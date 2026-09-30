@@ -57,8 +57,9 @@ export const StudioSidebar: React.FC<StudioSidebarProps> = ({
 
   return (
     <div className="w-[380px] border-r border-white/10 flex flex-col p-2.5 shrink-0 bg-[#121212] z-10 shadow-2xl h-full">
-      <div className="flex flex-col gap-2.5 overflow-y-auto pr-1 dark-scrollbar flex-1 pb-4">
-        <div className="flex items-center justify-between mb-1">
+      {/* ── 最上部固定ヘッダーエリア（スクロールしても絶対に隠れない） ── */}
+      <div className="flex flex-col gap-2 shrink-0 pb-2.5 border-b border-white/10">
+        <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <span className="material-symbols-outlined text-amber-500">movie_edit</span>
             <h1 className="text-lg font-black italic tracking-tighter uppercase">Studio Pro</h1>
@@ -70,7 +71,7 @@ export const StudioSidebar: React.FC<StudioSidebarProps> = ({
 
         {/* 連載レジュームセクション */}
         <input type="file" ref={resumeFileRef} accept=".json" className="hidden" onChange={handleResumeFileChange} />
-        <div className="flex items-center justify-between bg-white/5 p-2 rounded-xl border border-white/10 mb-1">
+        <div className="flex items-center justify-between bg-white/5 p-2 rounded-xl border border-white/10">
           <div className="flex flex-col">
             <span className="text-[11px] font-bold text-gray-300">連載レジューム</span>
             <span className="text-[9px] text-gray-400">
@@ -90,15 +91,22 @@ export const StudioSidebar: React.FC<StudioSidebarProps> = ({
           </button>
         </div>
 
-        <SectionLabel>制作モード</SectionLabel>
-        <SegmentedToggle 
-          value={settings.productionMode} 
-          onChange={v => setSettings(s => ({ ...s, productionMode: v as any }))} 
-          items={[
-            { value: 'episodes', label: 'ドラマ連番' },
-            { value: 'style-matrix', label: '画風比較' }
-          ]} 
-        />
+        {/* 最重要：制作モード切り替え（常時固定表示） */}
+        <div className="flex flex-col gap-1">
+          <SectionLabel>制作モード</SectionLabel>
+          <SegmentedToggle 
+            value={settings.productionMode} 
+            onChange={v => setSettings(s => ({ ...s, productionMode: v as any }))} 
+            items={[
+              { value: 'episodes', label: 'ドラマ連番' },
+              { value: 'style-matrix', label: '画風比較' }
+            ]} 
+          />
+        </div>
+      </div>
+
+      {/* ── スクロールエリア（設定詳細） ── */}
+      <div className="flex flex-col gap-2.5 overflow-y-auto pr-1 dark-scrollbar flex-1 py-2.5">
         
         <ReferenceVault 
           assets={referenceAssets} 
@@ -162,8 +170,10 @@ export const StudioSidebar: React.FC<StudioSidebarProps> = ({
               🛑 緊急停止 (Abort)
             </PillButton>
           ) : (
-            <PillButton variant="solid" className="h-11 bg-white hover:bg-gray-200 text-black font-black uppercase tracking-widest" onClick={onStart} icon={<span className="material-symbols-outlined">auto_awesome</span>}>
-              {activeSeriesManifest ? `⏩ 第 ${(activeSeriesManifest.completedEpisodeIds?.length || 0) + 1} 話から再開` : '生成開始'}
+            <PillButton variant="solid" className="h-11 bg-white hover:bg-gray-200 text-black font-black uppercase tracking-widest" onClick={onStart} icon={<span className="material-symbols-outlined">{settings.productionMode === 'style-matrix' ? 'palette' : 'auto_awesome'}</span>}>
+              {settings.productionMode === 'style-matrix' 
+                ? '🎨 画風比較を開始' 
+                : (activeSeriesManifest ? `⏩ 第 ${(activeSeriesManifest.completedEpisodeIds?.length || 0) + 1} 話から再開` : '✨ 生成開始')}
             </PillButton>
           )}
           <PillButton variant="outline" className="text-red-400 h-9" onClick={onClear} icon={<span className="material-symbols-outlined">delete</span>}>全消去</PillButton>

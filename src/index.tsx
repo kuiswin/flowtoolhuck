@@ -1,7 +1,15 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
+import { Flow } from 'flow-sdk';
 import App from '../App';
 import './style.css';
+
+// ブラウザの importmap から解決された Flow を window.Flow にも保持
+if (typeof window !== 'undefined') {
+  if (Flow) {
+    (window as any).Flow = Flow;
+  }
+}
 
 // Material Symbols フォントの動的注入（Flow Tools iframe内でのアイコン表示を保証）
 function ensureMaterialIcons() {
@@ -82,9 +90,10 @@ if (typeof window !== 'undefined') {
     mount,
     unmount,
     version: '1.0.0',
-    App
+    App,
+    Flow
   };
 }
 
-export { App };
-export default { mount, unmount, App };
+export { App, Flow };
+export default { mount, unmount, App, Flow };

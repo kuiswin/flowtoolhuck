@@ -42,12 +42,13 @@ async function main() {
 
   // 2. Git setup & commit
   console.log('🔧 Step 2: Preparing Git commit...');
+  let commitSha = '';
   try {
     // Configure user identity if needed
     try {
       run('git config user.name');
     } catch {
-      run('git config user.name "kuiswin"');
+      run('git config user.name "kymMyLab"');
       run('git config user.email "flowtool@local"');
     }
 
@@ -65,10 +66,11 @@ async function main() {
     }
 
     // 最新コミットハッシュを記録した version.json を生成・コミット
-    const commitSha = run('git rev-parse HEAD').slice(0, 10);
+    commitSha = run('git rev-parse HEAD').slice(0, 10);
     fs.writeFileSync(path.join(rootDir, 'dist', 'version.json'), JSON.stringify({ commit: commitSha, time: Date.now() }, null, 2));
     run('git add dist/version.json');
     run('git commit --amend --no-edit');
+    commitSha = run('git rev-parse HEAD').slice(0, 10);
     console.log(`📌 Version pinned to commit: ${commitSha}`);
 
     // Push to GitHub

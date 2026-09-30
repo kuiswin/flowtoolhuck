@@ -1,0 +1,155 @@
+import React from 'react';
+import { Cut, VideoModelType, RecommendationModel } from '../types';
+
+interface CutCardProps {
+  cut: Cut;
+  episodeId: number;
+  onAnimateRequest: (epId: number, cutId: number, modelType: VideoModelType) => void;
+  onPreviewCut: (epId: number, cutId: number) => void;
+  onUpdateSelection: (epId: number, cutId: number, isSelected: boolean) => void;
+  onUpdateModel: (epId: number, cutId: number, model: RecommendationModel) => void;
+  onRetry?: (type: 'image' | 'video', epId: number, cutId: number) => void;
+}
+
+export const CutCard: React.FC<CutCardProps> = ({ 
+  cut, episodeId, onAnimateRequest, onPreviewCut, onUpdateSelection, onUpdateModel, onRetry 
+}) => {
+  const imageSrc = cut.imageBase64 ? `data:image/png;base64,${cut.imageBase64}` : null;
+  const videoSrc = cut.videoBase64 ? `data:video/mp4;base64,${cut.videoBase64}` : null;
+
+  const handleRetry = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!onRetry) return;
+    if (!cut.imageBase64) onRetry('image', episodeId, cut.id);
+    else onRetry('video', episodeId, cut.id);
+  };
+
+  const handleToggleSelection = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    onUpdateSelection(episodeId, cut.id, !cut.isSelectedForVideo);
+  };
+
+  const cycleModel = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    const models: RecommendationModel[] = ['omni-flash', 'veo-lite', 'none'];
+    const currentIndex = models.indexOf(cut.targetVideoModel);
+    const nextIndex = (currentIndex + 1) % models.length;
+    const nextModel = models[nextIndex];
+    onUpdateModel(episodeId, cut.id, nextModel);
+    if (nextModel !== 'none') onUpdateSelection(episodeId, cut.id, true);
+    else onUpdateSelection(episodeId, cut.id, false);
+  };
+
+  const getKenBurnsClass = () => {
+    if (videoSrc || !imageSrc || !cut.kenBurnsPreset || cut.kenBurnsPreset === 'none') return '';
+    return `animate-ken-burns-${cut.kenBurnsPreset}`;
+  };
+
+  return (
+    <div 
+      onClick={() => onPreviewCut(episodeId, cut.id)}
+      className={`flex-shrink-0 w-[140px] bg-[#1a1a1a] border rounded-xl overflow-hidden flex flex-col group transition-all relative shadow-lg cursor-pointer ${
+        cut.isSelectedForVideo ? 'border-amber-500/50 shadow-amber-500/10' : 'border-[#333] hover:border-[#969696]'
+      }`}
+    >
+      <div className="relative aspect-[9/16] bg-black flex items-center justify-center overflow-hidden">
+        {videoSrc ? (
+          <video src={videoSrc} className="w-full h-full object-cover" autoPlay loop muted playsInline />
+        ) : imageSrc ? (
+          <div className="w-full h-full overflow-hidden">
+            <img 
+              src={imageSrc} 
+              alt={`Cut ${cut.id}`} 
+              className={`w-full h-full object-cover animate-in fade-in duration-700 ${getKenBurnsClass()}`} 
+            />
+          </div>
+        ) : (cut.isGeneratingImage || cut.isDirecting) ? (
+          <div className="flex flex-col items-center gap-1">
+            <div className={`w-5 h-5 border border-t-white rounded-full animate-spin ${cut.isDirecting ? 'border-amber-500/20 border-t-amber-500' : 'border-white/10'}`} />
+            <span className="text-[8px] text-white/40 tracking-widest uppercase animate-pulse">
+              {cut.isDirecting ? 'Directing' : 'Drawing'}
+            </span>
+          </div>
+        ) : cut.error ? (
+          <div className="flex flex-col items-center gap-1 px-2 text-center">
+            <span className="material-symbols-outlined text-red-500 text-[20px] opacity-50">error</span>
+            <span className="text-[8px] text-red-400 font-bold uppercase">Failed</span>
+            {onRetry && (
+              <button onClick={handleRetry} className="mt-1 bg-white/10 hover:bg-white/20 border border-white/20 text-white rounded px-2 py-0.5 text-[8px] font-bold transition-all">Retry</button>
+            )}
+          </div>
+        ) : (
+          <span className="text-white/10 text-[8px] tracking-widest uppercase">Standby</span>
+        )}
+
+        {/* 演出バッジ (Shot Scale) */}
+        {cut.shotScale && (
+          <div className="absolute bottom-1.5 left-1.5 px-1.5 py-0.5 rounded-sm bg-amber-500 text-[7px] font-black text-black uppercase tracking-tighter shadow-lg">
+            {cut.shotScale}
+          </div>
+        )}
+
+        <div className="absolute top-1.5 left-1.5 flex flex-col gap-1 z-10">
+          <div className="flex gap-1">
+            <div 
+              onClick={handleToggleSelection}
+              className={`w-5 h-5 flex items-center justify-center rounded-sm backdrop-blur-md border transition-all ${
+                cut.isSelectedForVideo 
+                  ? 'bg-amber-500 border-amber-400 text-black shadow-lg shadow-amber-500/20' 
+                  : 'bg-black/40 border-white/10 text-white/40 hover:bg-black/60'
+              }`}
+            >
+              <span className="material-symbols-outlined text-[14px] font-bold">
+                {cut.isSelectedForVideo ? 'check' : 'check_box_outline_blank'}
+              </span>
+            </div>
+            <div className="px-1.5 py-0.5 rounded-sm bg-black/60 text-[8px] font-black text-white/90 backdrop-blur-md border border-white/10 flex items-center">
+              C{cut.id.toString().padStart(2, '0')}
+            </div>
+          </div>
+          
+          <div 
+            onClick={cycleModel}
+            className={`px-1.5 py-0.5 rounded-sm text-[7px] font-black uppercase tracking-tighter backdrop-blur-md border transition-all ${
+              cut.targetVideoModel === 'omni-flash' ? 'bg-purple-600/80 border-purple-400 text-white' :
+              cut.targetVideoModel === 'veo-lite' ? 'bg-blue-600/80 border-blue-400 text-white' :
+              'bg-white/10 border-white/10 text-white/30'
+            }`}
+          >
+            {cut.targetVideoModel === 'omni-flash' ? 'Omni ⚡' : 
+             cut.targetVideoModel === 'veo-lite' ? 'Veo Lite' : 'Still Only'}
+          </div>
+        </div>
+
+        {cut.isQueued && (
+          <div className="absolute inset-0 bg-black/60 backdrop-blur-[2px] flex flex-col items-center justify-center">
+             <div className="w-6 h-6 border border-amber-500/20 border-t-amber-500 rounded-full animate-spin" />
+          </div>
+        )}
+
+        {cut.isGeneratingVideo && (
+          <div className="absolute inset-0 bg-black/70 backdrop-blur-sm flex flex-col items-center justify-center gap-2">
+             <div className="w-8 h-8 border-2 border-white/20 border-t-white rounded-full animate-spin" />
+             <span className="text-[8px] text-white font-black animate-pulse uppercase">Baking Video</span>
+          </div>
+        )}
+      </div>
+
+      <div className="p-2 flex flex-col gap-1.5 bg-gradient-to-b from-[#1a1a1a] to-[#141414]">
+        <p className="text-[10px] text-white/80 font-medium line-clamp-2 leading-snug h-[28px]">
+          {cut.narrationJp || "脚本策定中..."}
+        </p>
+        
+        <div className="flex items-center justify-between mt-auto pt-1 border-t border-white/5">
+           <span className={`text-[7px] px-1 py-0.5 rounded-sm font-bold uppercase tracking-tighter ${cut.videoModelUsed ? 'bg-white/10 text-white/40' : 'text-white/10'}`}>
+             {cut.videoModelUsed ? cut.videoModelUsed.replace('-', ' ') : cut.targetVideoModel !== 'none' ? 'READY' : 'STILL'}
+           </span>
+           <div className="flex gap-0.5">
+              {cut.bgmMediaId && <span className="material-symbols-outlined text-[10px] text-blue-400/50">music_note</span>}
+              {cut.voiceId && <span className="material-symbols-outlined text-[10px] text-amber-400/50">record_voice_over</span>}
+           </div>
+        </div>
+      </div>
+    </div>
+  );
+};

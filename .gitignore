@@ -1,0 +1,30 @@
+# Dependencies
+node_modules/
+.pnp
+.pnp.js
+
+# Testing / Build caches
+.vite/
+*.local
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Editor
+.vscode/
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+.DS_Store
+
+# Temporary scratch repo
+scratch_repo/
+
+# Dist directory:
+# IMPORTANT: dist/bundle.js must be committed to GitHub so jsDelivr can serve it.
+# Do NOT ignore dist/!

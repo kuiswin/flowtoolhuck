@@ -54,7 +54,7 @@ function drawBakedSubtitles(ctx: CanvasRenderingContext2D | OffscreenCanvasRende
 
   const text = rawText.replace(/^[\s「『]+|[:：\s」』]+$/g, '').slice(0, 32);
   const highlights = cut.telop?.highlights || [];
-  const baseFontSize = 30;
+  const baseFontSize = 33;
   const kanjiScale = 1.05;
   const strokeWidth = 8;
   const letterMargin = 4;

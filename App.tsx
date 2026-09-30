@@ -7,10 +7,10 @@ import { EpisodeSection } from './components/EpisodeSection';
 import { LogEntry } from './components/StudioLogs';
 import { Cut, GeneratorSettings, VideoModelType } from './types';
 import { ERAS, THEMES, TASTES, IMAGE_MODELS, VIDEO_MODELS } from './constants';
-import { createLogMessage } from './lib/utils';
+import { createLogMessage } from './services/utils';
 import { initDB, getAllStories, StoryRecord } from './services/db';
 import { downloadZip } from './services/exportService';
-import { useStudioProduction } from './hooks/useStudioProduction';
+import { useStudioProduction } from './services/useStudioProduction';
 
 export default function App() {
   const [settings, setSettings] = useState<GeneratorSettings>({

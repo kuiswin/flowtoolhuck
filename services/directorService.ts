@@ -1,145 +1,117 @@
 import { Flow } from 'flow-sdk';
 import { Cut, GenerationTask, GeneratorSettings, KenBurnsPreset, SeriesEpisodePlan } from '../types';
 import { IMAGE_MODELS, DEFAULT_ASPECT_RATIO, STRICT_STYLE_SUFFIX, TASTES } from '../constants';
-import { safeJsonParse, callWithRetry } from '../lib/utils';
-
-/**
- * 時代設定に応じた「存在してはならない不適合要素」を動的に生成
- */
-export function getEraSpecificAnachronisms(era: string): { positiveAttire: string; negativeAnachronisms: string } {
-  const commonModernNegative = 'headphones, earphones, modern headsets, wrist watch, modern glasses, sneakers, plastic, smartphones';
-  
-  // 現代設定の場合：時代劇要素（着物、侍、刀など）を禁止
-  if (era.includes('現代') || era.includes('令和') || era.includes('平成')) {
-    return {
-      positiveAttire: 'wearing modern contemporary outfits, stylish casual clothing, or professional office wear.',
-      negativeAnachronisms: 'kimono, yukata, samurai, katana, topknot, traditional japanese sandals, medieval weapons, armor, horse-drawn carriage'
-    };
-  }
-
-  if (era.includes('江戸') || era.includes('幕末')) {
-    return {
-      positiveAttire: 'wearing strictly authentic Edo-period traditional Japanese attire, historically accurate kimono, obi, and period footwear.',
-      negativeAnachronisms: `modern clothing, western clothes, school uniform, sailor suit, blazer, suit, tie, hoodies, jeans, zippers, asphalt, electric poles, skyscraper, ${commonModernNegative}`
-    };
-  }
-  if (era.includes('明治') || era.includes('文明開化')) {
-    return {
-      positiveAttire: 'wearing authentic Meiji-era attire, traditional hakama, or early Meiji western-japanese hybrid clothing.',
-      negativeAnachronisms: `modern casual clothes, modern hoodies, jeans, skyscrapers, asphalt roads, electric power towers, ${commonModernNegative}`
-    };
-  }
-  if (era.includes('大正')) {
-    return {
-      positiveAttire: 'wearing authentic Taisho-roman style kimono or 1920s vintage retro attire.',
-      negativeAnachronisms: `contemporary modern clothes, modern electronics, casual tracksuits, ${commonModernNegative}`
-    };
-  }
-  if (era.includes('昭和') || era.includes('戦後') || era.includes('バブル')) {
-    return {
-      positiveAttire: 'wearing authentic period-accurate Showa retro fashion and vintage garments.',
-      negativeAnachronisms: `flatscreen tv, modern internet devices, modern 2020s fashion, futuristic technology, ${commonModernNegative}`
-    };
-  }
-  return { positiveAttire: '', negativeAnachronisms: '' };
-}
-
-/**
- * 時代に応じた服装の追加プロンプトを取得 (レガシー互換)
- */
-export function getEraClothing(era: string): string {
-  const { positiveAttire } = getEraSpecificAnachronisms(era);
-  return positiveAttire || '';
-}
+import { safeJsonParse, callWithRetry } from './utils';
 
 /**
  * キャラクター画像からDNA（特徴）を抽出するためのプロンプトを構築
  */
 export function buildCharacterScreeningPrompt(era: string, country: string): string {
-  return `Analyze the character image for a historical drama set in "${era}", "${country}".\nIf the character in the image wears modern clothing (school uniform, sailor suit, blazer, tie, modern casual, glasses, sneakers), specify traditional clothing (${era}) in characterDna, and strictly put all modern attire keywords into eraNegative to ensure modern clothes are NEVER drawn unless time-slip is explicitly intended.\nOutput JSON: { "characterDna": "...", "styleDna": "...", "antiPoseNegative": "...", "eraNegative": "modern clothing, school uniform, sailor suit, pleated skirt, blazer, necktie, ribbon, modern casual, sneakers, eyeglasses, headphones, earphones" }`;
+  return `Analyze the character image for a historical drama set in "${era}", "${country}".
+Identify facial features, hairstyles, and iconic characteristics.
+Strictly ensure modern attire (school uniform, blazer, necktie, casual wear, sneakers, glasses, headphones) is converted to authentic period clothing for "${era}".
+Output JSON: {
+  "characterDna": "Description of facial features and body traits",
+  "styleDna": "Consistent artistic rendering medium",
+  "antiPoseNegative": "awkward pose, unnatural anatomy",
+  "eraNegative": "modern clothing, school uniform, sailor suit, blazer, necktie, modern casual, sneakers, eyeglasses, headphones, wristwatch, smartphone"
+}`;
 }
 
 /**
  * シリーズ全体のグランドデザイン（全話プロット）を生成するためのプロンプト
  */
 export function buildGrandDesignPrompt(count: number, country: string, era: string, theme: string): string {
-  return `Create a full ${count}-episode drama grand design for ${country}, ${era}, ${theme}. Output ONLY valid JSON: { "seriesTitle": "...", "overallSynopsis": "...", "episodesPlan": [ { "epNumber": 1, "titleJp": "...", "titleEn": "...", "summary": "..." } ] }`;
+  return `Create a full ${count}-episode drama grand design set in ${country}, ${era}, with theme "${theme}".
+Output ONLY valid JSON:
+{
+  "seriesTitle": "Dramatic Series Title",
+  "overallSynopsis": "Overview of the entire narrative arc",
+  "episodesPlan": [
+    { "epNumber": 1, "titleJp": "日本語タイトル", "titleEn": "English Title", "summary": "話のあらすじ" }
+  ]
+}`;
 }
 
 /**
- * 各話の脚本（12カット分）を生成するためのプロンプト
+ * 各話の脚本（12カット分）および時代考証をAIに動的生成させるプロンプト
+ * （固定辞書を全廃し、Geminiに時代考証・衣装・NG要素をその場で考証させる）
  */
 export function buildScriptPrompt(epId: number, currentPlan: SeriesEpisodePlan, era: string, country: string, theme: string): string {
-  // 設定された時代・国・テーマを動的に埋め込み
-  return `Generate a 12-cut drama story skeleton for Episode ${epId} (${currentPlan.titleJp}).
-STRICT CONTEXT: Set in "${era}", "${country}". Theme: "${theme}".
-You MUST respect the era setting. Never introduce elements that contradict "${era}".
+  return `You are a world-class historical drama director and historical researcher.
+Create a 12-cut drama story skeleton for Episode ${epId} ("${currentPlan.titleJp}").
+Setting: "${country}", Era: "${era}", Theme: "${theme}".
+
+STRICT HISTORICAL ACCURACY:
+Dynamically analyze "${era}" and "${country}". Determine authentic period attire and identify modern anachronisms that must NEVER appear.
 
 Output ONLY valid JSON matching this exact structure:
 {
   "titleJp": "${currentPlan.titleJp}",
   "titleEn": "${currentPlan.titleEn}",
-  "summary": "あらすじ",
-  "eraAnalysisJp": "時代考証(JP)",
-  "forbiddenAnachronisms": ["不適合な要素1", "不適合な要素2"],
+  "summary": "話のあらすじ（日本語）",
+  "eraAnalysisJp": "時代背景と舞台設定の考証解説（日本語）",
+  "authenticAttireEn": "Detailed English prompt for authentic historical costume and attire of ${era}, ${country}",
+  "forbiddenKeywordsEn": "Comma-separated English negative keywords for anachronisms that must NEVER appear in ${era} (e.g. smartphones, wristwatches, modern glasses, sneakers, modern clothing, electricity poles, asphalt)",
+  "forbiddenAnachronisms": ["日本語の禁止要素1", "日本語の禁止要素2"],
   "coverCatchphraseJp": "超ド迫力キャッチコピー",
-  "highlightWords": ["キーワード"],
+  "highlightWords": ["キーワード1", "キーワード2"],
   "cuts": [
-    { "id": 1, "basicPlot": "Visual prompt in English describing the scene", "narrationJp": "ナレーション日本語" }
+    { "id": 1, "basicPlot": "Cinematic visual description of the cut in English", "narrationJp": "重厚なナレーション（日本語）" }
   ]
 }`;
 }
 
 /**
  * 画像生成用の最終プロンプトとネガティブプロンプトを構築
+ * （AIが動的考証した衣装と禁止ワードを反映）
  */
 export function buildImagePromptAndNegative(
   task: GenerationTask,
   settings: GeneratorSettings,
   activeReference: any
 ): { finalPrompt: string; finalNegative: string; referenceImageMediaIds?: string[] } {
-  const { prompt, negativePrompt, styleKey, forbiddenAnachronisms } = task;
+  const { prompt, negativePrompt, styleKey, forbiddenAnachronisms, authenticAttireEn, forbiddenKeywordsEn } = task as any;
   const rawStyle = TASTES[styleKey] || '';
-  const eraClothing = getEraClothing(settings.era);
-  const { positiveAttire, negativeAnachronisms } = getEraSpecificAnachronisms(settings.era);
 
   // 画風固定の最優先指示
   const masterStylePrefix = `Masterpiece, authentic ${rawStyle}. Consistent visual art style in ${rawStyle}.`;
   const masterStylePrompt = `[MASTER ART STYLE: ${rawStyle}, strictly maintain identical visual medium and rendering consistency across scenes]`;
 
   const cameraContext = 'Cinematic composition, natural human anatomy, solid torso, complete upper body, grounded perspective, 8k resolution';
-  const antiGulliverAndGoreNegative = 'giant, giantess, floating head, severed body, floating torso, half body cut off by scenery, sitting on rooftop, scale error, dollhouse, diorama, standing straight facing camera, simple mugshot';
+  const antiGulliverAndGoreNegative = 'giant, giantess, floating head, severed body, floating torso, half body cut off by scenery, scale error, diorama, simple mugshot';
   
   // アニメ・イラスト系の場合のネガティブ自動付与
   const isIllustration = styleKey.includes('アニメ') || styleKey.includes('イラスト') || styleKey.includes('マンガ') || styleKey.includes('セル画');
   const illustrationNegative = isIllustration ? 'photorealistic, realistic photo, hyperrealistic photograph, 3d render, cgi, ' : '';
-  
   const baselineNegative = `${illustrationNegative}pixel art, 8-bit, 16-bit, lowres, worst quality, text, watermark, signature, blurry`;
+
+  // AIが動的考証した時代衣装・除外ワード
+  const dynamicAttire = authenticAttireEn ? `[PERIOD ATTIRE: ${authenticAttireEn}]` : '';
+  const dynamicForbidden = forbiddenKeywordsEn || (forbiddenAnachronisms || []).join(', ');
 
   if (activeReference) {
     const { styleDna, antiPoseNegative, eraNegative, mediaId } = activeReference;
     const finalNegative = [
       antiGulliverAndGoreNegative,
-      negativeAnachronisms,
+      dynamicForbidden,
       antiPoseNegative,
       eraNegative,
-      (forbiddenAnachronisms || []).join(', '),
       negativePrompt,
       baselineNegative
     ].filter(Boolean).join(', ');
 
-    const finalPrompt = `${masterStylePrefix}. ${masterStylePrompt}. [ACTION & POSE: ${prompt}, ${cameraContext}, ${eraClothing}, ${positiveAttire}]. [REFERENCE MEDIUM: ${styleDna}].${STRICT_STYLE_SUFFIX}`;
+    const finalPrompt = `${masterStylePrefix}. ${masterStylePrompt}. [ACTION: ${prompt}, ${cameraContext}]. ${dynamicAttire}. [REFERENCE MEDIUM: ${styleDna}].${STRICT_STYLE_SUFFIX}`;
     return { finalPrompt, finalNegative, referenceImageMediaIds: [mediaId] };
   } else {
     const finalNegative = [
       antiGulliverAndGoreNegative,
-      negativeAnachronisms,
-      (forbiddenAnachronisms || []).join(', '),
+      dynamicForbidden,
       negativePrompt,
       baselineNegative
     ].filter(Boolean).join(', ');
 
-    const finalPrompt = `${masterStylePrefix}. ${masterStylePrompt}. ${cameraContext}. ${prompt}. ${eraClothing}. ${positiveAttire}.${STRICT_STYLE_SUFFIX}`;
+    const finalPrompt = `${masterStylePrefix}. ${masterStylePrompt}. ${cameraContext}. ${prompt}. ${dynamicAttire}.${STRICT_STYLE_SUFFIX}`;
     return { finalPrompt, finalNegative };
   }
 }
@@ -154,10 +126,8 @@ export async function directShot(
   previousShotScale?: string,
   addLog?: (msg: string, type?: any) => void
 ): Promise<Partial<Cut>> {
-  const { epId, cutId, storyContext, prompt, styleKey } = task;
-  const era = settings.era;
-  const country = settings.country;
-  const taste = TASTES[styleKey] || '';
+  const { cutId, prompt, styleKey } = task;
+  const rawStyle = TASTES[styleKey] || '';
   const characterGuidance = activeReference 
     ? `Protagonist: ${activeReference.characterDna}. She is the central heroine.` 
     : 'No specific reference asset.';
@@ -178,47 +148,45 @@ export async function directShot(
   ];
 
   const preset = CINEMATIC_SHOT_PRESETS[(cutId - 1) % CINEMATIC_SHOT_PRESETS.length];
+  const kenBurnsPresets: KenBurnsPreset[] = ['zoomIn', 'zoomOut', 'panLeft', 'panRight', 'subtleZoom', 'panDiagonal'];
+  const kbPreset = kenBurnsPresets[(cutId - 1) % kenBurnsPresets.length];
 
-  // 演出AIに対しても画風を厳守させる
-  const directorPrompt = `Generate cinematic directing data for Cut #${cutId}.
-[TARGET ART STYLE]: ${taste}
-You MUST NOT describe photographic or photorealistic elements if the style is Anime/Manga.
-You MUST NOT describe anime/illustration elements if the style is Photography.
+  const directorPrompt = `You are a film director designing a visual shot for a historical drama.
+Context: "${prompt}".
+Style: "${rawStyle}".
+${characterGuidance}
+Requested Framing: ${preset.scale} (${preset.angle}).
+Avoid scale errors. If wide shot, character MUST be small and buildings realistic. If close-up, show head/shoulders with natural proportions.
 
-[CAMERA ANGLE GOAL]: ${preset.angle}
-[SHOT SCALE REQUIRED]: ${preset.scale}
-[ANATOMY & SCALE RULE]: Natural human anatomy! Character must have a solid body (never cut off like a floating ghost head). In Wide shots, character must be realistic small size on the ground.
-[CHARACTER GUIDANCE]: ${characterGuidance}
 Output ONLY valid JSON:
 {
-  "promptEn": "Cinematic visual description matching (${preset.angle}) in English, solid complete anatomy",
-  "shotScale": "${preset.scale}",
-  "kenBurnsPreset": "none|zoom-in|zoom-out|pan-left|pan-right|tilt-up|tilt-down",
-  "telop": {
-    "fullText": "テロップ文章（15〜20文字程度）",
-    "highlights": [ { "word": "最も強調したい2〜3文字のキーワード", "color": "#FFE600", "sizeScale": 1.15 } ]
-  }
-}
-[STORY CONTEXT]: ${storyContext}
-[SCENE PLOT]: ${prompt}
-[ERA & LOCATION]: ${era}, ${country}`;
+  "enhancedPrompt": "Extremely detailed scene description in English including lighting, props, historical attire, atmosphere, shot angle",
+  "cameraWork": "${preset.tag}",
+  "cinematicAngle": "${preset.angle}",
+  "shotScale": "${preset.scale}"
+}`;
 
   try {
-    const result = await callWithRetry(async () => {
-      const res = await Flow.generate.text(directorPrompt);
-      if (!res?.text || !res.text.includes('{')) throw new Error('Invalid directing data');
-      return res;
-    }, (attempt, max, delay) => {
-      if (addLog) addLog(`Retrying Directing (attempt ${attempt}/${max}) after ${delay} ms...`, 'warning');
-    });
-    const directed = safeJsonParse(result.text, { promptEn: `${prompt}, ${preset.angle}`, shotScale: preset.scale });
-    directed.shotScale = preset.scale;
-
-    const varietyPattern: KenBurnsPreset[] = ['zoom-in', 'pan-right', 'zoom-out', 'pan-left', 'tilt-up', 'pan-right', 'zoom-in', 'zoom-out', 'pan-left', 'tilt-up', 'pan-right', 'zoom-in'];
-    directed.kenBurnsPreset = varietyPattern[(cutId - 1) % varietyPattern.length];
-    return { ...directed, isDirecting: false };
+    const res = await Flow.generate.text(directorPrompt);
+    const parsed = safeJsonParse(res);
+    if (parsed && parsed.enhancedPrompt) {
+      return {
+        promptEn: parsed.enhancedPrompt,
+        cameraWork: parsed.cameraWork || preset.tag,
+        cinematicAngle: parsed.cinematicAngle || preset.angle,
+        shotScale: parsed.shotScale || preset.scale,
+        kenBurnsPreset: kbPreset,
+      };
+    }
   } catch (err) {
-    if (addLog) addLog(`⚠️ Ep.${epId} C${cutId.toString().padStart(2, '0')}: 演出AIがタイムアウトしたためデフォルト設定を使用します。`, 'warning');
-    return { isDirecting: false, shotScale: preset.scale, promptEn: `${prompt}, ${preset.angle}` };
+    if (addLog) addLog(`演出AIの生成をスキップしプリセットを適用します: ${err}`, 'warning');
   }
+
+  return {
+    promptEn: `${preset.angle}. ${prompt}`,
+    cameraWork: preset.tag,
+    cinematicAngle: preset.angle,
+    shotScale: preset.scale,
+    kenBurnsPreset: kbPreset,
+  };
 }

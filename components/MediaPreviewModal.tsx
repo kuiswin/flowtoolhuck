@@ -3,7 +3,7 @@ import { Cut, VideoModelType, KenBurnsPreset } from '../types';
 import { PillButton, SectionLabel, TextInput, FieldDropdown, ToggleSwitch } from './Primitives';
 import { VOICE_CHARACTERS, CAMERA_WORK_OPTIONS, IMAGE_MODELS, KEN_BURNS_PRESETS, sanitizeFilename } from '../constants';
 import { Flow } from 'flow-sdk';
-import { callWithRetry } from '../lib/utils';
+import { callWithRetry } from '../services/utils';
 
 interface MediaPreviewModalProps {
     isOpen: boolean;

@@ -61,6 +61,8 @@ export interface Episode {
   summary?: string;
   eraAnalysis?: string;
   forbiddenAnachronisms?: string[];
+  authenticAttireEn?: string;
+  forbiddenKeywordsEn?: string;
   highlightWords?: string[];
 
   coverCatchphraseJp?: string;
@@ -113,6 +115,8 @@ export interface GenerationTask {
   imageModel: string;
   eraAnalysis?: string;
   forbiddenAnachronisms?: string[];
+  authenticAttireEn?: string;
+  forbiddenKeywordsEn?: string;
   referenceImageMediaId?: string;
   storyContext?: string;
 }

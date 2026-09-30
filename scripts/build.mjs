@@ -55,8 +55,6 @@ async function runBuild() {
     'types.ts',
     'src',
     'components',
-    'hooks',
-    'lib',
     'services',
   ];
 

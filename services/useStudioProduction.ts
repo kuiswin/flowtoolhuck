@@ -2,17 +2,17 @@ import { useState, useRef, useEffect, useCallback } from 'react';
 import { Flow } from 'flow-sdk';
 import { Episode, Cut, GeneratorSettings, VideoModelType, GenerationTask, SeriesManifest } from '../types';
 import { IMAGE_MODELS, VIDEO_MODELS, DEFAULT_ASPECT_RATIO, CUTS_PER_EPISODE } from '../constants';
-import { safeJsonParse, callWithRetry, formatErrorMessage, createDefaultCut } from '../lib/utils';
-import { saveStory, getAllReferenceAssets, saveReferenceAsset } from '../services/db';
-import { renderKenBurnsVideo, renderFullEpisodeMovie } from '../services/browserVideoService';
-import { downloadZip, downloadManifestFile } from '../services/exportService';
+import { safeJsonParse, callWithRetry, formatErrorMessage, createDefaultCut } from './utils';
+import { saveStory, getAllReferenceAssets, saveReferenceAsset } from './db';
+import { renderKenBurnsVideo, renderFullEpisodeMovie } from './browserVideoService';
+import { downloadZip, downloadManifestFile } from './exportService';
 import { 
   directShot, 
   buildImagePromptAndNegative, 
   buildCharacterScreeningPrompt, 
   buildGrandDesignPrompt, 
   buildScriptPrompt 
-} from '../services/directorService';
+} from './directorService';
 import { LogEntry } from '../components/StudioLogs';
 
 interface UseStudioProductionProps {
@@ -151,7 +151,7 @@ export function useStudioProduction({ settings, logs, addLog, refreshStories }: 
     updateEpisode(epId, { isGeneratingRemainingImages: true });
     addLog(`🎨 Ep.${epId}: 残り ${remainingCuts.length} 枚の画像生成を開始...`, 'process');
     const tasks: GenerationTask[] = remainingCuts.map(c => ({
-      epId, cutId: c.id, prompt: c.promptEn, styleKey: settings.taste, imageModel: settings.imageModel, storyContext: ep.summary || '', eraAnalysis: ep.eraAnalysis, forbiddenAnachronisms: ep.forbiddenAnachronisms
+      epId, cutId: c.id, prompt: c.promptEn, styleKey: settings.taste, imageModel: settings.imageModel, storyContext: ep.summary || '', eraAnalysis: ep.eraAnalysis, forbiddenAnachronisms: ep.forbiddenAnachronisms, authenticAttireEn: ep.authenticAttireEn, forbiddenKeywordsEn: ep.forbiddenKeywordsEn
     }));
     await runTasks(tasks);
     updateEpisode(epId, { isGeneratingRemainingImages: false });
@@ -414,6 +414,8 @@ export function useStudioProduction({ settings, logs, addLog, refreshStories }: 
             summary: sharedScript.summary,
             eraAnalysis: sharedScript.eraAnalysisJp,
             forbiddenAnachronisms: sharedScript.forbiddenAnachronisms,
+            authenticAttireEn: sharedScript.authenticAttireEn,
+            forbiddenKeywordsEn: sharedScript.forbiddenKeywordsEn,
             coverCatchphraseJp: sharedScript.coverCatchphraseJp,
             coverCatchphraseEn: sharedScript.coverCatchphraseEn,
             highlightWords: sharedScript.highlightWords || [],
@@ -424,7 +426,7 @@ export function useStudioProduction({ settings, logs, addLog, refreshStories }: 
           });
 
           const tasks: GenerationTask[] = episodeCuts.slice(0, settings.previewCutCount).map(c => ({
-            epId, cutId: c.id, prompt: c.promptEn, styleKey: settings.taste, imageModel: settings.imageModel, storyContext: sharedScript.summary || '', eraAnalysis: sharedScript.eraAnalysisJp, forbiddenAnachronisms: sharedScript.forbiddenAnachronisms
+            epId, cutId: c.id, prompt: c.promptEn, styleKey: settings.taste, imageModel: settings.imageModel, storyContext: sharedScript.summary || '', eraAnalysis: sharedScript.eraAnalysisJp, forbiddenAnachronisms: sharedScript.forbiddenAnachronisms, authenticAttireEn: sharedScript.authenticAttireEn, forbiddenKeywordsEn: sharedScript.forbiddenKeywordsEn
           }));
 
           await runTasks(tasks);

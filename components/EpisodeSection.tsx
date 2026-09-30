@@ -15,20 +15,20 @@ export const HistoricalCard: React.FC<{ ep: Episode }> = ({ ep }) => (
       </div>
       
       {/* 共通設定バッジ */}
-      <div className="flex gap-2">
+      <div className="flex flex-wrap items-center gap-2">
         {ep.taste && (
-          <span className="px-2 py-0.5 bg-blue-500/20 text-blue-300 text-[9px] font-bold rounded-full border border-blue-500/30">
-            画風: {ep.taste.split(' (')[0]}
+          <span className="px-2.5 py-0.5 bg-blue-500/20 text-blue-300 text-[10px] font-bold rounded-full border border-blue-500/30">
+            画風: {ep.taste.split(' (')[0].trim()}
           </span>
         )}
         {ep.era && (
-          <span className="px-2 py-0.5 bg-purple-500/20 text-purple-300 text-[9px] font-bold rounded-full border border-purple-500/30">
-            年代: {ep.era.split('（')[0]}
+          <span className="px-2.5 py-0.5 bg-purple-500/20 text-purple-300 text-[10px] font-bold rounded-full border border-purple-500/30">
+            年代: {ep.era.split('（')[0].trim()}
           </span>
         )}
         {ep.theme && (
-          <span className="px-2 py-0.5 bg-amber-500/20 text-amber-400 text-[9px] font-bold rounded-full border border-amber-500/30">
-            テーマ: {ep.theme.split(' ')[0]}
+          <span className="px-2.5 py-0.5 bg-amber-500/20 text-amber-400 text-[10px] font-bold rounded-full border border-amber-500/30">
+            テーマ: {ep.theme.split('（')[0].trim()}
           </span>
         )}
       </div>

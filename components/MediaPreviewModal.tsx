@@ -169,16 +169,16 @@ export const MediaPreviewModal: React.FC<MediaPreviewModalProps> = ({
         });
 
         return (
-            <div className="absolute bottom-[4%] left-0 w-full px-4 flex flex-col items-center pointer-events-none z-40 animate-in fade-in slide-in-from-bottom-2 duration-300">
-                {/* テロップ背景プレート（視認性抜群のシネマ字幕バー） */}
-                <div className="bg-black/85 backdrop-blur-md rounded-xl px-4 py-2.5 flex flex-wrap justify-center items-baseline max-w-[88%] shadow-2xl border border-white/10 leading-snug">
+            <div className="absolute bottom-[4%] left-0 w-full px-3 flex flex-col items-center pointer-events-none z-40 animate-in fade-in slide-in-from-bottom-2 duration-300">
+                {/* テロップ背景プレート（約20%〜35%背景が透けて見えるシネマ風グラスモーフィズム） */}
+                <div className="bg-black/65 backdrop-blur-md rounded-2xl px-5 py-3 flex flex-wrap justify-center items-baseline max-w-[92%] shadow-xl shadow-black/40 border border-white/15 leading-snug">
                     {text.split('').map((char, i) => {
                         const isKanji = /[\u4e00-\u9faf]/.test(char);
                         const isPunctuation = /[。、！？…]/.test(char);
                         const highlight = highlightIndices.get(i);
                         
                         const color = highlight ? (highlight.color || '#FFE600') : '#FFFFFF';
-                        const scale = (isKanji ? 1.05 : 1.0) * (highlight ? (highlight.sizeScale || 1.15) : 1.0);
+                        const scale = (isKanji ? 1.06 : 1.0) * (highlight ? (highlight.sizeScale || 1.15) : 1.0);
 
                         return (
                             <span 
@@ -186,12 +186,12 @@ export const MediaPreviewModal: React.FC<MediaPreviewModalProps> = ({
                                 className="font-[900] tracking-normal select-none"
                                 style={{ 
                                     color: color, 
-                                    fontSize: `${scale * 1.08}rem`, 
+                                    fontSize: `${scale * 1.25}rem`, 
                                     display: isPunctuation ? 'inline' : 'inline-block',
                                     margin: isPunctuation ? '0 1px 0 -1px' : '0 0.5px',
                                     textShadow: highlight 
-                                      ? '0 0 10px rgba(255, 230, 0, 0.8), 0 2px 4px rgba(0,0,0,0.95)' 
-                                      : '0 2px 4px rgba(0,0,0,0.95), 0 0 2px rgba(0,0,0,0.9)'
+                                      ? '0 0 12px rgba(255, 230, 0, 0.85), 0 2px 5px rgba(0,0,0,0.95)' 
+                                      : '0 2px 5px rgba(0,0,0,0.95), 0 0 3px rgba(0,0,0,0.9)'
                                 }}
                             >
                                 {char}

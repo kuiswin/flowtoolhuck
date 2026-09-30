@@ -52,13 +52,13 @@ function drawBakedSubtitles(ctx: CanvasRenderingContext2D | OffscreenCanvasRende
   const rawText = cut.telop?.fullText || cut.narrationJp || '';
   if (!rawText.trim()) return;
 
-  const text = rawText.replace(/^[\s「『]+|[:：\s」』]+$/g, '').slice(0, 32);
+  const text = rawText.replace(/^[\s「『]+|[:：\s」』]+$/g, '').slice(0, 36);
   const highlights = cut.telop?.highlights || [];
-  const baseFontSize = 33;
-  const kanjiScale = 1.05;
+  const baseFontSize = 38;
+  const kanjiScale = 1.06;
   const strokeWidth = 8;
   const letterMargin = 4;
-  const maxWidth = width * 0.88;
+  const maxWidth = width * 0.92;
 
   ctx.save();
   ctx.textAlign = 'center';
@@ -85,7 +85,7 @@ function drawBakedSubtitles(ctx: CanvasRenderingContext2D | OffscreenCanvasRende
       char,
       isKanji,
       color: highlight ? (highlight.color || '#FFE600') : 'white',
-      scale: (highlight ? (highlight.sizeScale || 1.1) : 1.0) * (isKanji ? kanjiScale : 1.0)
+      scale: (highlight ? (highlight.sizeScale || 1.15) : 1.0) * (isKanji ? kanjiScale : 1.0)
     };
   });
 
@@ -107,16 +107,41 @@ function drawBakedSubtitles(ctx: CanvasRenderingContext2D | OffscreenCanvasRende
   });
   if (currentLine.length > 0) lines.push(currentLine);
 
-  const lineHeight = baseFontSize * 1.55;
+  const lineHeight = baseFontSize * 1.5;
   const totalHeight = lines.length * lineHeight;
-  const plateY = height * 0.82;
+  const plateY = height * 0.84;
 
-  // 四角い黒座布団を完全撤廃。背景アートを100%遮らない完全シースルー仕様（文字の黒フチ14pxで視認性を確保）
-  const bottomFade = ctx.createLinearGradient(0, height * 0.72, 0, height);
-  bottomFade.addColorStop(0, 'rgba(0, 0, 0, 0)');
-  bottomFade.addColorStop(1, 'rgba(0, 0, 0, 0.25)');
-  ctx.fillStyle = bottomFade;
-  ctx.fillRect(0, height * 0.72, width, height * 0.28);
+  // 各行の最大横幅を計測して、座布団サイズを計算
+  let maxLineWidth = 0;
+  lines.forEach(line => {
+    let w = 0;
+    line.forEach(d => {
+      ctx.font = `900 ${baseFontSize * d.scale}px "Noto Sans JP", sans-serif`;
+      w += ctx.measureText(d.char).width + letterMargin;
+    });
+    if (w > maxLineWidth) maxLineWidth = w;
+  });
+
+  const boxWidth = Math.min(width * 0.94, maxLineWidth + 44);
+  const boxHeight = totalHeight + 28;
+  const boxX = (width - boxWidth) / 2;
+  const boxY = plateY - boxHeight / 2;
+
+  // 約20%〜35%後ろが見える半透明座布団プレート（グラスモーフィズム調）
+  ctx.save();
+  ctx.fillStyle = 'rgba(0, 0, 0, 0.65)';
+  ctx.strokeStyle = 'rgba(255, 255, 255, 0.15)';
+  ctx.lineWidth = 2;
+  if (typeof (ctx as any).roundRect === 'function') {
+    ctx.beginPath();
+    (ctx as any).roundRect(boxX, boxY, boxWidth, boxHeight, 18);
+    ctx.fill();
+    ctx.stroke();
+  } else {
+    ctx.fillRect(boxX, boxY, boxWidth, boxHeight);
+    ctx.strokeRect(boxX, boxY, boxWidth, boxHeight);
+  }
+  ctx.restore();
 
   const startY = plateY - totalHeight / 2;
 

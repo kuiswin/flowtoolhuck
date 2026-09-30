@@ -77,11 +77,11 @@ export const THEMES = [
 
 export const TASTES: Record<string, string> = {
   "🔥 90年代レトロセル画アニメ調 (90s Retro Cel Anime)": "90s classic Japanese hand-drawn cel anime aesthetic, authentic visible ink outlines, rich warm grain, vintage film color palette, nostalgic retro anime masterpiece",
-  "✨ 美麗シネマティック・新海調 (Luminous Sky & Atmospheric Anime)": "Makoto Shinkai inspired cinematic anime, breathtaking luminous atmosphere, emotional vibrant sky, cumulus clouds, lens flare, delicate digital painting, visual masterpiece",
-  "⚔️ ダークファンタジー・Ufotable調 (Dark Chiaroscuro & High-Contrast Anime)": "Ufotable inspired dark cinematic anime, dramatic deep shadows, high-contrast chiaroscuro lighting, glowing ember highlights, intense emotional atmosphere, hyper-detailed drama",
+  "✨ 美麗シネマティック・光と青空 (Luminous Sky & Cinematic Anime)": "Breathtaking luminous anime aesthetic, cinematic lighting, emotional vibrant sky, cumulus clouds, gentle lens flare, delicate digital painting, visual masterpiece",
+  "⚔️ ダークファンタジー・重厚陰影 (Dark Chiaroscuro & High-Contrast Anime)": "Dark cinematic fantasy anime, dramatic deep shadows, high-contrast chiaroscuro lighting, glowing ember highlights, intense emotional atmosphere, hyper-detailed drama",
   "🏮 京都・江戸 伝統浮世絵木版画 (Traditional Japanese Ukiyo-e)": "Authentic Japanese Ukiyo-e woodblock print style, washi paper texture, traditional mineral pigments, indigo and vermilion tones, elegant flowing line art, classical Edo masterpiece",
   "🖋️ 白黒劇画・超絶インクマンガ (Intense Monochrome Manga)": "Dramatic black and white manga style, aggressive ink brush strokes, intense screentone crosshatching, extreme contrast, dynamic manga panel composition, gritty historical realism",
-  "🍃 手描き水彩・情緒ジブリ調 (Whimsical Hand-drawn Watercolor)": "Studio Ghibli inspired hand-painted watercolor animation, lush pastoral nature, soft sunlight, warm nostalgic earth tones, charming artisanal aesthetic, heartwarming feel",
+  "🍃 手描き水彩・情緒パストラル (Whimsical Hand-drawn Watercolor)": "Artisanal hand-painted watercolor animation style, lush pastoral nature, soft warm sunlight, nostalgic earth tones, charming storybook aesthetic, heartwarming feel",
   "🎬 35mmフィルム映画・実写シネマ (Authentic 35mm Film Cinematic Drama)": "35mm film photography, cinematic historical drama still, shallow depth of field, anamorphic lens flare, natural soft lighting, authentic period costume texture, award-winning cinematography",
   "🖌️ 水墨画・破墨山水 (Traditional Sumi-e Ink Wash Painting)": "Traditional Japanese Sumi-e ink wash painting, expressive Zen brush strokes, dynamic ink splatters and atmospheric mist, elegant negative space, timeless historical artistry"
 };

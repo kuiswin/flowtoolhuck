@@ -325,23 +325,11 @@ export function useStudioProduction({ settings, logs, addLog, refreshStories }: 
         const targetTastes = allTasteKeys.slice(0, settings.episodeCount);
         addLog(`🎨 【画風比較モード】同じ物語で ${targetTastes.length} 種類の画風を同時生成・比較します！`, 'process');
 
-        // 1. 比較用の共通ストーリー（第1話）を1つだけ策定
-        const plan = {
-          epNumber: 1,
-          titleJp: '運命の交差点',
-          titleEn: 'Crossroads of Destiny',
-          summary: `${settings.theme}の世界観で描かれるドラマ`
-        };
-
-        addLog(`📖 比較基準となる共通ストーリー（12カット）をAIに執筆依頼中...`, 'process');
-        const scriptPrompt = buildScriptPrompt(1, plan as any, settings.country, settings.theme, settings.era);
-        const scriptRes = await callWithRetry(
-          () => Flow.generate.text(scriptPrompt),
-          (attempt, max, delay) => addLog(`Retrying Script Plot (attempt ${attempt}/${max}) after ${delay} ms...`, 'warning'),
-          5
-        );
-        const sharedScript = safeJsonParse(scriptRes.text, { titleJp: plan.titleJp, titleEn: plan.titleEn, cuts: [] });
-        addLog(`✨ 共通脚本が完成！『${sharedScript.titleJp}』（全${targetTastes.length}画風へ展開開始）`, 'success');
+        // 既存エピソードが存在するか確認（画面上にあるエピソードの脚本を最優先で100%流用）
+        const existingEp = episodesRef.current.find(e => e.cuts && e.cuts.some(c => c.narrationJp || c.promptEn));
+        
+        let sharedScript: any = null;
+        let baseCutsData: any[] = [];
 
         const ratio = settings.videoRatio;
         const getIsSelected = (idx: number) => {
@@ -352,25 +340,89 @@ export function useStudioProduction({ settings, logs, addLog, refreshStories }: 
           return false;
         };
 
-        const rawCuts = Array.isArray(sharedScript.cuts) ? sharedScript.cuts : (Array.isArray(sharedScript.scenes) ? sharedScript.scenes : []);
-        const baseCutsData = Array.from({ length: CUTS_PER_EPISODE }, (_, j) => {
-          const cutData = rawCuts[j] || {};
-          const narration = cutData.narrationJp || cutData.narration || '';
-          const plot = cutData.basicPlot || cutData.promptEn || cutData.prompt || '';
-          const cutHighlights = cutData.highlights || sharedScript.highlightWords || [];
-          return {
-            id: j + 1,
-            narration,
-            plot,
-            isSelected: getIsSelected(j),
-            highlights: extractHighlights(narration, cutHighlights)
+        if (existingEp) {
+          // 既存エピソードから【画風名】等のプレフィックスを取り除いた純粋なタイトルを取得
+          const cleanTitleJp = existingEp.titleJp.replace(/^【.*?】\s*/, '');
+          addLog(`📖 画面上のエピソード『${cleanTitleJp}』の脚本（全${existingEp.cuts.length}カット）をそのまま各画風へ展開します！`, 'success');
+
+          sharedScript = {
+            titleJp: cleanTitleJp,
+            titleEn: existingEp.titleEn || 'The Story',
+            summary: existingEp.summary || '',
+            eraAnalysisJp: existingEp.eraAnalysis || '',
+            forbiddenAnachronisms: existingEp.forbiddenAnachronisms || [],
+            authenticAttireEn: existingEp.authenticAttireEn || '',
+            forbiddenKeywordsEn: existingEp.forbiddenKeywordsEn || '',
+            coverCatchphraseJp: existingEp.coverCatchphraseJp || '',
+            coverCatchphraseEn: existingEp.coverCatchphraseEn || '',
+            highlightWords: existingEp.highlightWords || []
           };
-        });
+
+          baseCutsData = existingEp.cuts.map((c, j) => ({
+            id: c.id,
+            narration: c.narrationJp,
+            plot: c.promptEn || c.scenePlot || '',
+            isSelected: c.isSelectedForVideo ?? getIsSelected(j),
+            highlights: c.telop?.highlights || extractHighlights(c.narrationJp, existingEp.highlightWords || [])
+          }));
+        } else {
+          // 画面にエピソードがない場合は、選択中のテーマに沿った本格脚本を新規策定
+          addLog(`📖 テーマ『${settings.theme}』に合わせた比較用脚本（12カット）をAIに執筆依頼中...`, 'process');
+          
+          const planPrompt = `Create a compelling episode 1 title and synopsis based on:
+Country: ${settings.country}
+Theme: ${settings.theme}
+Era: ${settings.era}
+Output JSON ONLY:
+{
+  "titleJp": "Japanese Episode Title",
+  "titleEn": "English Episode Title",
+  "summary": "Short 2-line summary"
+}`;
+          const planRes = await callWithRetry(
+            () => Flow.generate.text(planPrompt),
+            undefined, 4
+          );
+          const generatedPlan = safeJsonParse(planRes.text, {
+            titleJp: settings.theme.split('（')[0].replace(/^[^\w\s\u4e00-\u9faf]+/, '').trim() || '運命の物語',
+            titleEn: 'The Tale of Destiny',
+            summary: `${settings.theme}の世界観で描かれるドラマ`
+          });
+
+          const scriptPrompt = buildScriptPrompt(1, generatedPlan as any, settings.country, settings.theme, settings.era);
+          const scriptRes = await callWithRetry(
+            () => Flow.generate.text(scriptPrompt),
+            (attempt, max, delay) => addLog(`Retrying Script Plot (attempt ${attempt}/${max}) after ${delay} ms...`, 'warning'),
+            5
+          );
+          const parsed = safeJsonParse(scriptRes.text, { titleJp: generatedPlan.titleJp, titleEn: generatedPlan.titleEn, cuts: [] });
+          sharedScript = {
+            ...parsed,
+            titleJp: parsed.titleJp || generatedPlan.titleJp,
+            titleEn: parsed.titleEn || generatedPlan.titleEn
+          };
+          addLog(`✨ テーマに即した共通脚本が完成！『${sharedScript.titleJp}』（全${targetTastes.length}画風へ展開開始）`, 'success');
+
+          const rawCuts = Array.isArray(sharedScript.cuts) ? sharedScript.cuts : (Array.isArray(sharedScript.scenes) ? sharedScript.scenes : []);
+          baseCutsData = Array.from({ length: CUTS_PER_EPISODE }, (_, j) => {
+            const cutData = rawCuts[j] || {};
+            const narration = cutData.narrationJp || cutData.narration || '';
+            const plot = cutData.basicPlot || cutData.promptEn || cutData.prompt || '';
+            const cutHighlights = cutData.highlights || sharedScript.highlightWords || [];
+            return {
+              id: j + 1,
+              narration,
+              plot,
+              isSelected: getIsSelected(j),
+              highlights: extractHighlights(narration, cutHighlights)
+            };
+          });
+        }
 
         // 各画風のエピソードカードを並列展開
         const matrixEpisodes: Episode[] = targetTastes.map((tasteKey, idx) => {
           const epId = idx + 1;
-          const shortTaste = tasteKey.split(' ')[1] || tasteKey.slice(0, 10);
+          const shortTaste = tasteKey.split(' (')[0].trim();
           return {
             id: epId,
             internalId: crypto.randomUUID(),
@@ -395,8 +447,8 @@ export function useStudioProduction({ settings, logs, addLog, refreshStories }: 
             isPreviewDone: false,
             isDone: false,
             taste: tasteKey,
-            era: settings.era,
-            theme: settings.theme
+            era: existingEp?.era || settings.era,
+            theme: existingEp?.theme || settings.theme
           };
         });
         setEpisodes(matrixEpisodes);
@@ -406,7 +458,7 @@ export function useStudioProduction({ settings, logs, addLog, refreshStories }: 
           if (isAbortedRef.current) break;
           const epId = idx + 1;
           const tasteKey = targetTastes[idx];
-          const shortTaste = tasteKey.split(' ')[1] || tasteKey.slice(0, 10);
+          const shortTaste = tasteKey.split(' (')[0].trim();
 
           addLog(`🎨 [${idx + 1}/${targetTastes.length}] 画風「${shortTaste}」の描画タスクを開始...（先行${settings.previewCutCount}カット）`, 'process');
           const currentEp = matrixEpisodes[idx];

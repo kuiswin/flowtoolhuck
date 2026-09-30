@@ -64,9 +64,16 @@ async function main() {
       console.log(`✅ Changes committed: "Deploy FlowTool Bundle: ${timestamp}"`);
     }
 
+    // 最新コミットハッシュを記録した version.json を生成・コミット
+    const commitSha = run('git rev-parse HEAD').slice(0, 10);
+    fs.writeFileSync(path.join(rootDir, 'dist', 'version.json'), JSON.stringify({ commit: commitSha, time: Date.now() }, null, 2));
+    run('git add dist/version.json');
+    run('git commit --amend --no-edit');
+    console.log(`📌 Version pinned to commit: ${commitSha}`);
+
     // Push to GitHub
     console.log('\n📤 Step 3: Pushing to GitHub (origin/main)...');
-    run('git push -u origin main');
+    run('git push -u origin main --force');
     console.log('✅ Pushed successfully to GitHub!');
   } catch (err) {
     console.error('❌ Git operation failed:\n', err.stderr || err.stdout || err.message);
@@ -88,13 +95,12 @@ async function main() {
   }
 
   // 4. Output snippet for user
-  const ts = Date.now();
   console.log('\n====================================================');
   console.log('🎉 Deployment Complete!');
   console.log('====================================================');
   console.log('\nPaste the following into your Google Flow Tools DevTools Console:');
   console.log('----------------------------------------------------');
-  console.log(`fetch('https://api.github.com/repos/kuiswin/flowtoolhuck/commits/main').then(r=>r.json()).then(c=>c.sha||'main').catch(()=>'main').then(ref=>import(\`https://cdn.jsdelivr.net/gh/kuiswin/flowtoolhuck@\${ref}/dist/bundle.js?t=\${Date.now()}\`)).then(m=>m.mount(document.getElementById('root')||document.body));`);
+  console.log(`fetch('https://raw.githubusercontent.com/kuiswin/flowtoolhuck/main/dist/version.json?t=' + Date.now()).then(r => r.json()).then(v => import('https://cdn.jsdelivr.net/gh/kuiswin/flowtoolhuck@' + v.commit + '/dist/bundle.js?t=' + Date.now())).then(m => { const root = document.getElementById('root') || document.body; root.innerHTML = ''; m.mount(root); console.log('🚀 STUDIO PRO 最新版マウント完了！'); });`);
   console.log('----------------------------------------------------\n');
 }
 

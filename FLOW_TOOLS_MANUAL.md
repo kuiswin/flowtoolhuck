@@ -15,29 +15,13 @@ Flow Tools のプレビュー iframe は再読み込みやプロジェクト切�
 2. DevTools 上部の **「Sources（ソース）」** タブを選択。
 3. 左側ペインの **「Snippets」**（見当たらない場合は `>>` をクリック）を選択。
 4. **「+ New snippet」** をクリックし、名前に `mount-app` と入力。
-5. エディタ部分に以下のコードを貼り付けて保存（`Ctrl + S`）：
+5. プロジェクト直下の `MOUNT_COMMAND.js` を開いて中身をコピーし、スニペットに貼り付けて保存（`Ctrl + S`）：
 
 ```javascript
-// 1. 古い画面をクリア
-const root = document.getElementById('root') || document.body;
-root.innerHTML = '';
-
-// 2. GitHub Rawから最新コードを0秒直取得して動的マウント
-fetch(`https://raw.githubusercontent.com/kuiswin/flowtoolhuck/main/dist/bundle.js?t=${Date.now()}`)
-  .then(r => {
-    if (!r.ok) throw new Error('GitHubからの取得エラー: ' + r.status);
-    return r.text();
-  })
-  .then(code => {
-    const blob = new Blob([code], { type: 'application/javascript' });
-    return import(URL.createObjectURL(blob));
-  })
-  .then(m => {
-    m.mount(root);
-    console.log("🚀 STUDIO PRO (完全最新版) をマウントしました！");
-  })
-  .catch(err => console.error("マウントエラー:", err));
+import('https://cdn.jsdelivr.net/gh/kymMyLab/flowtoolhuck@85540742f3/dist/bundle.js').then(m => { const root = document.getElementById('root') || document.body; root.innerHTML = ''; m.mount(root); console.log('🚀 STUDIO PRO 完全最新版マウント完了！'); });
 ```
+
+> 💡 **ワンポイント**: デプロイを行うたびに、プロジェクト直下の `MOUNT_COMMAND.js` の中身が自動的に最新コミットハッシュへ自動更新されます。常にそのファイルを開いてコピーするだけで最新版が起動できます！
 
 ---
 

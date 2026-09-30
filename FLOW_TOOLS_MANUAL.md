@@ -18,12 +18,16 @@ Flow Tools のプレビュー iframe は再読み込みやプロジェクト切�
 5. エディタ部分に以下のコードを貼り付けて保存（`Ctrl + S`）：
 
 ```javascript
-import(`https://cdn.jsdelivr.net/gh/kuiswin/flowtoolhuck@main/dist/bundle.js?t=${Date.now()}`).then(m => {
-  m.mount(document.getElementById('root') || document.body);
-  console.log("🚀 STUDIO PRO をマウントしました！");
-}).catch(err => {
-  console.error("マウントエラー:", err);
-});
+fetch('https://api.github.com/repos/kuiswin/flowtoolhuck/commits/main')
+  .then(r => r.json())
+  .then(c => c.sha || 'main')
+  .catch(() => 'main')
+  .then(ref => import(`https://cdn.jsdelivr.net/gh/kuiswin/flowtoolhuck@${ref}/dist/bundle.js?t=${Date.now()}`))
+  .then(m => {
+    m.mount(document.getElementById('root') || document.body);
+    console.log("🚀 STUDIO PRO (最新版) をマウントしました！");
+  })
+  .catch(err => console.error("マウントエラー:", err));
 ```
 
 ---

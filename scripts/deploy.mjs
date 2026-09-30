@@ -94,7 +94,7 @@ async function main() {
   console.log('====================================================');
   console.log('\nPaste the following into your Google Flow Tools DevTools Console:');
   console.log('----------------------------------------------------');
-  console.log(`import('${JSDELIVR_URL}?t=${ts}').then(m => m.mount(document.getElementById('root')));`);
+  console.log(`fetch('https://api.github.com/repos/kuiswin/flowtoolhuck/commits/main').then(r=>r.json()).then(c=>c.sha||'main').catch(()=>'main').then(ref=>import(\`https://cdn.jsdelivr.net/gh/kuiswin/flowtoolhuck@\${ref}/dist/bundle.js?t=\${Date.now()}\`)).then(m=>m.mount(document.getElementById('root')||document.body));`);
   console.log('----------------------------------------------------\n');
 }
 

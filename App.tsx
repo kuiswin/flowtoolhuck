@@ -11,6 +11,7 @@ import { createLogMessage } from './services/utils';
 import { initDB, getAllStories, StoryRecord } from './services/db';
 import { downloadZip } from './services/exportService';
 import { useStudioProduction } from './services/useStudioProduction';
+import { extractHighlights } from './services/directorService';
 
 export default function App() {
   const [settings, setSettings] = useState<GeneratorSettings>({
@@ -45,8 +46,17 @@ export default function App() {
   }, [resumeSeries]);
 
   const updateCutWrapped = useCallback((epId: number, cutId: number, updates: Partial<Cut>) => {
-    updateCut(epId, cutId, updates);
-    setPreviewingCutData(prev => (prev && prev.epId === epId && prev.cut.id === cutId) ? { ...prev, cut: { ...prev.cut, ...updates } } : prev);
+    // ナレーションが更新された場合はテロップテキストとハイライトも自動同期
+    let finalUpdates = { ...updates };
+    if (updates.narrationJp !== undefined) {
+      const highlights = extractHighlights(updates.narrationJp);
+      finalUpdates.telop = {
+        fullText: updates.narrationJp,
+        highlights: highlights
+      };
+    }
+    updateCut(epId, cutId, finalUpdates);
+    setPreviewingCutData(prev => (prev && prev.epId === epId && prev.cut.id === cutId) ? { ...prev, cut: { ...prev.cut, ...finalUpdates } } : prev);
   }, [updateCut]);
 
   useEffect(() => {

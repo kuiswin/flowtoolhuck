@@ -4,6 +4,7 @@ import { PillButton, SectionLabel, TextInput, FieldDropdown, ToggleSwitch } from
 import { VOICE_CHARACTERS, CAMERA_WORK_OPTIONS, IMAGE_MODELS, KEN_BURNS_PRESETS, sanitizeFilename } from '../constants';
 import { Flow } from 'flow-sdk';
 import { callWithRetry } from '../services/utils';
+import { extractHighlights } from '../services/directorService';
 
 interface MediaPreviewModalProps {
     isOpen: boolean;
@@ -115,9 +116,9 @@ export const MediaPreviewModal: React.FC<MediaPreviewModalProps> = ({
         const highlights = cut.telop.highlights || [];
 
         return (
-            <div className="absolute bottom-[10%] left-0 w-full px-8 flex flex-col items-center pointer-events-none z-40 animate-in fade-in slide-in-from-bottom-4 duration-500">
-                {/* テロップ背景プレート（黒座布団） */}
-                <div className="bg-black/65 backdrop-blur-sm rounded-[24px] px-8 py-5 flex flex-wrap justify-center items-baseline gap-y-3 max-w-[620px] shadow-2xl border border-white/5">
+            <div className="absolute bottom-[6%] left-0 w-full px-6 flex flex-col items-center pointer-events-none z-40 animate-in fade-in slide-in-from-bottom-3 duration-300">
+                {/* テロップ背景プレート（洗練されたシネマ字幕バー） */}
+                <div className="bg-black/75 backdrop-blur-md rounded-xl px-5 py-3 flex flex-wrap justify-center items-baseline gap-y-1.5 max-w-[92%] shadow-2xl border border-white/10">
                     {text.split('').map((char, i) => {
                         const isKanji = /[\u4e00-\u9faf]/.test(char);
                         const highlight = highlights.find(h => {
@@ -125,18 +126,21 @@ export const MediaPreviewModal: React.FC<MediaPreviewModalProps> = ({
                            return startIdx !== -1 && i >= startIdx && i < startIdx + h.word.length;
                         });
                         
-                        const color = highlight ? (highlight.color || '#FFE600') : 'white';
-                        const scale = (isKanji ? 1.2 : 1.0) * (highlight ? highlight.sizeScale : 1.0);
+                        const color = highlight ? (highlight.color || '#FFE600') : '#FFFFFF';
+                        const scale = (isKanji ? 1.08 : 1.0) * (highlight ? highlight.sizeScale : 1.0);
 
                         return (
                             <span 
                                 key={i}
-                                className="impact-telop font-[900] tracking-tighter"
+                                className="font-[900] tracking-tight leading-snug select-none"
                                 style={{ 
                                     color: color, 
-                                    fontSize: `${scale * 3.2}rem`, 
+                                    fontSize: `${scale * 1.3}rem`, 
                                     display: 'inline-block',
-                                    margin: '0 4px' // 文字間マージン確保
+                                    margin: '0 1.5px',
+                                    textShadow: highlight 
+                                      ? '0 0 12px rgba(255, 230, 0, 0.6), 0 2px 4px rgba(0,0,0,0.9)' 
+                                      : '0 2px 4px rgba(0,0,0,0.9), 0 0 2px rgba(0,0,0,0.8)'
                                 }}
                             >
                                 {char}
@@ -208,7 +212,14 @@ export const MediaPreviewModal: React.FC<MediaPreviewModalProps> = ({
                             <SectionLabel>テロップ設定</SectionLabel>
                             <div className="bg-white/5 p-3 rounded-xl border border-white/5 flex flex-col gap-3">
                                 <ToggleSwitch label="字幕を表示する" checked={showTelop} onChange={setShowTelop} />
-                                <TextInput label="字幕テキスト" value={cut.telop?.fullText || ''} onChange={v => onUpdateCut({ telop: { ...cut.telop!, fullText: v } })} />
+                                <TextInput 
+                                  label="字幕テキスト" 
+                                  value={cut.telop?.fullText || ''} 
+                                  onChange={v => {
+                                    const highlights = extractHighlights(v);
+                                    onUpdateCut({ telop: { ...cut.telop!, fullText: v, highlights } });
+                                  }} 
+                                />
                                 {cut.telop?.highlights && cut.telop.highlights.length > 0 && (
                                     <div className="flex flex-wrap gap-1.5 mt-1">
                                         {cut.telop.highlights.map((h, i) => (

@@ -157,7 +157,7 @@ export const StudioSidebar: React.FC<StudioSidebarProps> = ({
         </div>
       </div>
 
-      <StudioLogs logs={logs} onAddLog={onAddLog} />
+      <StudioLogs logs={logs} onAddLog={onAddLog} isProducing={isProducing} />
     </div>
   );
 };

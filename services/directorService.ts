@@ -34,8 +34,41 @@ Output ONLY valid JSON:
 }
 
 /**
+ * ナレーションから強調すべき重要キーワード（2〜4文字の漢字熟語等）を抽出・確定
+ * （AIが指定した単語を優先し、万が一空でもナレーション内の重要熟語を自動検出して絶対に色付けを失わせない）
+ */
+export function extractHighlights(narrationText: string, suggestedWords: string[] = []): Array<{ word: string; color: string; sizeScale: number }> {
+  if (!narrationText) return [];
+  const validHighlights: Array<{ word: string; color: string; sizeScale: number }> = [];
+
+  // 1. AIが明示的に指定した単語（ナレーション内に実在するもの）を優先
+  for (const rawWord of suggestedWords) {
+    const word = (rawWord || '').trim();
+    if (word && narrationText.includes(word) && word.length >= 2 && word.length <= 4) {
+      if (!validHighlights.some(h => h.word === word)) {
+        validHighlights.push({ word, color: '#FFE600', sizeScale: 1.15 });
+      }
+    }
+  }
+
+  // 2. もしAIの指定が合致しなかった場合の自動検出（ナレーション中の漢字2〜4文字熟語）
+  if (validHighlights.length === 0) {
+    const kanjiMatches = narrationText.match(/[\u4e00-\u9faf]{2,4}/g);
+    if (kanjiMatches && kanjiMatches.length > 0) {
+      // 助詞や記号を避けた有力な熟語を最大2つピックアップ
+      const candidates = Array.from(new Set(kanjiMatches)).filter(w => w.length >= 2 && w.length <= 4);
+      for (const word of candidates.slice(0, 2)) {
+        validHighlights.push({ word, color: '#FFE600', sizeScale: 1.15 });
+      }
+    }
+  }
+
+  return validHighlights;
+}
+
+/**
  * 各話の脚本（12カット分）および時代考証をAIに動的生成させるプロンプト
- * （固定辞書を全廃し、Geminiに時代考証・衣装・NG要素をその場で考証させる）
+ * （固定辞書を全廃し、Geminiに時代考証・衣装・NG要素およびカットごとの金文字強調キーワードを生成させる）
  */
 export function buildScriptPrompt(epId: number, currentPlan: SeriesEpisodePlan, era: string, country: string, theme: string): string {
   return `You are a world-class historical drama director and historical researcher.
@@ -44,6 +77,9 @@ Setting: "${country}", Era: "${era}", Theme: "${theme}".
 
 STRICT HISTORICAL ACCURACY:
 Dynamically analyze "${era}" and "${country}". Determine authentic period attire and identify modern anachronisms that must NEVER appear.
+
+CRITICAL SUBTITLE HIGHLIGHTS:
+For EACH cut, select 1 to 2 dramatic key terms (2 to 4 characters each, EXACTLY present in narrationJp) for the "highlights" array to be highlighted in gold text.
 
 Output ONLY valid JSON matching this exact structure:
 {
@@ -55,9 +91,14 @@ Output ONLY valid JSON matching this exact structure:
   "forbiddenKeywordsEn": "Comma-separated English negative keywords for anachronisms that must NEVER appear in ${era} (e.g. smartphones, wristwatches, modern glasses, sneakers, modern clothing, electricity poles, asphalt)",
   "forbiddenAnachronisms": ["日本語の禁止要素1", "日本語の禁止要素2"],
   "coverCatchphraseJp": "超ド迫力キャッチコピー",
-  "highlightWords": ["キーワード1", "キーワード2"],
+  "highlightWords": ["代表キーワード1", "代表キーワード2"],
   "cuts": [
-    { "id": 1, "basicPlot": "Cinematic visual description of the cut in English", "narrationJp": "重厚なナレーション（日本語）" }
+    { 
+      "id": 1, 
+      "basicPlot": "Cinematic visual description of the cut in English", 
+      "narrationJp": "重厚なナレーション（日本語）",
+      "highlights": ["重要語1", "重要語2"]
+    }
   ]
 }`;
 }

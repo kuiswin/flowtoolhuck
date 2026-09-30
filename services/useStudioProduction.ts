@@ -11,7 +11,8 @@ import {
   buildImagePromptAndNegative, 
   buildCharacterScreeningPrompt, 
   buildGrandDesignPrompt, 
-  buildScriptPrompt 
+  buildScriptPrompt,
+  extractHighlights
 } from './directorService';
 import { LogEntry } from '../components/StudioLogs';
 
@@ -195,6 +196,7 @@ export function useStudioProduction({ settings, logs, addLog, refreshStories }: 
         const task = queueRef.current.shift();
         if (!task) break;
         updateCut(task.epId, task.cutId, { isDirecting: true });
+        addLog(`🎬 Ep.${task.epId} C${task.cutId.toString().padStart(2, '0')}: 構図演出・プロンプト最適化中...`, 'info');
         const directedUpdates = await directShot(task, settings, activeReferenceRef.current, lastAssignedScale, addLog);
         if (directedUpdates.shotScale) lastAssignedScale = directedUpdates.shotScale;
         updateCut(task.epId, task.cutId, directedUpdates);
@@ -208,7 +210,7 @@ export function useStudioProduction({ settings, logs, addLog, refreshStories }: 
     if (isAbortedRef.current) return;
     const { epId, cutId } = task;
     updateCut(epId, cutId, { isGeneratingImage: true });
-    addLog(`🎨 Ep.${epId} C${cutId.toString().padStart(2, '0')}: 画像生成中...`, 'info');
+    addLog(`🎨 Ep.${epId} C${cutId.toString().padStart(2, '0')}: 画像生成中 [${settings.imageModel}]...`, 'process');
 
     try {
       const modelInfo = IMAGE_MODELS.find(m => m.label === settings.imageModel) || IMAGE_MODELS[1];
@@ -319,7 +321,7 @@ export function useStudioProduction({ settings, logs, addLog, refreshStories }: 
 
     try {
       if (!seriesManifestRef.current) {
-        addLog(`📜 全${settings.episodeCount}話の大河ドラマグランドデザインを策定中...`, 'process');
+        addLog(`📜 全${settings.episodeCount}話の大河ドラマグランドデザインをAIに策定依頼中... [国: ${settings.country} / 時代: ${settings.era}]`, 'process');
         const designPrompt = buildGrandDesignPrompt(settings.episodeCount, settings.country, settings.era, settings.theme);
         const designRes = await callWithRetry(
           () => Flow.generate.text(designPrompt),
@@ -362,7 +364,7 @@ export function useStudioProduction({ settings, logs, addLog, refreshStories }: 
           theme: settings.theme
         }));
         setEpisodes(initialEpisodes);
-        addLog(`🏛️ 設計図「${design.seriesTitle}」を策定しました。`, 'success');
+        addLog(`🏛️ シリーズ設計図「${design.seriesTitle}」策定完了！（全${design.episodesPlan.length}話のプロット確定）`, 'success');
       }
 
       const manifest = seriesManifestRef.current!;
@@ -374,7 +376,7 @@ export function useStudioProduction({ settings, logs, addLog, refreshStories }: 
         const currentPlan = manifest.episodesPlan[i];
 
         try {
-          addLog(`📝 第 ${epId} 話『${currentPlan.titleJp}』の脚本をプロット中...`, 'process');
+          addLog(`📖 【第${epId}話】「${currentPlan.titleJp}」の脚本・時代考証をAIに執筆依頼中...`, 'process');
           updateEpisode(epId, { isGenerating: true });
 
           const scriptPrompt = buildScriptPrompt(epId, currentPlan, settings.era, settings.country, settings.theme);
@@ -385,6 +387,7 @@ export function useStudioProduction({ settings, logs, addLog, refreshStories }: 
           );
 
           const sharedScript = safeJsonParse(scriptRes.text, { titleJp: currentPlan.titleJp, titleEn: currentPlan.titleEn, cuts: [] });
+          addLog(`✨ 【第${epId}話】脚本＆時代考証が完成！（考証: ${sharedScript.eraAnalysisJp?.slice(0, 24) || '完了'}...）`, 'success');
 
           const ratio = settings.videoRatio;
           const getIsSelected = (idx: number) => {
@@ -402,9 +405,11 @@ export function useStudioProduction({ settings, logs, addLog, refreshStories }: 
             const narration = cutData.narrationJp || cutData.narration || '';
             const plot = cutData.basicPlot || cutData.promptEn || cutData.prompt || '';
             const cut = createDefaultCut(j + 1, narration, plot, getIsSelected(j));
-            if (sharedScript.highlightWords && sharedScript.highlightWords.length > 0) {
-              cut.telop.highlights = sharedScript.highlightWords.map((w: string) => ({ word: w, color: '#FFE600', sizeScale: 1.15 }));
-            }
+            
+            // AI指定のハイライト、またはエピソード代表キーワード、または漢字熟語自動抽出を適用
+            const cutHighlights = cutData.highlights || sharedScript.highlightWords || [];
+            cut.telop.highlights = extractHighlights(narration, cutHighlights);
+
             return cut;
           });
 
@@ -425,11 +430,13 @@ export function useStudioProduction({ settings, logs, addLog, refreshStories }: 
             theme: settings.theme
           });
 
+          addLog(`🎨 【第${epId}話】先行プレビュー ${settings.previewCutCount} カットの描画タスクを開始...（並列度: ${settings.parallelCount}）`, 'process');
           const tasks: GenerationTask[] = episodeCuts.slice(0, settings.previewCutCount).map(c => ({
             epId, cutId: c.id, prompt: c.promptEn, styleKey: settings.taste, imageModel: settings.imageModel, storyContext: sharedScript.summary || '', eraAnalysis: sharedScript.eraAnalysisJp, forbiddenAnachronisms: sharedScript.forbiddenAnachronisms, authenticAttireEn: sharedScript.authenticAttireEn, forbiddenKeywordsEn: sharedScript.forbiddenKeywordsEn
           }));
 
           await runTasks(tasks);
+          addLog(`🎉 【第${epId}話】「${currentPlan.titleJp}」の先行プレビュー制作が完了しました！`, 'success');
 
           const cutsToAnimate = episodeCuts.filter(c => c.isSelectedForVideo);
           if ((settings.autoVideo || settings.videoRatio !== 'none') && cutsToAnimate.length > 0 && !isAbortedRef.current) {

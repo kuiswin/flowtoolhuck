@@ -205,7 +205,7 @@ export async function directShot(
   ];
 
   const preset = CINEMATIC_SHOT_PRESETS[(cutId - 1) % CINEMATIC_SHOT_PRESETS.length];
-  const kenBurnsPresets: KenBurnsPreset[] = ['zoomIn', 'zoomOut', 'panLeft', 'panRight', 'subtleZoom', 'panDiagonal'];
+  const kenBurnsPresets: KenBurnsPreset[] = ['zoom-in', 'zoom-out', 'pan-left', 'pan-right', 'tilt-up', 'tilt-down'];
   const kbPreset = kenBurnsPresets[(cutId - 1) % kenBurnsPresets.length];
 
   const directorPrompt = `You are a film director designing a visual shot for a historical drama.

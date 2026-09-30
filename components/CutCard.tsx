@@ -1,5 +1,6 @@
 import React from 'react';
 import { Cut, VideoModelType, RecommendationModel } from '../types';
+import { normalizeKenBurnsPreset } from '../services/browserVideoService';
 
 interface CutCardProps {
   cut: Cut;
@@ -41,8 +42,10 @@ export const CutCard: React.FC<CutCardProps> = ({
   };
 
   const getKenBurnsClass = () => {
-    if (videoSrc || !imageSrc || !cut.kenBurnsPreset || cut.kenBurnsPreset === 'none') return '';
-    return `animate-ken-burns-${cut.kenBurnsPreset}`;
+    if (videoSrc || !imageSrc) return '';
+    const preset = normalizeKenBurnsPreset(cut.kenBurnsPreset);
+    if (preset === 'none') return '';
+    return `animate-ken-burns-${preset}`;
   };
 
   return (

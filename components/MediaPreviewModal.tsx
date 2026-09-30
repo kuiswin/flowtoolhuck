@@ -5,6 +5,7 @@ import { VOICE_CHARACTERS, CAMERA_WORK_OPTIONS, IMAGE_MODELS, KEN_BURNS_PRESETS,
 import { Flow } from 'flow-sdk';
 import { callWithRetry } from '../services/utils';
 import { extractHighlights } from '../services/directorService';
+import { normalizeKenBurnsPreset } from '../services/browserVideoService';
 
 interface MediaPreviewModalProps {
     isOpen: boolean;
@@ -145,8 +146,10 @@ export const MediaPreviewModal: React.FC<MediaPreviewModalProps> = ({
     const isVeoRec = cut.targetVideoModel === 'veo-lite';
 
     const getKenBurnsClass = () => {
-        if (videoSrc || !imageSrc || !cut.kenBurnsPreset || cut.kenBurnsPreset === 'none') return '';
-        return `animate-ken-burns-${cut.kenBurnsPreset}`;
+        if (videoSrc || !imageSrc) return '';
+        const preset = normalizeKenBurnsPreset(cut.kenBurnsPreset);
+        if (preset === 'none') return '';
+        return `animate-ken-burns-${preset}`;
     };
 
     const renderTelopContent = () => {
@@ -352,7 +355,7 @@ export const MediaPreviewModal: React.FC<MediaPreviewModalProps> = ({
 
                             <div className="grid grid-cols-2 gap-2">
                                 <FieldDropdown label="カメラワーク" value={CAMERA_WORK_OPTIONS.find(o => o.value === cut.cameraMotion)?.label || CAMERA_WORK_OPTIONS[0].label} options={CAMERA_WORK_OPTIONS.map(o => o.label)} onChange={l => onUpdateCut({ cameraMotion: CAMERA_WORK_OPTIONS.find(o => l === o.label)?.value })} />
-                                <FieldDropdown label="ケンバーン演出" value={KEN_BURNS_PRESETS.find(p => p.value === cut.kenBurnsPreset)?.label || KEN_BURNS_PRESETS[0].label} options={KEN_BURNS_PRESETS.map(p => p.label)} onChange={l => onUpdateCut({ kenBurnsPreset: KEN_BURNS_PRESETS.find(p => p.label === l)?.value as KenBurnsPreset })} />
+                                <FieldDropdown label="ケンバーン演出" value={KEN_BURNS_PRESETS.find(p => p.value === normalizeKenBurnsPreset(cut.kenBurnsPreset))?.label || KEN_BURNS_PRESETS[0].label} options={KEN_BURNS_PRESETS.map(p => p.label)} onChange={l => onUpdateCut({ kenBurnsPreset: KEN_BURNS_PRESETS.find(p => p.label === l)?.value as KenBurnsPreset })} />
                             </div>
 
                             <TextInput label="画像プロンプト (EN)" value={cut.promptEn || ''} onChange={v => onUpdateCut({ promptEn: v })} />

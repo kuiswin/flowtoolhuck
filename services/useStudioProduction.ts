@@ -4,8 +4,7 @@ import { Episode, Cut, GeneratorSettings, VideoModelType, GenerationTask, Series
 import { IMAGE_MODELS, VIDEO_MODELS, DEFAULT_ASPECT_RATIO, CUTS_PER_EPISODE, TASTES } from '../constants';
 import { safeJsonParse, callWithRetry, formatErrorMessage, createDefaultCut } from './utils';
 import { saveStory, getAllReferenceAssets, saveReferenceAsset } from './db';
-import { renderKenBurnsVideo, renderFullEpisodeMovie } from './browserVideoService';
-import { downloadZip, downloadManifestFile } from './exportService';
+import { downloadZip } from './exportService';
 import { 
   directShot, 
   buildImagePromptAndNegative, 
@@ -624,7 +623,6 @@ Output JSON ONLY:
           if (settings.autoDownload && !isAbortedRef.current) {
             await downloadZip(freshEp, addLog, manifest, logsRef.current);
           }
-          await downloadManifestFile(manifest, addLog);
           await saveStory({ titleJp: freshEp.titleJp, titleEn: freshEp.titleEn, country: settings.country, era: settings.era, theme: settings.theme, protagonistSummary: freshEp.summary || '', createdAt: new Date().toISOString() });
         } catch (epErr: any) {
           addLog(`⚠️ 第 ${epId} 話の生成中にエラーが発生しました。スキップして次へ進みます: ${formatErrorMessage(epErr)}`, 'warning');

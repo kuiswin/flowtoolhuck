@@ -72,3 +72,48 @@ body {
   -ms-overflow-style: none;
   scrollbar-width: none;
 }
+
+/* ケンバーンズ効果 (Ken Burns Animation) */
+@keyframes kb-zoom-in {
+  0% { transform: scale(1); }
+  100% { transform: scale(1.15); }
+}
+@keyframes kb-zoom-out {
+  0% { transform: scale(1.15); }
+  100% { transform: scale(1); }
+}
+@keyframes kb-pan-left {
+  0% { transform: scale(1.12) translateX(4%); }
+  100% { transform: scale(1.12) translateX(-4%); }
+}
+@keyframes kb-pan-right {
+  0% { transform: scale(1.12) translateX(-4%); }
+  100% { transform: scale(1.12) translateX(4%); }
+}
+@keyframes kb-tilt-up {
+  0% { transform: scale(1.12) translateY(4%); }
+  100% { transform: scale(1.12) translateY(-4%); }
+}
+@keyframes kb-tilt-down {
+  0% { transform: scale(1.12) translateY(-4%); }
+  100% { transform: scale(1.12) translateY(4%); }
+}
+
+.animate-ken-burns-zoom-in {
+  animation: kb-zoom-in 8s ease-in-out infinite alternate !important;
+}
+.animate-ken-burns-zoom-out {
+  animation: kb-zoom-out 8s ease-in-out infinite alternate !important;
+}
+.animate-ken-burns-pan-left {
+  animation: kb-pan-left 8s ease-in-out infinite alternate !important;
+}
+.animate-ken-burns-pan-right {
+  animation: kb-pan-right 8s ease-in-out infinite alternate !important;
+}
+.animate-ken-burns-tilt-up {
+  animation: kb-tilt-up 8s ease-in-out infinite alternate !important;
+}
+.animate-ken-burns-tilt-down {
+  animation: kb-tilt-down 8s ease-in-out infinite alternate !important;
+}

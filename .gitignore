@@ -25,6 +25,19 @@ yarn-error.log*
 # Temporary scratch repo
 scratch_repo/
 
+# Secrets & Credentials
+.env
+.env.*
+*.env
+*.pem
+*.key
+*.p12
+*.pfx
+credentials*.json
+service-account*.json
+token*.json
+auth*.json
+
 # Dist directory:
 # IMPORTANT: dist/bundle.js must be committed to GitHub so jsDelivr can serve it.
 # Do NOT ignore dist/!

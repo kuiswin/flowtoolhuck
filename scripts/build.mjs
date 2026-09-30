@@ -3,10 +3,12 @@ import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 
+import os from 'os';
+
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const sourceDir = path.resolve(__dirname, '..');
-const localBuildDir = 'C:\\Users\\you-1\\.flowtool_build';
+const localBuildDir = path.join(os.homedir(), '.flowtool_build');
 
 function log(msg) {
   console.log(`[Build Engine] ${msg}`);

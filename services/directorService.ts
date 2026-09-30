@@ -141,7 +141,7 @@ export function buildImagePromptAndNegative(
   // アニメ・イラスト系の場合のネガティブ自動付与
   const isIllustration = styleKey.includes('アニメ') || styleKey.includes('イラスト') || styleKey.includes('マンガ') || styleKey.includes('セル画');
   const illustrationNegative = isIllustration ? 'photorealistic, realistic photo, hyperrealistic photograph, 3d render, cgi, ' : '';
-  const baselineNegative = `${illustrationNegative}pixel art, 8-bit, 16-bit, lowres, worst quality, text, watermark, signature, blurry`;
+  const baselineNegative = `${illustrationNegative}frame, border, picture frame, ornate frame, arch frame, decorative border, pixel art, 8-bit, 16-bit, lowres, worst quality, text, watermark, signature, blurry`;
 
   // AIが動的考証した時代衣装・除外ワード
   const dynamicAttire = authenticAttireEn ? `[PERIOD ATTIRE: ${authenticAttireEn}]` : '';

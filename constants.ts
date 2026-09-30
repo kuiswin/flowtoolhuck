@@ -116,9 +116,9 @@ export const TASTES: Record<string, string> = {
   "🖋️ 白黒劇画・超絶インクマンガ (Intense Monochrome Manga)":
     "Dramatic monochrome manga aesthetic, aggressive dry ink brush strokes, intense screentone crosshatching, extreme chiaroscuro contrast, dynamic single splash cut, no panels, gritty realism, high-impact black and white artwork",
 
-  // 11. アール・ヌーヴォー油彩（ミュシャ調装飾・宮廷絵画）
+  // 11. アール・ヌーヴォー油彩（優美な曲線美・宮廷絵画）
   "👑 アール・ヌーヴォー油彩・宮廷エレガンス (Art Nouveau Classical Oil Painting)":
-    "Masterpiece fine art oil painting, Alphonse Mucha inspired Art Nouveau aesthetic, John William Waterhouse romanticism, ornate circular arch window frame with intricate golden filigree and stained glass motifs, delicate translucent sheer lace and silk drapery, luminous subsurface scattering on porcelain skin, elegant aristocratic profile, soft diffused museum lighting, rich muted amber and cyan palette, timeless classical masterpiece"
+    "Masterpiece fine art classical oil painting, elegant Art Nouveau aesthetic, romantic classical realism, seamless full-bleed composition without frame or borders, flowing organic decorative curves and subtle botanical motifs gently blended into the background, delicate translucent sheer lace and silk drapery, luminous porcelain skin, soft diffused museum lighting, rich muted amber and cyan oil palette, timeless classical masterpiece, absolutely NO decorative frame, NO border, NO window arch, edge-to-edge artwork"
 };
 
 export const IMAGE_MODELS = [

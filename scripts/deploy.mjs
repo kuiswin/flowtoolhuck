@@ -7,10 +7,10 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const rootDir = path.resolve(__dirname, '..');
 
-const REPO_SSH = 'git@github.com:kuiswin/flowtoolhuck.git';
+const REPO_SSH = 'git@github.com:kymMyLab/flowtoolhuck.git';
 const BUNDLE_PATH = path.join(rootDir, 'dist', 'bundle.js');
-const JSDELIVR_URL = 'https://cdn.jsdelivr.net/gh/kuiswin/flowtoolhuck@main/dist/bundle.js';
-const PURGE_URL = 'https://purge.jsdelivr.net/gh/kuiswin/flowtoolhuck@main/dist/bundle.js';
+const JSDELIVR_URL = 'https://cdn.jsdelivr.net/gh/kymMyLab/flowtoolhuck@main/dist/bundle.js';
+const PURGE_URL = 'https://purge.jsdelivr.net/gh/kymMyLab/flowtoolhuck@main/dist/bundle.js';
 
 function run(cmd, options = {}) {
   return execSync(cmd, { cwd: rootDir, stdio: 'pipe', encoding: 'utf-8', ...options }).trim();
@@ -100,7 +100,7 @@ async function main() {
   console.log('====================================================');
   console.log('\nPaste the following into your Google Flow Tools DevTools Console:');
   console.log('----------------------------------------------------');
-  console.log(`fetch('https://raw.githubusercontent.com/kuiswin/flowtoolhuck/main/dist/bundle.js?t=' + Date.now()).then(r => r.text()).then(code => import(URL.createObjectURL(new Blob([code], { type: 'application/javascript' })))).then(m => { const root = document.getElementById('root') || document.body; root.innerHTML = ''; m.mount(root); console.log('🚀 STUDIO PRO 完全最新版マウント完了！'); });`);
+  console.log(`import('https://cdn.jsdelivr.net/gh/kymMyLab/flowtoolhuck@${commitSha}/dist/bundle.js').then(m => { const root = document.getElementById('root') || document.body; root.innerHTML = ''; m.mount(root); console.log('🚀 STUDIO PRO 完全最新版マウント完了！'); });`);
   console.log('----------------------------------------------------\n');
 }
 

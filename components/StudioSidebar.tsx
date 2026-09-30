@@ -143,8 +143,8 @@ export const StudioSidebar: React.FC<StudioSidebarProps> = ({
              <NumberChoice 
                label={settings.productionMode === 'style-matrix' ? '比較画風数' : '生成話数'} 
                value={settings.episodeCount} 
-               options={settings.productionMode === 'style-matrix' ? [3, 5, 8] : [1, 5, 10, 20, 50]} 
-               unit={settings.productionMode === 'style-matrix' ? '種' : '話'} 
+               options={settings.productionMode === 'style-matrix' ? [3, 5, 8, 11] : [1, 5, 10, 20, 50]} 
+               formatLabel={v => settings.productionMode === 'style-matrix' && v === 11 ? '11種 (全)' : `${v}${settings.productionMode === 'style-matrix' ? '種' : '話'}`}
                onChange={v => setSettings(s => ({ ...s, episodeCount: v }))} 
              />
           </div>

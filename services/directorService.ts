@@ -209,7 +209,8 @@ Output ONLY valid JSON:
 
   try {
     const res = await Flow.generate.text(directorPrompt);
-    const parsed = safeJsonParse(res);
+    const resText = typeof res === 'string' ? res : (res?.text || res);
+    const parsed = safeJsonParse<any>(resText, {});
     if (parsed && parsed.enhancedPrompt) {
       return {
         promptEn: parsed.enhancedPrompt,

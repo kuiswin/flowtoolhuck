@@ -1,5 +1,26 @@
-export function safeJsonParse<T>(text: string, defaultValue: T): T {
-  if (!text || !text.trim() || !text.includes('{')) {
+export function safeJsonParse<T>(raw: any, defaultValue: T = {} as T): T {
+  if (!raw) return defaultValue;
+
+  // すでにパース済みのオブジェクトであればそのまま返す
+  if (typeof raw === 'object' && raw !== null && !('text' in raw)) {
+    return raw as T;
+  }
+
+  // 文字列の抽出
+  let text = '';
+  if (typeof raw === 'string') {
+    text = raw;
+  } else if (typeof raw === 'object' && raw !== null && typeof raw.text === 'string') {
+    text = raw.text;
+  } else {
+    try {
+      text = String(raw);
+    } catch {
+      return defaultValue;
+    }
+  }
+
+  if (!text || typeof text !== 'string' || !text.trim() || !text.includes('{')) {
     return defaultValue;
   }
 
@@ -8,7 +29,7 @@ export function safeJsonParse<T>(text: string, defaultValue: T): T {
     const firstBrace = cleanText.indexOf('{');
     const lastBrace = cleanText.lastIndexOf('}');
     
-    if (firstBrace === -1 || lastBrace === -1) {
+    if (firstBrace === -1 || lastBrace === -1 || lastBrace < firstBrace) {
       return defaultValue;
     }
     

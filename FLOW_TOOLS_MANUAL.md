@@ -18,14 +18,23 @@ Flow Tools のプレビュー iframe は再読み込みやプロジェクト切�
 5. エディタ部分に以下のコードを貼り付けて保存（`Ctrl + S`）：
 
 ```javascript
-fetch('https://api.github.com/repos/kuiswin/flowtoolhuck/commits/main')
-  .then(r => r.json())
-  .then(c => c.sha || 'main')
-  .catch(() => 'main')
-  .then(ref => import(`https://cdn.jsdelivr.net/gh/kuiswin/flowtoolhuck@${ref}/dist/bundle.js?t=${Date.now()}`))
+// 1. 古い画面をクリア
+const root = document.getElementById('root') || document.body;
+root.innerHTML = '';
+
+// 2. GitHub Rawから最新コードを0秒直取得して動的マウント
+fetch(`https://raw.githubusercontent.com/kuiswin/flowtoolhuck/main/dist/bundle.js?t=${Date.now()}`)
+  .then(r => {
+    if (!r.ok) throw new Error('GitHubからの取得エラー: ' + r.status);
+    return r.text();
+  })
+  .then(code => {
+    const blob = new Blob([code], { type: 'application/javascript' });
+    return import(URL.createObjectURL(blob));
+  })
   .then(m => {
-    m.mount(document.getElementById('root') || document.body);
-    console.log("🚀 STUDIO PRO (最新版) をマウントしました！");
+    m.mount(root);
+    console.log("🚀 STUDIO PRO (完全最新版) をマウントしました！");
   })
   .catch(err => console.error("マウントエラー:", err));
 ```

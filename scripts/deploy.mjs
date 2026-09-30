@@ -100,7 +100,7 @@ async function main() {
   console.log('====================================================');
   console.log('\nPaste the following into your Google Flow Tools DevTools Console:');
   console.log('----------------------------------------------------');
-  console.log(`fetch('https://raw.githubusercontent.com/kuiswin/flowtoolhuck/main/dist/version.json?t=' + Date.now()).then(r => r.json()).then(v => import('https://cdn.jsdelivr.net/gh/kuiswin/flowtoolhuck@' + v.commit + '/dist/bundle.js?t=' + Date.now())).then(m => { const root = document.getElementById('root') || document.body; root.innerHTML = ''; m.mount(root); console.log('🚀 STUDIO PRO 最新版マウント完了！'); });`);
+  console.log(`fetch('https://raw.githubusercontent.com/kuiswin/flowtoolhuck/main/dist/bundle.js?t=' + Date.now()).then(r => r.text()).then(code => import(URL.createObjectURL(new Blob([code], { type: 'application/javascript' })))).then(m => { const root = document.getElementById('root') || document.body; root.innerHTML = ''; m.mount(root); console.log('🚀 STUDIO PRO 完全最新版マウント完了！'); });`);
   console.log('----------------------------------------------------\n');
 }
 

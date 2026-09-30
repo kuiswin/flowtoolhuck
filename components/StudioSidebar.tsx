@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { SectionLabel, PillButton, FieldDropdown, SegmentedToggle, ToggleSwitch } from './Primitives';
+import { SectionLabel, PillButton, FieldDropdown, SegmentedToggle, ToggleSwitch, NumberChoice } from './Primitives';
 import { GeneratorSettings, ReferenceAsset } from '../types';
-import { THEMES, TASTES, IMAGE_MODELS, PARALLEL_OPTIONS, EPISODE_COUNT_OPTIONS, VIDEO_RATIO_OPTIONS, PREVIEW_COUNT_OPTIONS } from '../constants';
+import { THEMES, TASTES, IMAGE_MODELS, VIDEO_RATIO_OPTIONS } from '../constants';
 import { StudioLogs, LogEntry } from './StudioLogs';
 import { ReferenceVault } from './ReferenceVault';
 import { getAllReferenceAssets } from '../services/db';
@@ -120,7 +120,7 @@ export const StudioSidebar: React.FC<StudioSidebarProps> = ({
         
         <FieldDropdown 
           label="画風・テイスト" 
-          value={settings.selectedAssetId ? '🎨 参照画像の画風同期中' : settings.taste} 
+          value={settings.productionMode === 'style-matrix' ? '🎨 全画風マトリクス比較（自動）' : (settings.selectedAssetId ? '🎨 参照画像の画風同期中' : settings.taste)} 
           options={Object.keys(TASTES)} 
           onChange={v => setSettings(s => ({ ...s, taste: v }))} 
           disabled={isProducing || settings.productionMode === 'style-matrix' || !!settings.selectedAssetId} 
@@ -131,11 +131,23 @@ export const StudioSidebar: React.FC<StudioSidebarProps> = ({
           <FieldDropdown label="画像モデル" value={settings.imageModel} options={IMAGE_MODELS.map(m => m.label)} onChange={v => setSettings(s => ({ ...s, imageModel: v }))} disabled={isProducing} />
           
           <div className="grid grid-cols-2 gap-2">
-             <SegmentedToggle label="並列数" value={String(settings.parallelCount)} onChange={v => setSettings(s => ({ ...s, parallelCount: Number(v) }))} items={PARALLEL_OPTIONS} />
-             <SegmentedToggle label="生成話数" value={String(settings.episodeCount)} onChange={v => setSettings(s => ({ ...s, episodeCount: Number(v) }))} items={EPISODE_COUNT_OPTIONS} />
+             <NumberChoice label="並列数" value={settings.parallelCount} options={[1, 2, 3, 4]} onChange={v => setSettings(s => ({ ...s, parallelCount: v }))} />
+             <NumberChoice 
+               label={settings.productionMode === 'style-matrix' ? '比較画風数' : '生成話数'} 
+               value={settings.episodeCount} 
+               options={settings.productionMode === 'style-matrix' ? [3, 5, 8] : [1, 5, 10, 20, 50]} 
+               unit={settings.productionMode === 'style-matrix' ? '種' : '話'} 
+               onChange={v => setSettings(s => ({ ...s, episodeCount: v }))} 
+             />
           </div>
 
-          <SegmentedToggle label="生成カット数" value={String(settings.previewCutCount)} onChange={v => setSettings(s => ({ ...s, previewCutCount: Number(v) }))} items={PREVIEW_COUNT_OPTIONS} />
+          <NumberChoice 
+            label="生成カット数" 
+            value={settings.previewCutCount} 
+            options={[1, 3, 5, 12]} 
+            formatLabel={v => v === 12 ? '12枚 (全)' : `${v}枚`} 
+            onChange={v => setSettings(s => ({ ...s, previewCutCount: v }))} 
+          />
           <SegmentedToggle label="動画化する割合" value={settings.videoRatio} onChange={v => setSettings(s => ({ ...s, videoRatio: v as any }))} items={VIDEO_RATIO_OPTIONS} />
 
           <div className="flex flex-col bg-white/5 rounded-xl p-1.5 border border-white/5 gap-1">

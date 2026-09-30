@@ -150,6 +150,33 @@ export const SegmentedToggle: React.FC<{
   </div>
 );
 
+export const NumberChoice: React.FC<{
+  label: string;
+  value: number;
+  options: number[];
+  unit?: string;
+  onChange: (val: number) => void;
+  formatLabel?: (val: number) => string;
+}> = ({ label, value, options, unit = '', onChange, formatLabel }) => (
+  <div className="flex flex-col gap-1 w-full">
+    <p className="text-[11px] font-medium text-[rgba(255,255,255,0.35)] tracking-[0.1px] px-2">{label}</p>
+    <div className="flex w-full items-center border border-[#595959] rounded-xl overflow-hidden bg-transparent">
+      {options.map((num) => (
+        <button
+          key={num}
+          type="button"
+          onClick={() => onChange(num)}
+          className={`flex-1 flex items-center justify-center h-[34px] text-[11px] font-bold tracking-[0.1px] transition-all cursor-pointer ${
+            value === num ? 'bg-[#969696] text-black font-black' : 'text-[rgba(218,220,224,0.75)] hover:text-white hover:bg-white/5'
+          }`}
+        >
+          <span>{formatLabel ? formatLabel(num) : `${num}${unit}`}</span>
+        </button>
+      ))}
+    </div>
+  </div>
+);
+
 export const ToggleSwitch: React.FC<{
   label: string; checked: boolean; onChange: (val: boolean) => void;
 }> = ({ label, checked, onChange }) => (

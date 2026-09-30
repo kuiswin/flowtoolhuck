@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { Flow } from 'flow-sdk';
 import { Episode, Cut, GeneratorSettings, VideoModelType, GenerationTask, SeriesManifest } from '../types';
-import { IMAGE_MODELS, VIDEO_MODELS, DEFAULT_ASPECT_RATIO, CUTS_PER_EPISODE } from '../constants';
+import { IMAGE_MODELS, VIDEO_MODELS, DEFAULT_ASPECT_RATIO, CUTS_PER_EPISODE, TASTES } from '../constants';
 import { safeJsonParse, callWithRetry, formatErrorMessage, createDefaultCut } from './utils';
 import { saveStory, getAllReferenceAssets, saveReferenceAsset } from './db';
 import { renderKenBurnsVideo, renderFullEpisodeMovie } from './browserVideoService';
@@ -320,6 +320,118 @@ export function useStudioProduction({ settings, logs, addLog, refreshStories }: 
     }
 
     try {
+      if (settings.productionMode === 'style-matrix') {
+        const allTasteKeys = Object.keys(TASTES);
+        const targetTastes = allTasteKeys.slice(0, settings.episodeCount);
+        addLog(`🎨 【画風比較モード】同じ物語で ${targetTastes.length} 種類の画風を同時生成・比較します！`, 'process');
+
+        // 1. 比較用の共通ストーリー（第1話）を1つだけ策定
+        const plan = {
+          epNumber: 1,
+          titleJp: '運命の交差点',
+          titleEn: 'Crossroads of Destiny',
+          summary: `${settings.theme}の世界観で描かれるドラマ`
+        };
+
+        addLog(`📖 比較基準となる共通ストーリー（12カット）をAIに執筆依頼中...`, 'process');
+        const scriptPrompt = buildScriptPrompt(1, plan as any, settings.country, settings.theme, settings.era);
+        const scriptRes = await callWithRetry(
+          () => Flow.generate.text(scriptPrompt),
+          (attempt, max, delay) => addLog(`Retrying Script Plot (attempt ${attempt}/${max}) after ${delay} ms...`, 'warning'),
+          5
+        );
+        const sharedScript = safeJsonParse(scriptRes.text, { titleJp: plan.titleJp, titleEn: plan.titleEn, cuts: [] });
+        addLog(`✨ 共通脚本が完成！『${sharedScript.titleJp}』（全${targetTastes.length}画風へ展開開始）`, 'success');
+
+        const ratio = settings.videoRatio;
+        const getIsSelected = (idx: number) => {
+          if (ratio === 'none') return false;
+          if (ratio === '30%') return [0, 4, 8, 11].includes(idx);
+          if (ratio === '50%') return [0, 2, 4, 6, 8, 10].includes(idx);
+          if (ratio === '100%') return true;
+          return false;
+        };
+
+        const rawCuts = Array.isArray(sharedScript.cuts) ? sharedScript.cuts : (Array.isArray(sharedScript.scenes) ? sharedScript.scenes : []);
+        const baseCutsData = Array.from({ length: CUTS_PER_EPISODE }, (_, j) => {
+          const cutData = rawCuts[j] || {};
+          const narration = cutData.narrationJp || cutData.narration || '';
+          const plot = cutData.basicPlot || cutData.promptEn || cutData.prompt || '';
+          const cutHighlights = cutData.highlights || sharedScript.highlightWords || [];
+          return {
+            id: j + 1,
+            narration,
+            plot,
+            isSelected: getIsSelected(j),
+            highlights: extractHighlights(narration, cutHighlights)
+          };
+        });
+
+        // 各画風のエピソードカードを並列展開
+        const matrixEpisodes: Episode[] = targetTastes.map((tasteKey, idx) => {
+          const epId = idx + 1;
+          const shortTaste = tasteKey.split(' ')[1] || tasteKey.slice(0, 10);
+          return {
+            id: epId,
+            internalId: crypto.randomUUID(),
+            titleJp: `【${shortTaste}】${sharedScript.titleJp}`,
+            titleEn: sharedScript.titleEn,
+            summary: sharedScript.summary,
+            eraAnalysis: sharedScript.eraAnalysisJp,
+            forbiddenAnachronisms: sharedScript.forbiddenAnachronisms,
+            authenticAttireEn: sharedScript.authenticAttireEn,
+            forbiddenKeywordsEn: sharedScript.forbiddenKeywordsEn,
+            coverCatchphraseJp: sharedScript.coverCatchphraseJp,
+            coverCatchphraseEn: sharedScript.coverCatchphraseEn,
+            highlightWords: sharedScript.highlightWords || [],
+            cuts: baseCutsData.map(c => {
+              const cut = createDefaultCut(c.id, c.narration, c.plot, c.isSelected);
+              cut.telop.highlights = c.highlights;
+              return cut;
+            }),
+            isGenerating: true,
+            isGeneratingRemainingImages: false,
+            isBatchGeneratingVideos: false,
+            isPreviewDone: false,
+            isDone: false,
+            taste: tasteKey,
+            era: settings.era,
+            theme: settings.theme
+          };
+        });
+        setEpisodes(matrixEpisodes);
+
+        // 各画風ごとにカットを描画
+        for (let idx = 0; idx < targetTastes.length; idx++) {
+          if (isAbortedRef.current) break;
+          const epId = idx + 1;
+          const tasteKey = targetTastes[idx];
+          const shortTaste = tasteKey.split(' ')[1] || tasteKey.slice(0, 10);
+
+          addLog(`🎨 [${idx + 1}/${targetTastes.length}] 画風「${shortTaste}」の描画タスクを開始...（先行${settings.previewCutCount}カット）`, 'process');
+          const currentEp = matrixEpisodes[idx];
+          const tasks: GenerationTask[] = currentEp.cuts.slice(0, settings.previewCutCount).map(c => ({
+            epId,
+            cutId: c.id,
+            prompt: c.promptEn,
+            styleKey: tasteKey,
+            imageModel: settings.imageModel,
+            storyContext: sharedScript.summary || '',
+            eraAnalysis: sharedScript.eraAnalysisJp,
+            forbiddenAnachronisms: sharedScript.forbiddenAnachronisms,
+            authenticAttireEn: sharedScript.authenticAttireEn,
+            forbiddenKeywordsEn: sharedScript.forbiddenKeywordsEn
+          }));
+
+          await runTasks(tasks);
+          updateEpisode(epId, { isGenerating: false, isPreviewDone: true, isDone: true });
+          addLog(`✅ 画風「${shortTaste}」の生成が完了しました！`, 'success');
+        }
+
+        addLog(`🎉 全 ${targetTastes.length} 種類の画風比較マトリクスの制作が完了しました！見比べて最適な画風をお選びください！`, 'success');
+        return;
+      }
+
       if (!seriesManifestRef.current) {
         addLog(`📜 全${settings.episodeCount}話の大河ドラマグランドデザインをAIに策定依頼中... [世界観・テーマ: ${settings.theme}]`, 'process');
         const designPrompt = buildGrandDesignPrompt(settings.episodeCount, settings.country, settings.theme, settings.era);

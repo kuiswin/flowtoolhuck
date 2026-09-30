@@ -76,16 +76,14 @@ export const THEMES = [
 ];
 
 export const TASTES: Record<string, string> = {
-  "90年代レトロセル画アニメ調 (90s Retro Cel Anime)": "90s hand-drawn cel anime style, grainy texture, retro anime aesthetic, vintage feel, highly detailed lines",
-  "美麗シネマティック・空と光 (Cinematic Atmospheric Anime)": "Cinematic anime lighting, breathtaking luminous atmosphere, vibrant cumulus clouds, emotional scenery, lens flare, delicate coloring",
-  "手描き水彩・情緒アニメ調 (Hand-drawn Watercolor & Nostalgic Tone)": "Soft hand-painted watercolor animation textures, lush vibrant nature, charming cozy pastoral atmosphere, artisanal aesthetic",
-  "マンガ調・白黒劇画線画 (Manga Ink & Dramatic Screentone)": "Black and white manga style, dramatic ink brush work, detailed screentone textures, high contrast, dynamic composition",
-  "京都・江戸伝統浮世絵・木版画 (Traditional Japanese Ukiyo-e Woodblock)": "Traditional Japanese Ukiyo-e, woodblock print texture, washi paper grain, elegant flowing lines, classical Japanese art",
-  "水墨画・墨絵 (Sumi-e Ink Wash Painting)": "Sumi-e style, Japanese ink wash painting, traditional brush strokes, minimalist composition, Zen aesthetic",
-  "クラシック手描き長編アニメ (Golden Age Hand-drawn Animation)": "Golden age classical 2D hand-drawn fairy tale animation style, fluid lines, expressive warm characters, nostalgic storybook feel",
-  "油絵・印象派 (Impressionist Oil Painting)": "Impressionist oil painting, visible brushstrokes, vibrant colors, play of light and shadow, classical fine art",
-  "ノワール・モノクロシネマ (Film Noir & High Contrast Shadow)": "Film noir style, monochrome, high contrast shadows, moody lighting, dramatic cinema aesthetic",
-  "現代リアル・写真実写 (Ultra-Realistic 8K Photography)": "Hyper-realistic 8K photography, high detail, photorealistic textures, natural lighting, professional cinematography"
+  "🔥 90年代レトロセル画アニメ調 (90s Retro Cel Anime)": "90s classic Japanese hand-drawn cel anime aesthetic, authentic visible ink outlines, rich warm grain, vintage film color palette, nostalgic retro anime masterpiece",
+  "✨ 美麗シネマティック・新海調 (Luminous Sky & Atmospheric Anime)": "Makoto Shinkai inspired cinematic anime, breathtaking luminous atmosphere, emotional vibrant sky, cumulus clouds, lens flare, delicate digital painting, visual masterpiece",
+  "⚔️ ダークファンタジー・Ufotable調 (Dark Chiaroscuro & High-Contrast Anime)": "Ufotable inspired dark cinematic anime, dramatic deep shadows, high-contrast chiaroscuro lighting, glowing ember highlights, intense emotional atmosphere, hyper-detailed drama",
+  "🏮 京都・江戸 伝統浮世絵木版画 (Traditional Japanese Ukiyo-e)": "Authentic Japanese Ukiyo-e woodblock print style, washi paper texture, traditional mineral pigments, indigo and vermilion tones, elegant flowing line art, classical Edo masterpiece",
+  "🖋️ 白黒劇画・超絶インクマンガ (Intense Monochrome Manga)": "Dramatic black and white manga style, aggressive ink brush strokes, intense screentone crosshatching, extreme contrast, dynamic manga panel composition, gritty historical realism",
+  "🍃 手描き水彩・情緒ジブリ調 (Whimsical Hand-drawn Watercolor)": "Studio Ghibli inspired hand-painted watercolor animation, lush pastoral nature, soft sunlight, warm nostalgic earth tones, charming artisanal aesthetic, heartwarming feel",
+  "🎬 35mmフィルム映画・実写シネマ (Authentic 35mm Film Cinematic Drama)": "35mm film photography, cinematic historical drama still, shallow depth of field, anamorphic lens flare, natural soft lighting, authentic period costume texture, award-winning cinematography",
+  "🖌️ 水墨画・破墨山水 (Traditional Sumi-e Ink Wash Painting)": "Traditional Japanese Sumi-e ink wash painting, expressive Zen brush strokes, dynamic ink splatters and atmospheric mist, elegant negative space, timeless historical artistry"
 };
 
 export const IMAGE_MODELS = [
@@ -145,27 +143,7 @@ export const CAMERA_WORK_OPTIONS = [
 
 export const sanitizeFilename = (name: string) => (name || '').replace(/[\\/:*?"<>|]/g, '').trim();
 
-export const PARALLEL_OPTIONS = [
-  { label: '1', value: '1' },
-  { label: '2', value: '2' },
-  { label: '3', value: '3' },
-  { label: '4', value: '4' }
-];
 
-export const PREVIEW_COUNT_OPTIONS = [
-  { label: '1枚', value: '1' },
-  { label: '3枚', value: '3' },
-  { label: '5枚', value: '5' },
-  { label: '12枚 (全)', value: '12' }
-];
-
-export const EPISODE_COUNT_OPTIONS = [
-  { label: '1話', value: '1' },
-  { label: '5話', value: '5' },
-  { label: '10話', value: '10' },
-  { label: '20話', value: '20' },
-  { label: '50話', value: '50' }
-];
 
 // システム動作に必要なテクニカル定数
 export const STRICT_STYLE_SUFFIX = ' seamless full-bleed vertical 9:16 artwork. Strictly upright vertical perspective. Grounded immersive cinematic human eye-level framing. Absolutely NO drone shots, NO modern aerial drones, NO borders, NO text, NO kanji, NO numbers, NO year labels, NO signs indicating the year or date.';

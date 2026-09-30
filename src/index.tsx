@@ -1,15 +1,7 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
-import { Flow } from 'flow-sdk';
 import App from '../App';
 import './style.css';
-
-// ブラウザの importmap から解決された Flow を window.Flow にも保持
-if (typeof window !== 'undefined') {
-  if (Flow) {
-    (window as any).Flow = Flow;
-  }
-}
 
 // Material Symbols フォントの動的注入（Flow Tools iframe内でのアイコン表示を保証）
 function ensureMaterialIcons() {
@@ -24,6 +16,35 @@ function ensureMaterialIcons() {
   }
 }
 
+/**
+ * Google Flow Tools の iframe 内に存在する importmap から
+ * flow-sdk を動的インポートして window.Flow へ自動代入する
+ */
+export async function ensureFlowSDK(): Promise<any> {
+  if (typeof window === 'undefined') return null;
+
+  if ((window as any).Flow) {
+    return (window as any).Flow;
+  }
+
+  try {
+    const moduleName = 'flow-sdk';
+    const flowModule = await import(/* @vite-ignore */ moduleName);
+    const resolvedFlow = flowModule.Flow || flowModule.default || flowModule;
+    (window as any).Flow = resolvedFlow;
+    console.log('✅ [FlowTool] Auto-bound window.Flow successfully from importmap:', resolvedFlow);
+    return resolvedFlow;
+  } catch (err) {
+    console.warn('⚠️ [FlowTool] Could not load flow-sdk natively from importmap, keeping shim fallback:', err);
+    return null;
+  }
+}
+
+// バンドルが読み込まれた時点で直ちに自動バインドを試みる
+if (typeof window !== 'undefined') {
+  ensureFlowSDK();
+}
+
 let reactRoot: ReactDOM.Root | null = null;
 let currentContainer: HTMLElement | null = null;
 
@@ -31,9 +52,14 @@ let currentContainer: HTMLElement | null = null;
  * FlowTool React アプリケーションをターゲットDOMにマウントする
  * @param targetElement マウント先DOM要素 (省略時は #root または document.body)
  */
-export function mount(targetElement?: HTMLElement | null): { unmount: () => void } {
+export async function mount(targetElement?: HTMLElement | null): Promise<{ unmount: () => void }> {
+  // 1. Flow SDK の自動解決・バインドを待機
+  await ensureFlowSDK();
+
+  // 2. フォントの注入
   ensureMaterialIcons();
 
+  // 3. マウント先コンテナの解決
   const container = targetElement || document.getElementById('root') || document.body;
   if (!container) {
     console.error('[FlowTool] Target container could not be found to mount the application.');
@@ -89,11 +115,11 @@ if (typeof window !== 'undefined') {
   (window as any).FlowTool = {
     mount,
     unmount,
-    version: '1.0.0',
-    App,
-    Flow
+    ensureFlowSDK,
+    version: '1.1.0',
+    App
   };
 }
 
-export { App, Flow };
-export default { mount, unmount, App, Flow };
+export { App };
+export default { mount, unmount, ensureFlowSDK, App };

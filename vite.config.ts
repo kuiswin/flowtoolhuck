@@ -3,16 +3,16 @@ import react from '@vitejs/plugin-react';
 import cssInjectedByJsPlugin from 'vite-plugin-css-injected-by-js';
 import path from 'path';
 
-export default defineConfig(({ command }) => ({
+export default defineConfig({
   plugins: [
     react(),
     cssInjectedByJsPlugin(),
   ],
   resolve: {
-    // ローカル開発サーバー(dev)の時のみローカルshimを使用、ビルド時はexternalとしてブラウザのimportmapに委譲
-    alias: command === 'serve' ? {
+    alias: {
+      // 内部コードの import { Flow } from 'flow-sdk' はすべて shim (window.Flow参照Proxy) に接続
       'flow-sdk': path.resolve(__dirname, './src/flow-sdk-shim.ts'),
-    } : {},
+    },
   },
   define: {
     'process.env.NODE_ENV': JSON.stringify(process.env.NODE_ENV || 'production'),
@@ -29,13 +29,12 @@ export default defineConfig(({ command }) => ({
       fileName: () => 'bundle.js',
     },
     rollupOptions: {
-      // flow-sdk は Google Flow Tools プレビュー(iframe)の importmap に完全委譲
-      external: ['flow-sdk'],
       output: {
         entryFileNames: 'bundle.js',
         format: 'es',
         inlineDynamicImports: true,
       },
+      external: [],
     },
   },
-}));
+});

@@ -88,13 +88,13 @@ export interface Episode {
 export interface GeneratorSettings {
   productionMode: ProductionMode; 
   country: string;
-  customCountry: string;
-  era: string;
-  customEra: string;
+  customCountry?: string;
+  era?: string;
+  customEra?: string;
   theme: string;
-  customTheme: string;
+  customTheme?: string;
   taste: string;
-  customTaste: string;
+  customTaste?: string;
   imageModel: string;
   defaultVideoModel: string;
   videoRatio: VideoRatio;

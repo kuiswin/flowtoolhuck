@@ -321,8 +321,8 @@ export function useStudioProduction({ settings, logs, addLog, refreshStories }: 
 
     try {
       if (!seriesManifestRef.current) {
-        addLog(`📜 全${settings.episodeCount}話の大河ドラマグランドデザインをAIに策定依頼中... [国: ${settings.country} / 時代: ${settings.era}]`, 'process');
-        const designPrompt = buildGrandDesignPrompt(settings.episodeCount, settings.country, settings.era, settings.theme);
+        addLog(`📜 全${settings.episodeCount}話の大河ドラマグランドデザインをAIに策定依頼中... [世界観・テーマ: ${settings.theme}]`, 'process');
+        const designPrompt = buildGrandDesignPrompt(settings.episodeCount, settings.country, settings.theme, settings.era);
         const designRes = await callWithRetry(
           () => Flow.generate.text(designPrompt),
           (attempt, max, delay) => addLog(`Retrying Grand Design (attempt ${attempt}/${max}) after ${delay} ms...`, 'warning'),
@@ -379,7 +379,7 @@ export function useStudioProduction({ settings, logs, addLog, refreshStories }: 
           addLog(`📖 【第${epId}話】「${currentPlan.titleJp}」の脚本・時代考証をAIに執筆依頼中...`, 'process');
           updateEpisode(epId, { isGenerating: true });
 
-          const scriptPrompt = buildScriptPrompt(epId, currentPlan, settings.era, settings.country, settings.theme);
+          const scriptPrompt = buildScriptPrompt(epId, currentPlan, settings.country, settings.theme, settings.era);
           const scriptRes = await callWithRetry(
             () => Flow.generate.text(scriptPrompt),
             (attempt, max, delay) => addLog(`Retrying Script Plot (attempt ${attempt}/${max}) after ${delay} ms...`, 'warning'),

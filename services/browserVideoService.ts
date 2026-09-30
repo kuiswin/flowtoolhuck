@@ -52,12 +52,12 @@ function drawBakedSubtitles(ctx: CanvasRenderingContext2D | OffscreenCanvasRende
   const rawText = cut.telop?.fullText || cut.narrationJp || '';
   if (!rawText.trim()) return;
 
-  const text = rawText.replace(/^[\s「『]+|[:：\s」』]+$/g, '').slice(0, 26);
+  const text = rawText.replace(/^[\s「『]+|[:：\s」』]+$/g, '').slice(0, 32);
   const highlights = cut.telop?.highlights || [];
-  const baseFontSize = 36;
-  const kanjiScale = 1.08;
-  const strokeWidth = 10;
-  const letterMargin = 5;
+  const baseFontSize = 30;
+  const kanjiScale = 1.05;
+  const strokeWidth = 8;
+  const letterMargin = 4;
   const maxWidth = width * 0.88;
 
   ctx.save();
@@ -66,17 +66,26 @@ function drawBakedSubtitles(ctx: CanvasRenderingContext2D | OffscreenCanvasRende
   ctx.lineJoin = 'round';
   ctx.lineCap = 'round';
 
+  const highlightIndices = new Map<number, { color: string; sizeScale: number }>();
+  highlights.forEach(h => {
+    if (!h.word) return;
+    let pos = 0;
+    while ((pos = text.indexOf(h.word, pos)) !== -1) {
+      for (let k = 0; k < h.word.length; k++) {
+        highlightIndices.set(pos + k, h);
+      }
+      pos += 1;
+    }
+  });
+
   const charData = text.split('').map((char, index) => {
     const isKanji = /[\u4e00-\u9faf]/.test(char);
-    const highlight = highlights.find(h => {
-      const startIdx = text.indexOf(h.word);
-      return startIdx !== -1 && index >= startIdx && index < startIdx + h.word.length;
-    });
+    const highlight = highlightIndices.get(index);
     return {
       char,
       isKanji,
       color: highlight ? (highlight.color || '#FFE600') : 'white',
-      scale: (highlight ? highlight.sizeScale : 1.0) * (isKanji ? kanjiScale : 1.0)
+      scale: (highlight ? (highlight.sizeScale || 1.1) : 1.0) * (isKanji ? kanjiScale : 1.0)
     };
   });
 

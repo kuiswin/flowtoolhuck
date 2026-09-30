@@ -21,8 +21,13 @@ Output JSON: {
 /**
  * シリーズ全体のグランドデザイン（全話プロット）を生成するためのプロンプト
  */
-export function buildGrandDesignPrompt(count: number, country: string, era: string, theme: string): string {
-  return `Create a full ${count}-episode drama grand design set in ${country}, ${era}, with theme "${theme}".
+/**
+ * シリーズ全体のグランドデザイン（全話プロット）を生成するためのプロンプト
+ */
+export function buildGrandDesignPrompt(count: number, country: string, theme: string, era?: string): string {
+  const worldSetting = era && era !== theme ? `${theme} (時代: ${era}, 地域: ${country})` : `${theme} (${country})`;
+  return `Create a full ${count}-episode drama grand design with World Theme & Setting: "${worldSetting}".
+Analyze the authentic era, cultural background, human drama, and visual atmosphere directly from this theme.
 Output ONLY valid JSON:
 {
   "seriesTitle": "Dramatic Series Title",
@@ -35,30 +40,40 @@ Output ONLY valid JSON:
 
 /**
  * ナレーションから強調すべき重要キーワード（2〜4文字の漢字熟語等）を抽出・確定
- * （AIが指定した単語を優先し、万が一空でもナレーション内の重要熟語を自動検出して絶対に色付けを失わせない）
+ * （AIやユーザー指定の単語を優先し、本文に実在する単語だけを厳密に採用。空なら本文から自動抽出して確実に色付けを点灯させる）
  */
 export function extractHighlights(narrationText: string, suggestedWords: string[] = []): Array<{ word: string; color: string; sizeScale: number }> {
-  if (!narrationText) return [];
+  if (!narrationText || !narrationText.trim()) return [];
   const validHighlights: Array<{ word: string; color: string; sizeScale: number }> = [];
 
-  // 1. AIが明示的に指定した単語（ナレーション内に実在するもの）を優先
+  // 1. 指定された単語のうち、ナレーション本文に確実に含まれているものを採用
   for (const rawWord of suggestedWords) {
     const word = (rawWord || '').trim();
-    if (word && narrationText.includes(word) && word.length >= 2 && word.length <= 4) {
+    if (word && narrationText.includes(word) && word.length >= 1 && word.length <= 6) {
       if (!validHighlights.some(h => h.word === word)) {
-        validHighlights.push({ word, color: '#FFE600', sizeScale: 1.15 });
+        validHighlights.push({ word, color: '#FFE600', sizeScale: 1.1 });
       }
     }
   }
 
-  // 2. もしAIの指定が合致しなかった場合の自動検出（ナレーション中の漢字2〜4文字熟語）
+  // 2. もし本文に合致する指定単語が0件なら、ナレーション本文から漢字熟語（2〜4文字）を自動抽出
   if (validHighlights.length === 0) {
     const kanjiMatches = narrationText.match(/[\u4e00-\u9faf]{2,4}/g);
     if (kanjiMatches && kanjiMatches.length > 0) {
-      // 助詞や記号を避けた有力な熟語を最大2つピックアップ
+      // 重複を除去し、登場順に有力な熟語を最大2つピックアップ
       const candidates = Array.from(new Set(kanjiMatches)).filter(w => w.length >= 2 && w.length <= 4);
       for (const word of candidates.slice(0, 2)) {
-        validHighlights.push({ word, color: '#FFE600', sizeScale: 1.15 });
+        validHighlights.push({ word, color: '#FFE600', sizeScale: 1.1 });
+      }
+    }
+  }
+
+  // 3. それでも0件なら（ひらがな中心などの場合）、カタカナ単語または文中の代表語
+  if (validHighlights.length === 0) {
+    const katakanaMatches = narrationText.match(/[\u30a1-\u30f6]{2,6}/g);
+    if (katakanaMatches && katakanaMatches.length > 0) {
+      for (const word of Array.from(new Set(katakanaMatches)).slice(0, 2)) {
+        validHighlights.push({ word, color: '#FFE600', sizeScale: 1.1 });
       }
     }
   }
@@ -68,18 +83,19 @@ export function extractHighlights(narrationText: string, suggestedWords: string[
 
 /**
  * 各話の脚本（12カット分）および時代考証をAIに動的生成させるプロンプト
- * （固定辞書を全廃し、Geminiに時代考証・衣装・NG要素およびカットごとの金文字強調キーワードを生成させる）
+ * （世界観・テーマからGeminiが時代考証・衣装・NG要素およびカットごとの金文字強調キーワードを自律生成）
  */
-export function buildScriptPrompt(epId: number, currentPlan: SeriesEpisodePlan, era: string, country: string, theme: string): string {
+export function buildScriptPrompt(epId: number, currentPlan: SeriesEpisodePlan, country: string, theme: string, era?: string): string {
+  const worldSetting = era && era !== theme ? `${theme} (時代: ${era}, 地域: ${country})` : `${theme} (${country})`;
   return `You are a world-class historical drama director and historical researcher.
 Create a 12-cut drama story skeleton for Episode ${epId} ("${currentPlan.titleJp}").
-Setting: "${country}", Era: "${era}", Theme: "${theme}".
+World Theme & Setting: "${worldSetting}".
 
 STRICT HISTORICAL ACCURACY:
-Dynamically analyze "${era}" and "${country}". Determine authentic period attire and identify modern anachronisms that must NEVER appear.
+Dynamically analyze the period, setting, and atmosphere implied by "${worldSetting}". Determine authentic period attire and identify modern anachronisms that must NEVER appear.
 
 CRITICAL SUBTITLE HIGHLIGHTS:
-For EACH cut, select 1 to 2 dramatic key terms (2 to 4 characters each, EXACTLY present in narrationJp) for the "highlights" array to be highlighted in gold text.
+For EACH cut, select 1 to 2 dramatic key terms (2 to 4 characters each, which MUST BE EXACTLY present in narrationJp) for the "highlights" array to be highlighted in gold text.
 
 Output ONLY valid JSON matching this exact structure:
 {
@@ -87,8 +103,8 @@ Output ONLY valid JSON matching this exact structure:
   "titleEn": "${currentPlan.titleEn}",
   "summary": "話のあらすじ（日本語）",
   "eraAnalysisJp": "時代背景と舞台設定の考証解説（日本語）",
-  "authenticAttireEn": "Detailed English prompt for authentic historical costume and attire of ${era}, ${country}",
-  "forbiddenKeywordsEn": "Comma-separated English negative keywords for anachronisms that must NEVER appear in ${era} (e.g. smartphones, wristwatches, modern glasses, sneakers, modern clothing, electricity poles, asphalt)",
+  "authenticAttireEn": "Detailed English prompt for authentic historical costume and attire of ${worldSetting}",
+  "forbiddenKeywordsEn": "Comma-separated English negative keywords for anachronisms that must NEVER appear in ${worldSetting} (e.g. smartphones, wristwatches, modern glasses, sneakers, modern clothing, electricity poles, asphalt)",
   "forbiddenAnachronisms": ["日本語の禁止要素1", "日本語の禁止要素2"],
   "coverCatchphraseJp": "超ド迫力キャッチコピー",
   "highlightWords": ["代表キーワード1", "代表キーワード2"],
@@ -97,7 +113,7 @@ Output ONLY valid JSON matching this exact structure:
       "id": 1, 
       "basicPlot": "Cinematic visual description of the cut in English", 
       "narrationJp": "重厚なナレーション（日本語）",
-      "highlights": ["重要語1", "重要語2"]
+      "highlights": ["ナレーション内の重要語1", "ナレーション内の重要語2"]
     }
   ]
 }`;

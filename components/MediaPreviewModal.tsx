@@ -24,6 +24,7 @@ export const MediaPreviewModal: React.FC<MediaPreviewModalProps> = ({
     const [aiWish, setAiWish] = useState('');
     const [isRewriting, setIsRewriting] = useState(false);
     const [showTelop, setShowTelop] = useState(true);
+    const [newKeyword, setNewKeyword] = useState('');
     const [downloadState, setDownloadState] = useState<'idle' | 'saving' | 'done'>('idle');
 
     useEffect(() => {
@@ -32,6 +33,22 @@ export const MediaPreviewModal: React.FC<MediaPreviewModalProps> = ({
         window.addEventListener('keydown', handler);
         return () => window.removeEventListener('keydown', handler);
     }, [isOpen, onClose]);
+
+    // モーダル表示時、もし登録されたハイライトが本文に1つも合致していなければ自動修復
+    useEffect(() => {
+        if (!isOpen) return;
+        const text = cut.telop?.fullText || cut.narrationJp || '';
+        const highlights = cut.telop?.highlights || [];
+        if (text) {
+            const hasAnyMatch = highlights.some(h => h.word && text.includes(h.word));
+            if (!hasAnyMatch) {
+                const auto = extractHighlights(text);
+                if (auto.length > 0) {
+                    onUpdateCut({ telop: { ...cut.telop!, fullText: text, highlights: auto } });
+                }
+            }
+        }
+    }, [isOpen, cut.id]);
 
     // Ken Burns アニメーションのCSS
     useEffect(() => {
@@ -88,6 +105,29 @@ export const MediaPreviewModal: React.FC<MediaPreviewModalProps> = ({
         } catch (err) { console.error(err); } finally { setIsRewriting(false); }
     };
 
+    const handleAddKeyword = () => {
+        const target = newKeyword.trim();
+        if (!target) return;
+        const currentHighlights = cut.telop?.highlights || [];
+        if (!currentHighlights.some(h => h.word === target)) {
+            const next = [...currentHighlights, { word: target, color: '#FFE600', sizeScale: 1.1 }];
+            onUpdateCut({ telop: { ...cut.telop!, fullText: cut.telop?.fullText || '', highlights: next } });
+        }
+        setNewKeyword('');
+    };
+
+    const handleRemoveKeyword = (wordToRemove: string) => {
+        const currentHighlights = cut.telop?.highlights || [];
+        const next = currentHighlights.filter(h => h.word !== wordToRemove);
+        onUpdateCut({ telop: { ...cut.telop!, fullText: cut.telop?.fullText || '', highlights: next } });
+    };
+
+    const handleAutoExtract = () => {
+        const text = cut.telop?.fullText || cut.narrationJp || '';
+        const auto = extractHighlights(text);
+        onUpdateCut({ telop: { ...cut.telop!, fullText: text, highlights: auto } });
+    };
+
     const handleDownloadVideo = async () => {
         if (!cut.videoBase64 || downloadState !== 'idle') return;
         setDownloadState('saving');
@@ -115,32 +155,42 @@ export const MediaPreviewModal: React.FC<MediaPreviewModalProps> = ({
         const text = cut.telop.fullText;
         const highlights = cut.telop.highlights || [];
 
+        // 全一致箇所を正確にマッピング（同一単語が複数回登場しても確実にすべてハイライト）
+        const highlightIndices = new Map<number, { color: string; sizeScale: number }>();
+        highlights.forEach(h => {
+            if (!h.word) return;
+            let pos = 0;
+            while ((pos = text.indexOf(h.word, pos)) !== -1) {
+                for (let k = 0; k < h.word.length; k++) {
+                    highlightIndices.set(pos + k, h);
+                }
+                pos += 1;
+            }
+        });
+
         return (
-            <div className="absolute bottom-[6%] left-0 w-full px-6 flex flex-col items-center pointer-events-none z-40 animate-in fade-in slide-in-from-bottom-3 duration-300">
-                {/* テロップ背景プレート（洗練されたシネマ字幕バー） */}
-                <div className="bg-black/75 backdrop-blur-md rounded-xl px-5 py-3 flex flex-wrap justify-center items-baseline gap-y-1.5 max-w-[92%] shadow-2xl border border-white/10">
+            <div className="absolute bottom-[4%] left-0 w-full px-4 flex flex-col items-center pointer-events-none z-40 animate-in fade-in slide-in-from-bottom-2 duration-300">
+                {/* テロップ背景プレート（作画を隠さないシネマ字幕バー） */}
+                <div className="bg-black/80 backdrop-blur-md rounded-lg px-4 py-2 flex flex-wrap justify-center items-baseline max-w-[86%] shadow-2xl border border-white/10 leading-relaxed">
                     {text.split('').map((char, i) => {
                         const isKanji = /[\u4e00-\u9faf]/.test(char);
-                        const highlight = highlights.find(h => {
-                           const startIdx = text.indexOf(h.word);
-                           return startIdx !== -1 && i >= startIdx && i < startIdx + h.word.length;
-                        });
+                        const highlight = highlightIndices.get(i);
                         
                         const color = highlight ? (highlight.color || '#FFE600') : '#FFFFFF';
-                        const scale = (isKanji ? 1.08 : 1.0) * (highlight ? highlight.sizeScale : 1.0);
+                        const scale = (isKanji ? 1.05 : 1.0) * (highlight ? (highlight.sizeScale || 1.1) : 1.0);
 
                         return (
                             <span 
                                 key={i}
-                                className="font-[900] tracking-tight leading-snug select-none"
+                                className="font-[900] tracking-normal select-none"
                                 style={{ 
                                     color: color, 
-                                    fontSize: `${scale * 1.3}rem`, 
+                                    fontSize: `${scale * 0.88}rem`, 
                                     display: 'inline-block',
-                                    margin: '0 1.5px',
+                                    margin: '0 0.5px',
                                     textShadow: highlight 
-                                      ? '0 0 12px rgba(255, 230, 0, 0.6), 0 2px 4px rgba(0,0,0,0.9)' 
-                                      : '0 2px 4px rgba(0,0,0,0.9), 0 0 2px rgba(0,0,0,0.8)'
+                                      ? '0 0 8px rgba(255, 230, 0, 0.7), 0 2px 4px rgba(0,0,0,0.95)' 
+                                      : '0 2px 4px rgba(0,0,0,0.95), 0 0 2px rgba(0,0,0,0.9)'
                                 }}
                             >
                                 {char}
@@ -210,23 +260,93 @@ export const MediaPreviewModal: React.FC<MediaPreviewModalProps> = ({
                             </div>
 
                             <SectionLabel>テロップ設定</SectionLabel>
-                            <div className="bg-white/5 p-3 rounded-xl border border-white/5 flex flex-col gap-3">
+                            <div className="bg-white/5 p-3.5 rounded-xl border border-white/5 flex flex-col gap-3">
                                 <ToggleSwitch label="字幕を表示する" checked={showTelop} onChange={setShowTelop} />
+                                
                                 <TextInput 
                                   label="字幕テキスト" 
                                   value={cut.telop?.fullText || ''} 
                                   onChange={v => {
-                                    const highlights = extractHighlights(v);
-                                    onUpdateCut({ telop: { ...cut.telop!, fullText: v, highlights } });
+                                    const currentHighlights = cut.telop?.highlights || [];
+                                    const validExisting = currentHighlights.filter(h => h.word && v.includes(h.word));
+                                    const nextHighlights = validExisting.length > 0 ? validExisting : extractHighlights(v);
+                                    onUpdateCut({ telop: { ...cut.telop!, fullText: v, highlights: nextHighlights } });
                                   }} 
                                 />
-                                {cut.telop?.highlights && cut.telop.highlights.length > 0 && (
-                                    <div className="flex flex-wrap gap-1.5 mt-1">
-                                        {cut.telop.highlights.map((h, i) => (
-                                          <span key={i} style={{ color: h.color || '#FFE600', borderColor: (h.color || '#FFE600') + '40' }} className="px-2 py-0.5 rounded border bg-black/20 text-[10px] font-bold">● {h.word}</span>
-                                        ))}
+
+                                {/* キーワード管理エリア */}
+                                <div className="flex flex-col gap-2 pt-1 border-t border-white/5">
+                                    <div className="flex items-center justify-between">
+                                        <span className="text-[11px] font-black text-amber-400 flex items-center gap-1">
+                                            <span className="material-symbols-outlined text-[14px]">stars</span>
+                                            金文字強調キーワード
+                                        </span>
+                                        <button 
+                                          type="button"
+                                          onClick={handleAutoExtract}
+                                          className="text-[10px] text-amber-300 hover:text-amber-200 bg-amber-500/10 hover:bg-amber-500/20 px-2 py-0.5 rounded border border-amber-500/30 flex items-center gap-0.5 transition-colors"
+                                          title="本文中の漢字熟語から自動抽出"
+                                        >
+                                            <span className="material-symbols-outlined text-[12px]">sync</span>
+                                            本文から自動抽出
+                                        </button>
                                     </div>
-                                )}
+
+                                    {/* 現在登録されているキーワードの一覧（点灯/消灯ステータス付き） */}
+                                    <div className="flex flex-wrap gap-1.5 min-h-[26px]">
+                                        {cut.telop?.highlights && cut.telop.highlights.length > 0 ? (
+                                            cut.telop.highlights.map((h, i) => {
+                                                const currentFullText = cut.telop?.fullText || '';
+                                                const isMatch = h.word && currentFullText.includes(h.word);
+                                                return (
+                                                    <span 
+                                                      key={i} 
+                                                      className={`px-2 py-0.5 rounded-md border text-[10px] font-bold flex items-center gap-1 transition-all ${
+                                                          isMatch 
+                                                            ? 'bg-amber-500/15 border-amber-400 text-amber-300 shadow-[0_0_8px_rgba(255,230,0,0.2)]' 
+                                                            : 'bg-white/5 border-white/10 text-white/35'
+                                                      }`}
+                                                    >
+                                                        <span>{isMatch ? '✨' : '⚠️'} {h.word}</span>
+                                                        <span className={`text-[9px] ${isMatch ? 'text-amber-400/80 font-normal' : 'text-white/20'}`}>
+                                                            {isMatch ? '(点灯中)' : '(未出現)'}
+                                                        </span>
+                                                        <button 
+                                                          type="button"
+                                                          onClick={() => handleRemoveKeyword(h.word)}
+                                                          className="ml-0.5 hover:text-red-400 transition-colors flex items-center"
+                                                          title="キーワードから削除"
+                                                        >
+                                                            <span className="material-symbols-outlined text-[11px]">close</span>
+                                                        </button>
+                                                    </span>
+                                                );
+                                            })
+                                        ) : (
+                                            <span className="text-[10px] text-white/30 italic">キーワードなし（すべて白色で表示中）</span>
+                                        )}
+                                    </div>
+
+                                    {/* キーワード手動追加フォーム */}
+                                    <div className="flex gap-1.5 mt-1">
+                                        <input 
+                                          type="text" 
+                                          value={newKeyword} 
+                                          onChange={e => setNewKeyword(e.target.value)} 
+                                          onKeyDown={e => e.key === 'Enter' && handleAddKeyword()}
+                                          placeholder="強調する単語を追加..." 
+                                          className="flex-1 bg-black/50 border border-white/10 rounded-lg px-2.5 py-1 text-[11px] outline-none focus:border-amber-400/70 text-white placeholder:text-white/25"
+                                        />
+                                        <button 
+                                          type="button" 
+                                          onClick={handleAddKeyword}
+                                          disabled={!newKeyword.trim()}
+                                          className="px-2.5 py-1 bg-white/10 hover:bg-amber-500 hover:text-black text-white text-[11px] font-bold rounded-lg border border-white/10 transition-colors disabled:opacity-30 disabled:pointer-events-none"
+                                        >
+                                          ＋追加
+                                        </button>
+                                    </div>
+                                </div>
                             </div>
 
                             <div className="grid grid-cols-2 gap-2">

@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { SectionLabel, PillButton, FieldDropdown, SegmentedToggle, ToggleSwitch } from './Primitives';
 import { GeneratorSettings, ReferenceAsset } from '../types';
-import { COUNTRIES, ERAS, THEMES, TASTES, IMAGE_MODELS, PARALLEL_OPTIONS, EPISODE_COUNT_OPTIONS, VIDEO_RATIO_OPTIONS, PREVIEW_COUNT_OPTIONS } from '../constants';
+import { THEMES, TASTES, IMAGE_MODELS, PARALLEL_OPTIONS, EPISODE_COUNT_OPTIONS, VIDEO_RATIO_OPTIONS, PREVIEW_COUNT_OPTIONS } from '../constants';
 import { StudioLogs, LogEntry } from './StudioLogs';
 import { ReferenceVault } from './ReferenceVault';
 import { getAllReferenceAssets } from '../services/db';
@@ -109,13 +109,14 @@ export const StudioSidebar: React.FC<StudioSidebarProps> = ({
           disabled={isProducing}
         />
 
-        <SectionLabel>制作条件</SectionLabel>
-        <div className="grid grid-cols-2 gap-2">
-          <FieldDropdown label="国" value={settings.country} options={COUNTRIES} onChange={v => setSettings(s => ({ ...s, country: v }))} disabled={isProducing} />
-          <FieldDropdown label="時代" value={settings.era} options={ERAS} onChange={v => setSettings(s => ({ ...s, era: v }))} disabled={isProducing} />
-        </div>
-
-        <FieldDropdown label="テーマ" value={settings.theme} options={THEMES} onChange={v => setSettings(s => ({ ...s, theme: v }))} disabled={isProducing} />
+        <SectionLabel>世界観・テーマ</SectionLabel>
+        <FieldDropdown 
+          label="世界観・テーマ" 
+          value={settings.theme} 
+          options={THEMES} 
+          onChange={v => setSettings(s => ({ ...s, theme: v, era: v }))} 
+          disabled={isProducing} 
+        />
         
         <FieldDropdown 
           label="画風・テイスト" 

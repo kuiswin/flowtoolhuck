@@ -6,7 +6,7 @@ import { StudioSidebar } from './components/StudioSidebar';
 import { EpisodeSection } from './components/EpisodeSection';
 import { LogEntry } from './components/StudioLogs';
 import { Cut, GeneratorSettings, VideoModelType } from './types';
-import { ERAS, THEMES, TASTES, IMAGE_MODELS, VIDEO_MODELS } from './constants';
+import { THEMES, TASTES, IMAGE_MODELS, VIDEO_MODELS } from './constants';
 import { createLogMessage } from './services/utils';
 import { initDB, getAllStories, StoryRecord } from './services/db';
 import { downloadZip } from './services/exportService';
@@ -15,7 +15,7 @@ import { extractHighlights } from './services/directorService';
 
 export default function App() {
   const [settings, setSettings] = useState<GeneratorSettings>({
-    productionMode: 'episodes', country: '日本', customCountry: '', era: ERAS[0], customEra: '', theme: THEMES[0], customTheme: '', taste: Object.keys(TASTES)[0], customTaste: '', imageModel: IMAGE_MODELS[1].label, defaultVideoModel: VIDEO_MODELS[0].label, videoRatio: '30%', episodeCount: 1, previewCutCount: 3, parallelCount: 2, autoVideo: false, autoDownload: false
+    productionMode: 'episodes', country: '日本', theme: THEMES[0], taste: Object.keys(TASTES)[0], imageModel: IMAGE_MODELS[1].label, defaultVideoModel: VIDEO_MODELS[0].label, videoRatio: '30%', episodeCount: 1, previewCutCount: 3, parallelCount: 2, autoVideo: false, autoDownload: false
   });
 
   const [logs, setLogs] = useState<LogEntry[]>([]);

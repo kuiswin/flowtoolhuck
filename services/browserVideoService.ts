@@ -1,7 +1,7 @@
 import { Cut, Episode, KenBurnsPreset } from '../types';
 import { Output, Mp4OutputFormat, BufferTarget, CanvasSource } from 'mediabunny';
 import { renderCoverCanvas } from './exportService';
-import { applyComicCanvasClip } from './comicPanelService';
+import { drawComicCompositeOnCanvas } from './comicPanelService';
 
 /**
  * ケンバーンズ効果の文字列をケバブケースに正規化（キャメルケースや旧表記との互換性を確保）
@@ -287,7 +287,20 @@ export async function renderFullEpisodeMovie(
       }
       document.body.removeChild(video);
     } else if (cut.imageBase64) {
-      const img = await new Promise<HTMLImageElement>((resolve, reject) => {
+      // 画像キャッシュマップを構築
+      const imagesMap = new Map<number, HTMLImageElement>();
+      for (const c of ep.cuts) {
+        if (c.imageBase64) {
+          const loadedImg = await new Promise<HTMLImageElement>((resolve) => {
+            const im = new Image();
+            im.onload = () => resolve(im);
+            im.src = `data:image/png;base64,${c.imageBase64}`;
+          });
+          imagesMap.set(c.id, loadedImg);
+        }
+      }
+
+      const img = imagesMap.get(cut.id) || await new Promise<HTMLImageElement>((resolve, reject) => {
         const imgObj = new Image();
         imgObj.onload = () => resolve(imgObj);
         imgObj.onerror = reject;
@@ -302,10 +315,10 @@ export async function renderFullEpisodeMovie(
         ctx.fillStyle = 'black';
         ctx.fillRect(0, 0, width, height);
         
-        const hasClip1 = applyComicCanvasClip(ctx as any, width, height, cut.comicPanel);
-        drawKenBurnsFrame(ctx, img, width, height, cut.kenBurnsPreset || 'none', progress);
-        if (hasClip1) {
-          ctx.restore();
+        if (cut.comicPanel && cut.comicPanel.layout !== 'none' && cut.comicPanel.layout !== 'spread-splash') {
+          drawComicCompositeOnCanvas(ctx as any, width, height, cut, ep.cuts, imagesMap);
+        } else {
+          drawKenBurnsFrame(ctx, img, width, height, cut.kenBurnsPreset || 'none', progress);
         }
         drawBakedSubtitles(ctx, width, height, cut);
         
@@ -352,11 +365,7 @@ export async function renderKenBurnsVideo(cut: Cut, durationSec: number = 4): Pr
     const progress = frame / totalFrames;
     ctx.fillStyle = 'black';
     ctx.fillRect(0, 0, width, height);
-    const hasClip2 = applyComicCanvasClip(ctx as any, width, height, cut.comicPanel);
     drawKenBurnsFrame(ctx, img, width, height, cut.kenBurnsPreset || 'none', progress);
-    if (hasClip2) {
-      ctx.restore();
-    }
     drawBakedSubtitles(ctx, width, height, cut);
     await canvasSource.add(frame / fps, 1 / fps);
   }

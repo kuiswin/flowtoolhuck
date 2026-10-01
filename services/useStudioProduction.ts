@@ -215,34 +215,11 @@ export function useStudioProduction({ settings, logs, addLog, refreshStories }: 
     const currentEp = episodesRef.current.find(e => e.id === epId);
     const currentCut = currentEp?.cuts.find(c => c.id === cutId);
 
-    // コマ割りシークエンスの子コマ（step > 1）の場合、親コマの画像を引き継ぐ
-    if (currentCut?.comicPanel && currentCut.comicPanel.step > 1 && currentCut.comicPanel.parentCutId !== cutId) {
-      const parentId = currentCut.comicPanel.parentCutId;
-      addLog(`📖 Ep.${epId} C${cutId.toString().padStart(2, '0')}: 親コマ (C${parentId.toString().padStart(2, '0')}) の作画完了を待機中...`, 'info');
-      
-      let parentImg: { mediaId?: string; base64?: string } | null = null;
-      for (let attempt = 0; attempt < 60; attempt++) {
-        if (isAbortedRef.current) return;
-        const pCut = episodesRef.current.find(e => e.id === epId)?.cuts.find(c => c.id === parentId);
-        if (pCut?.imageMediaId || pCut?.imageBase64) {
-          parentImg = { mediaId: pCut.imageMediaId, base64: pCut.imageBase64 };
-          break;
-        }
-        await new Promise(r => setTimeout(r, 1000));
-      }
-
-      if (parentImg) {
-        updateCut(epId, cutId, {
-          imageMediaId: parentImg.mediaId,
-          imageBase64: parentImg.base64,
-          isGeneratingImage: false
-        });
-        addLog(`✨ Ep.${epId} C${cutId.toString().padStart(2, '0')}: 親コマの作画と同期完了 [ステップ ${currentCut.comicPanel.step}/${currentCut.comicPanel.totalSteps}]`, 'success');
-        return;
-      }
+    if (currentCut?.comicPanel && currentCut.comicPanel.layout !== 'none') {
+      addLog(`🎨 Ep.${epId} C${cutId.toString().padStart(2, '0')}: 漫画コマ [${currentCut.comicPanel.step}/${currentCut.comicPanel.totalSteps}] の個別シーンを作画中 [${settings.imageModel}]...`, 'process');
+    } else {
+      addLog(`🎨 Ep.${epId} C${cutId.toString().padStart(2, '0')}: 画像生成中 [${settings.imageModel}]...`, 'process');
     }
-
-    addLog(`🎨 Ep.${epId} C${cutId.toString().padStart(2, '0')}: 画像生成中 [${settings.imageModel}]...`, 'process');
 
     try {
       const modelInfo = IMAGE_MODELS.find(m => m.label === settings.imageModel) || IMAGE_MODELS[1];

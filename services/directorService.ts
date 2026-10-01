@@ -185,29 +185,14 @@ export function buildImagePromptAndNegative(
     : '';
   const baselineNegative = `${illustrationNegative}${mangaNegative}frame, border, picture frame, ornate frame, arch frame, decorative border, pixel art, 8-bit, 16-bit, lowres, worst quality, text, watermark, signature, blurry`;
 
-  // コマ割りレイアウトに応じた作画構図指示
+  // コマ割り各シーンに応じた単独作画指示（1コマごとに画面いっぱいの迫真シーンを描く）
   const comicPanel = (task as any).comicPanel;
   let comicLayoutPrompt = '';
   if (settings.isMangaMode && comicPanel && comicPanel.layout !== 'none') {
-    switch (comicPanel.layout) {
-      case 'diagonal-2':
-        comicLayoutPrompt = 'Dynamic 2-panel diagonal split composition with sharp dynamic dividing angle. Split screen showing two contrasting character actions. Full-bleed edge-to-edge.';
-        break;
-      case 'vertical-2':
-        comicLayoutPrompt = 'Dynamic 2-panel vertically stacked composition with crisp black dividing gutter. Top panel shows establishing moment, bottom panel shows intense climax. Full-bleed edge-to-edge.';
-        break;
-      case 'vertical-3':
-        comicLayoutPrompt = 'Dynamic 3-panel vertically stacked manga composition. 3 distinct sequential moments from top to bottom separated by thin black dividing gutters. Full-bleed edge-to-edge.';
-        break;
-      case 't-split-3':
-        comicLayoutPrompt = 'Dynamic 3-panel manga composition. Large upper splash panel, lower half split into two side-by-side reaction panels. Full-bleed edge-to-edge.';
-        break;
-      case 'grid-4':
-        comicLayoutPrompt = 'Dynamic 4-panel 2x2 grid manga composition. 4 rapid sequential action panels separated by crisp dividing gutters. Full-bleed edge-to-edge.';
-        break;
-      case 'spread-splash':
-        comicLayoutPrompt = 'Breathtaking double-page spread manga climax splash artwork. Monumental epic scale, boundary-breaking dynamic composition bursting across the screen, ultimate visual impact, borderless full-bleed edge-to-edge.';
-        break;
+    if (comicPanel.layout === 'spread-splash') {
+      comicLayoutPrompt = 'Breathtaking double-page spread manga climax splash artwork, monumental epic scale, boundary-breaking dynamic composition bursting across the screen, ultimate visual impact, borderless full-bleed edge-to-edge';
+    } else {
+      comicLayoutPrompt = `Dramatic sequential manga scene [Story Moment ${comicPanel.step}/${comicPanel.totalSteps}]. Intense dynamic scene, extreme high-energy manga illustration, masterwork inking and screentones, borderless full-bleed edge-to-edge`;
     }
   }
 

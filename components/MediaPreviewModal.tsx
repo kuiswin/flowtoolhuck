@@ -6,12 +6,13 @@ import { Flow } from 'flow-sdk';
 import { callWithRetry } from '../services/utils';
 import { extractHighlights } from '../services/directorService';
 import { normalizeKenBurnsPreset } from '../services/browserVideoService';
-import { getComicClipPath, getComicPanelBadge } from '../services/comicPanelService';
+import { getComicCompositeSlots, getComicPanelBadge } from '../services/comicPanelService';
 
 interface MediaPreviewModalProps {
     isOpen: boolean;
     cut: Cut;
     episodeId: number;
+    allCuts?: Cut[];
     onClose: () => void;
     onAnimate: (m: VideoModelType) => void;
     onBrowserAnimate: () => void;
@@ -20,7 +21,7 @@ interface MediaPreviewModalProps {
 }
 
 export const MediaPreviewModal: React.FC<MediaPreviewModalProps> = ({
-    isOpen, cut, episodeId, onClose, onAnimate, onBrowserAnimate, onUpdateCut, onRegenerateImage
+    isOpen, cut, episodeId, allCuts, onClose, onAnimate, onBrowserAnimate, onUpdateCut, onRegenerateImage
 }) => {
     const videoRef = useRef<HTMLVideoElement>(null);
     const [aiWish, setAiWish] = useState('');
@@ -224,12 +225,31 @@ export const MediaPreviewModal: React.FC<MediaPreviewModalProps> = ({
                             )}
                             {videoSrc ? (
                                 <video ref={videoRef} src={videoSrc} className="w-full h-full object-contain block" autoPlay loop playsInline />
+                            ) : (cut.comicPanel && cut.comicPanel.layout !== 'none' && cut.comicPanel.layout !== 'spread-splash') ? (
+                                <div className="w-full h-full relative overflow-hidden bg-[#0c0c0c]">
+                                    {getComicCompositeSlots(cut, allCuts || [cut]).map(slot => (
+                                        <div 
+                                            key={slot.slotIndex}
+                                            className="absolute inset-0 w-full h-full pointer-events-none overflow-hidden"
+                                            style={{ clipPath: slot.clipPath }}
+                                        >
+                                            {slot.imageSrc ? (
+                                                <img 
+                                                    src={slot.imageSrc} 
+                                                    alt={slot.label} 
+                                                    className={`w-full h-full object-contain block ${slot.isNew ? 'animate-in fade-in zoom-in-95 duration-500' : ''}`} 
+                                                />
+                                            ) : (
+                                                <div className="w-full h-full bg-[#181818] flex items-center justify-center border border-white/5">
+                                                    <span className="text-xs text-white/30 font-bold uppercase tracking-wider">{slot.label}</span>
+                                                </div>
+                                            )}
+                                        </div>
+                                    ))}
+                                </div>
                             ) : imageSrc ? (
-                                <div className="w-full h-full overflow-hidden relative">
-                                    {cut.comicPanel && cut.comicPanel.layout !== 'none' && cut.comicPanel.layout !== 'spread-splash' && (
-                                        <img src={imageSrc} className="w-full h-full object-contain block opacity-20 grayscale contrast-150 absolute inset-0 pointer-events-none" alt="" />
-                                    )}
-                                    <img src={imageSrc} style={{ clipPath: getComicClipPath(cut.comicPanel) }} className={`w-full h-full object-contain block relative ${getKenBurnsClass()}`} alt="Preview" />
+                                <div className="w-full h-full overflow-hidden">
+                                    <img src={imageSrc} className={`w-full h-full object-contain block ${getKenBurnsClass()}`} alt="Preview" />
                                 </div>
                             ) : (
                                 <div className="w-full h-full flex flex-col items-center justify-center text-white/10 gap-3 uppercase tracking-widest text-[10px]">Rendering</div>

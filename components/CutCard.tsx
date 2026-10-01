@@ -1,11 +1,12 @@
 import React from 'react';
 import { Cut, VideoModelType, RecommendationModel } from '../types';
 import { normalizeKenBurnsPreset } from '../services/browserVideoService';
-import { getComicClipPath, getComicPanelBadge } from '../services/comicPanelService';
+import { getComicCompositeSlots, getComicPanelBadge } from '../services/comicPanelService';
 
 interface CutCardProps {
   cut: Cut;
   episodeId: number;
+  allCuts?: Cut[];
   onAnimateRequest: (epId: number, cutId: number, modelType: VideoModelType) => void;
   onPreviewCut: (epId: number, cutId: number) => void;
   onUpdateSelection: (epId: number, cutId: number, isSelected: boolean) => void;
@@ -14,7 +15,7 @@ interface CutCardProps {
 }
 
 export const CutCard: React.FC<CutCardProps> = ({ 
-  cut, episodeId, onAnimateRequest, onPreviewCut, onUpdateSelection, onUpdateModel, onRetry 
+  cut, episodeId, allCuts, onAnimateRequest, onPreviewCut, onUpdateSelection, onUpdateModel, onRetry 
 }) => {
   const imageSrc = cut.imageBase64 ? `data:image/png;base64,${cut.imageBase64}` : null;
   const videoSrc = cut.videoBase64 ? `data:video/mp4;base64,${cut.videoBase64}` : null;
@@ -59,21 +60,34 @@ export const CutCard: React.FC<CutCardProps> = ({
       <div className="relative aspect-[9/16] bg-black flex items-center justify-center overflow-hidden">
         {videoSrc ? (
           <video src={videoSrc} className="w-full h-full object-cover" autoPlay loop muted playsInline />
+        ) : (cut.comicPanel && cut.comicPanel.layout !== 'none' && cut.comicPanel.layout !== 'spread-splash') ? (
+          <div className="w-full h-full relative overflow-hidden bg-[#0c0c0c]">
+            {getComicCompositeSlots(cut, allCuts || [cut]).map(slot => (
+              <div 
+                key={slot.slotIndex}
+                className="absolute inset-0 w-full h-full pointer-events-none overflow-hidden"
+                style={{ clipPath: slot.clipPath }}
+              >
+                {slot.imageSrc ? (
+                  <img 
+                    src={slot.imageSrc} 
+                    alt={slot.label} 
+                    className={`w-full h-full object-cover ${slot.isNew ? 'animate-in fade-in zoom-in-95 duration-500' : ''}`} 
+                  />
+                ) : (
+                  <div className="w-full h-full bg-[#181818] flex items-center justify-center border border-white/5">
+                    <span className="text-[7px] text-white/25 font-bold uppercase tracking-wider">{slot.label}</span>
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
         ) : imageSrc ? (
-          <div className="w-full h-full overflow-hidden relative">
-            {/* 未開放コマの薄い下地プレビュー */}
-            {cut.comicPanel && cut.comicPanel.layout !== 'none' && cut.comicPanel.layout !== 'spread-splash' && (
-              <img 
-                src={imageSrc} 
-                alt="" 
-                className="w-full h-full object-cover opacity-20 grayscale contrast-150 absolute inset-0 pointer-events-none" 
-              />
-            )}
+          <div className="w-full h-full overflow-hidden">
             <img 
               src={imageSrc} 
               alt={`Cut ${cut.id}`} 
-              style={{ clipPath: getComicClipPath(cut.comicPanel) }}
-              className={`w-full h-full object-cover relative animate-in fade-in duration-700 ${getKenBurnsClass()}`} 
+              className={`w-full h-full object-cover animate-in fade-in duration-700 ${getKenBurnsClass()}`} 
             />
           </div>
         ) : (cut.isGeneratingImage || cut.isDirecting) ? (

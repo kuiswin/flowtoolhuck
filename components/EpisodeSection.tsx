@@ -144,7 +144,7 @@ export const EpisodeSection: React.FC<EpisodeSectionProps> = ({
       <div className={`no-wrap-row gap-4 pb-6 dark-scrollbar ${isPending ? 'grayscale pointer-events-none' : ''}`}>
         {ep.cuts.map(cut => (
           <CutCard 
-            key={cut.id} cut={cut} episodeId={ep.id} 
+            key={cut.id} cut={cut} episodeId={ep.id} allCuts={ep.cuts} 
             onAnimateRequest={onAnimateRequest}
             onPreviewCut={() => onPreviewCut(ep.id, cut)}
             onUpdateSelection={(eId, cId, sel) => onUpdateCut(eId, cId, { isSelectedForVideo: sel })}

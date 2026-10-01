@@ -25,6 +25,7 @@ import {
   extractHighlights,
   PreviousShotInfo
 } from './directorService';
+import { getStoryboardPreset } from './promptEngine';
 import { LogEntry } from '../components/StudioLogs';
 
 interface UseStudioProductionProps {
@@ -556,6 +557,139 @@ Output JSON ONLY:
         }
 
         addLog(`🎉 全 ${targetTastes.length} 種類の画風比較マトリクスの制作が完了しました！見比べて最適な画風をお選びください！`, 'success');
+        return;
+      }
+
+      // ── 音楽MVモード（アンニュイ情景連続・1曲12カット） ──
+      if (settings.productionMode === 'mv' || settings.isMvMode) {
+        addLog(`🎵 【音楽MVモード】「${settings.theme}」の世界観でアンニュイな情景MV（12カット）を策定中...`, 'process');
+
+        // テーマ名からタイトル候補を抽出
+        const rawTitle = settings.theme.split('（')[0].replace(/^[^\w\s\u4e00-\u9faf]+/, '').trim() || '風の記憶';
+        const defaultEnTitle = 'Twilight Whispers';
+
+        const mvPlan = {
+          epNumber: 1,
+          titleJp: rawTitle,
+          titleEn: defaultEnTitle,
+          summary: `${rawTitle}の世界観で紡がれる、音楽のためのアンニュイな情景映像`
+        };
+
+        const scriptPrompt = buildScriptPrompt(
+          1, 
+          mvPlan, 
+          settings.country, 
+          settings.theme, 
+          settings.era, 
+          false, 
+          true // isMvMode = true
+        );
+
+        const scriptRes = await callWithRetry<any>(
+          () => Flow.generate.text(scriptPrompt),
+          (attempt, max, delay) => addLog(`Retrying MV Script (attempt ${attempt}/${max}) after ${delay} ms...`, 'warning'),
+          5
+        );
+        const parsed = safeJsonParse<any>(scriptRes.text, {
+          titleJp: rawTitle,
+          titleEn: defaultEnTitle,
+          summary: `${rawTitle}のアンニュイな情景`,
+          eraAnalysisJp: '音楽を引き立てるためのシネマティックでアンニュイな光と空気感の連続性。',
+          forbiddenAnachronisms: ['激しい叫びや戦闘', '過剰な劇的演出', '特異な大事件'],
+          authenticAttireEn: 'Effortless relaxed natural attire, indie cinematic style',
+          forbiddenKeywordsEn: 'screaming, aggressive, battle, explosive drama',
+          coverCatchphraseJp: '名もなき時間の、通り過ぎる風と光。',
+          highlightWords: ['風', '光'],
+          cuts: []
+        });
+
+        const ratio = settings.videoRatio;
+        const getIsSelected = (idx: number) => {
+          if (ratio === 'none') return false;
+          if (ratio === '30%') return [0, 4, 8, 11].includes(idx);
+          if (ratio === '50%') return [0, 2, 4, 6, 8, 10].includes(idx);
+          if (ratio === '100%') return true;
+          return false;
+        };
+
+        const rawCuts = Array.isArray(parsed.cuts) ? parsed.cuts : (Array.isArray(parsed.scenes) ? parsed.scenes : []);
+        const baseCutsData = Array.from({ length: CUTS_PER_EPISODE }, (_, j) => {
+          const cutData = rawCuts[j] || {};
+          const narration = cutData.narrationJp || cutData.narration || '';
+          const plot = cutData.basicPlot || cutData.promptEn || cutData.prompt || '';
+          const cutHighlights = cutData.highlights || parsed.highlightWords || [];
+          const preset = getStoryboardPreset(j + 1, true, false);
+          
+          const cut = createDefaultCut(j + 1, narration, plot, getIsSelected(j));
+          cut.shotScale = preset.scale;
+          cut.cinematicAngle = preset.angle;
+          cut.telop.highlights = extractHighlights(narration, cutHighlights);
+          return cut;
+        });
+
+        const mvEpisode: Episode = {
+          id: 1,
+          internalId: crypto.randomUUID(),
+          titleJp: `🎵 ${parsed.titleJp || rawTitle}`,
+          titleEn: parsed.titleEn || defaultEnTitle,
+          summary: parsed.summary || `${rawTitle}のアンニュイな情景`,
+          eraAnalysis: parsed.eraAnalysisJp || '音楽を引き立てるためのシネマティックでアンニュイな光と空気感の連続性。',
+          forbiddenAnachronisms: parsed.forbiddenAnachronisms || ['激しい叫びや戦闘', '過剰な劇的演出', '特異な大事件'],
+          authenticAttireEn: parsed.authenticAttireEn || 'Effortless relaxed natural attire, indie cinematic style',
+          forbiddenKeywordsEn: parsed.forbiddenKeywordsEn || 'screaming, aggressive, battle, explosive drama',
+          coverCatchphraseJp: parsed.coverCatchphraseJp || '名もなき時間の、通り過ぎる風と光。',
+          highlightWords: parsed.highlightWords || ['風', '光'],
+          cuts: baseCutsData,
+          isGenerating: true,
+          isGeneratingRemainingImages: false,
+          isBatchGeneratingVideos: false,
+          isPreviewDone: false,
+          isDone: false,
+          taste: settings.taste,
+          era: settings.era,
+          theme: settings.theme,
+          isMvMode: true
+        };
+
+        setEpisodes([mvEpisode]);
+        episodesRef.current = [mvEpisode];
+        addLog(`✨ 音楽MV『${mvEpisode.titleJp}』全12カットのアンニュイ情景演出が確定しました！描画を開始します...`, 'success');
+
+        const targetCutCount = Math.min(settings.previewCutCount, CUTS_PER_EPISODE);
+        const tasks: GenerationTask[] = mvEpisode.cuts.slice(0, targetCutCount).map(c => ({
+          epId: 1,
+          cutId: c.id,
+          prompt: c.promptEn,
+          styleKey: settings.taste,
+          imageModel: settings.imageModel,
+          isMvMode: true,
+          storyContext: mvEpisode.summary || '',
+          eraAnalysis: mvEpisode.eraAnalysis,
+          forbiddenAnachronisms: mvEpisode.forbiddenAnachronisms,
+          authenticAttireEn: mvEpisode.authenticAttireEn,
+          forbiddenKeywordsEn: mvEpisode.forbiddenKeywordsEn,
+          referenceImageMediaId: activeReferenceRef.current?.mediaId
+        }));
+
+        await runTasks(tasks);
+
+        const isAllDone = targetCutCount >= CUTS_PER_EPISODE;
+        updateEpisode(1, { 
+          isGenerating: false, 
+          isPreviewDone: true, 
+          isDone: isAllDone 
+        });
+        addLog(`✅ 音楽MV『${mvEpisode.titleJp}』先行${targetCutCount}カットの画像生成が完了しました！`, 'success');
+
+        // 自動動画化（autoVideo が ON の場合）
+        if (settings.autoVideo && !isAbortedRef.current) {
+          const selectedCuts = mvEpisode.cuts.slice(0, targetCutCount).filter(c => c.isSelectedForVideo);
+          if (selectedCuts.length > 0) {
+            addLog(`🎬 自動動画化を開始します（対象: ${selectedCuts.length}カット）...`, 'process');
+            await handleBulkVideo(1);
+          }
+        }
+
         return;
       }
 

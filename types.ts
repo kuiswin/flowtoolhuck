@@ -1,5 +1,5 @@
 export type VideoModelType = 'veo-lite' | 'omni-flash' | 'veo-fast' | 'browser-0pt';
-export type ProductionMode = 'episodes' | 'style-matrix';
+export type ProductionMode = 'episodes' | 'mv' | 'style-matrix';
 export type RecommendationModel = VideoModelType | 'none';
 export type VideoRatio = 'none' | '30%' | '50%' | '100%';
 
@@ -97,6 +97,7 @@ export interface Episode {
   taste?: string;
   era?: string;
   theme?: string;
+  isMvMode?: boolean;
 }
 
 export interface GeneratorSettings {

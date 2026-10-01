@@ -6,6 +6,7 @@ import { Flow } from 'flow-sdk';
 import { callWithRetry } from '../services/utils';
 import { extractHighlights } from '../services/directorService';
 import { normalizeKenBurnsPreset } from '../services/browserVideoService';
+import { getComicClipPath, getComicPanelBadge } from '../services/comicPanelService';
 
 interface MediaPreviewModalProps {
     isOpen: boolean;
@@ -216,11 +217,19 @@ export const MediaPreviewModal: React.FC<MediaPreviewModalProps> = ({
                 <div className="flex-1 bg-black relative flex items-center justify-center p-4 lg:p-10 min-h-0 overflow-hidden">
                     <div className="relative h-full w-full flex items-center justify-center">
                         <div className="relative h-full max-h-full aspect-[9/16] shadow-2xl rounded-xl overflow-hidden border border-white/10 group bg-[#111] flex items-center justify-center">
+                            {cut.comicPanel && getComicPanelBadge(cut.comicPanel) && (
+                                <div className="absolute top-4 left-4 z-50 px-2.5 py-1 rounded-md bg-purple-600/90 border border-purple-400 text-xs font-black text-white shadow-xl">
+                                    {getComicPanelBadge(cut.comicPanel)}
+                                </div>
+                            )}
                             {videoSrc ? (
                                 <video ref={videoRef} src={videoSrc} className="w-full h-full object-contain block" autoPlay loop playsInline />
                             ) : imageSrc ? (
-                                <div className="w-full h-full overflow-hidden">
-                                    <img src={imageSrc} className={`w-full h-full object-contain block ${getKenBurnsClass()}`} alt="Preview" />
+                                <div className="w-full h-full overflow-hidden relative">
+                                    {cut.comicPanel && cut.comicPanel.layout !== 'none' && cut.comicPanel.layout !== 'spread-splash' && (
+                                        <img src={imageSrc} className="w-full h-full object-contain block opacity-20 grayscale contrast-150 absolute inset-0 pointer-events-none" alt="" />
+                                    )}
+                                    <img src={imageSrc} style={{ clipPath: getComicClipPath(cut.comicPanel) }} className={`w-full h-full object-contain block relative ${getKenBurnsClass()}`} alt="Preview" />
                                 </div>
                             ) : (
                                 <div className="w-full h-full flex flex-col items-center justify-center text-white/10 gap-3 uppercase tracking-widest text-[10px]">Rendering</div>

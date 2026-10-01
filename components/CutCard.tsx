@@ -1,6 +1,7 @@
 import React from 'react';
 import { Cut, VideoModelType, RecommendationModel } from '../types';
 import { normalizeKenBurnsPreset } from '../services/browserVideoService';
+import { getComicClipPath, getComicPanelBadge } from '../services/comicPanelService';
 
 interface CutCardProps {
   cut: Cut;
@@ -59,11 +60,20 @@ export const CutCard: React.FC<CutCardProps> = ({
         {videoSrc ? (
           <video src={videoSrc} className="w-full h-full object-cover" autoPlay loop muted playsInline />
         ) : imageSrc ? (
-          <div className="w-full h-full overflow-hidden">
+          <div className="w-full h-full overflow-hidden relative">
+            {/* 未開放コマの薄い下地プレビュー */}
+            {cut.comicPanel && cut.comicPanel.layout !== 'none' && cut.comicPanel.layout !== 'spread-splash' && (
+              <img 
+                src={imageSrc} 
+                alt="" 
+                className="w-full h-full object-cover opacity-20 grayscale contrast-150 absolute inset-0 pointer-events-none" 
+              />
+            )}
             <img 
               src={imageSrc} 
               alt={`Cut ${cut.id}`} 
-              className={`w-full h-full object-cover animate-in fade-in duration-700 ${getKenBurnsClass()}`} 
+              style={{ clipPath: getComicClipPath(cut.comicPanel) }}
+              className={`w-full h-full object-cover relative animate-in fade-in duration-700 ${getKenBurnsClass()}`} 
             />
           </div>
         ) : (cut.isGeneratingImage || cut.isDirecting) ? (
@@ -89,6 +99,13 @@ export const CutCard: React.FC<CutCardProps> = ({
         {cut.shotScale && (
           <div className="absolute bottom-1.5 left-1.5 px-1.5 py-0.5 rounded-sm bg-amber-500 text-[7px] font-black text-black uppercase tracking-tighter shadow-lg">
             {cut.shotScale}
+          </div>
+        )}
+
+        {/* コマ割りバッジ */}
+        {cut.comicPanel && getComicPanelBadge(cut.comicPanel) && (
+          <div className="absolute bottom-1.5 right-1.5 px-1.5 py-0.5 rounded-sm bg-purple-600/90 border border-purple-400 text-[7px] font-black text-white uppercase tracking-tighter shadow-lg z-10">
+            {getComicPanelBadge(cut.comicPanel)}
           </div>
         )}
 

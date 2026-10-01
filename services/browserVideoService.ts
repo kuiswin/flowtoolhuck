@@ -1,6 +1,7 @@
 import { Cut, Episode, KenBurnsPreset } from '../types';
 import { Output, Mp4OutputFormat, BufferTarget, CanvasSource } from 'mediabunny';
 import { renderCoverCanvas } from './exportService';
+import { applyComicCanvasClip } from './comicPanelService';
 
 /**
  * ケンバーンズ効果の文字列をケバブケースに正規化（キャメルケースや旧表記との互換性を確保）
@@ -301,7 +302,11 @@ export async function renderFullEpisodeMovie(
         ctx.fillStyle = 'black';
         ctx.fillRect(0, 0, width, height);
         
+        const hasClip1 = applyComicCanvasClip(ctx as any, width, height, cut.comicPanel);
         drawKenBurnsFrame(ctx, img, width, height, cut.kenBurnsPreset || 'none', progress);
+        if (hasClip1) {
+          ctx.restore();
+        }
         drawBakedSubtitles(ctx, width, height, cut);
         
         await canvasSource.add(globalTime, 1 / fps);
@@ -347,7 +352,11 @@ export async function renderKenBurnsVideo(cut: Cut, durationSec: number = 4): Pr
     const progress = frame / totalFrames;
     ctx.fillStyle = 'black';
     ctx.fillRect(0, 0, width, height);
+    const hasClip2 = applyComicCanvasClip(ctx as any, width, height, cut.comicPanel);
     drawKenBurnsFrame(ctx, img, width, height, cut.kenBurnsPreset || 'none', progress);
+    if (hasClip2) {
+      ctx.restore();
+    }
     drawBakedSubtitles(ctx, width, height, cut);
     await canvasSource.add(frame / fps, 1 / fps);
   }

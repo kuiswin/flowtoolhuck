@@ -388,7 +388,7 @@ Output JSON ONLY:
             summary: `${settings.theme}の世界観で描かれるドラマ`
           });
 
-          const scriptPrompt = buildScriptPrompt(1, generatedPlan as any, settings.country, settings.theme, settings.era);
+          const scriptPrompt = buildScriptPrompt(1, generatedPlan as any, settings.country, settings.theme, settings.era, settings.isMangaMode);
           const scriptRes = await callWithRetry(
             () => Flow.generate.text(scriptPrompt),
             (attempt, max, delay) => addLog(`Retrying Script Plot (attempt ${attempt}/${max}) after ${delay} ms...`, 'warning'),
@@ -485,7 +485,7 @@ Output JSON ONLY:
 
       if (!seriesManifestRef.current) {
         addLog(`📜 全${settings.episodeCount}話の大河ドラマグランドデザインをAIに策定依頼中... [世界観・テーマ: ${settings.theme}]`, 'process');
-        const designPrompt = buildGrandDesignPrompt(settings.episodeCount, settings.country, settings.theme, settings.era);
+        const designPrompt = buildGrandDesignPrompt(settings.episodeCount, settings.country, settings.theme, settings.era, settings.isMangaMode);
         const designRes = await callWithRetry(
           () => Flow.generate.text(designPrompt),
           (attempt, max, delay) => addLog(`Retrying Grand Design (attempt ${attempt}/${max}) after ${delay} ms...`, 'warning'),
@@ -542,7 +542,7 @@ Output JSON ONLY:
           addLog(`📖 【第${epId}話】「${currentPlan.titleJp}」の脚本・時代考証をAIに執筆依頼中...`, 'process');
           updateEpisode(epId, { isGenerating: true });
 
-          const scriptPrompt = buildScriptPrompt(epId, currentPlan, settings.country, settings.theme, settings.era);
+          const scriptPrompt = buildScriptPrompt(epId, currentPlan, settings.country, settings.theme, settings.era, settings.isMangaMode);
           const scriptRes = await callWithRetry(
             () => Flow.generate.text(scriptPrompt),
             (attempt, max, delay) => addLog(`Retrying Script Plot (attempt ${attempt}/${max}) after ${delay} ms...`, 'warning'),

@@ -95,6 +95,7 @@ export interface GeneratorSettings {
   customTheme?: string;
   taste: string;
   customTaste?: string;
+  isMangaMode?: boolean;
   imageModel: string;
   defaultVideoModel: string;
   videoRatio: VideoRatio;

@@ -134,6 +134,17 @@ export const StudioSidebar: React.FC<StudioSidebarProps> = ({
           disabled={isProducing || settings.productionMode === 'style-matrix' || !!settings.selectedAssetId} 
         />
 
+        <div className="flex flex-col gap-1 mt-1">
+          <ToggleSwitch 
+            label="📖 漫画演出モード (コミックカット割り)" 
+            checked={!!settings.isMangaMode} 
+            onChange={v => setSettings(s => ({ ...s, isMangaMode: v }))} 
+          />
+          <span className="text-[10px] text-gray-400 px-2 leading-tight">
+            コマ割り構図、集中線、フキダシ・モノローグ・オノマトペ(SFX)演出をGeminiプロンプトに反映。
+          </span>
+        </div>
+
         <SectionLabel>自動化設定</SectionLabel>
         <div className="flex flex-col gap-2.5">
           <FieldDropdown label="画像モデル" value={settings.imageModel} options={IMAGE_MODELS.map(m => m.label)} onChange={v => setSettings(s => ({ ...s, imageModel: v }))} disabled={isProducing} />

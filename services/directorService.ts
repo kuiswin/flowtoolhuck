@@ -24,10 +24,14 @@ Output JSON: {
 /**
  * シリーズ全体のグランドデザイン（全話プロット）を生成するためのプロンプト
  */
-export function buildGrandDesignPrompt(count: number, country: string, theme: string, era?: string): string {
+export function buildGrandDesignPrompt(count: number, country: string, theme: string, era?: string, isMangaMode?: boolean): string {
   const worldSetting = era && era !== theme ? `${theme} (時代: ${era}, 地域: ${country})` : `${theme} (${country})`;
+  const mangaInstruction = isMangaMode 
+    ? "Design the pacing and narrative structure specifically for a highly dynamic comic/manga serialization (including dramatic cliffhangers and fast-paced story development)." 
+    : "";
   return `Create a full ${count}-episode drama grand design with World Theme & Setting: "${worldSetting}".
 Analyze the authentic era, cultural background, human drama, and visual atmosphere directly from this theme.
+${mangaInstruction}
 Output ONLY valid JSON:
 {
   "seriesTitle": "Dramatic Series Title",
@@ -85,11 +89,24 @@ export function extractHighlights(narrationText: string, suggestedWords: string[
  * 各話の脚本（12カット分）および時代考証をAIに動的生成させるプロンプト
  * （世界観・テーマからGeminiが時代考証・衣装・NG要素およびカットごとの金文字強調キーワードを自律生成）
  */
-export function buildScriptPrompt(epId: number, currentPlan: SeriesEpisodePlan, country: string, theme: string, era?: string): string {
+export function buildScriptPrompt(epId: number, currentPlan: SeriesEpisodePlan, country: string, theme: string, era?: string, isMangaMode?: boolean): string {
   const worldSetting = era && era !== theme ? `${theme} (時代: ${era}, 地域: ${country})` : `${theme} (${country})`;
-  return `You are a world-class historical drama director and historical researcher.
+  
+  const directorRole = isMangaMode 
+    ? "world-class comic/manga author and storyboard artist" 
+    : "world-class historical drama director";
+    
+  const mangaInstructions = isMangaMode 
+    ? `MANGA/COMIC DIRECTING:
+Design dynamic comic panels (large splash panels, webtoon vertical flow, dynamic diagonal composition).
+Include expressive dialogues (Spoken Dialogue), inner thoughts (Monologue), narration, and dramatic onomatopoeia (SFX) smoothly integrated into the script plot.`
+    : "";
+
+  return `You are a ${directorRole} and historical researcher.
 Create a 12-cut drama story skeleton for Episode ${epId} ("${currentPlan.titleJp}").
 World Theme & Setting: "${worldSetting}".
+
+${mangaInstructions}
 
 STRICT HISTORICAL ACCURACY:
 Dynamically analyze the period, setting, and atmosphere implied by "${worldSetting}". Determine authentic period attire and identify modern anachronisms that must NEVER appear.
@@ -143,6 +160,11 @@ export function buildImagePromptAndNegative(
   const illustrationNegative = isIllustration ? 'photorealistic, realistic photo, hyperrealistic photograph, 3d render, cgi, ' : '';
   const baselineNegative = `${illustrationNegative}frame, border, picture frame, ornate frame, arch frame, decorative border, pixel art, 8-bit, 16-bit, lowres, worst quality, text, watermark, signature, blurry`;
 
+  // 漫画演出モード時のプロンプト拡張
+  const mangaPromptSuffix = settings.isMangaMode 
+    ? 'manga style, comic book panel, pen and ink, screentone, cel shading, dynamic dramatic expressions, extreme high contrast, bold line art, action lines, speed lines' 
+    : '';
+
   // AIが動的考証した時代衣装・除外ワード
   const dynamicAttire = authenticAttireEn ? `[PERIOD ATTIRE: ${authenticAttireEn}]` : '';
   const dynamicForbidden = forbiddenKeywordsEn || (forbiddenAnachronisms || []).join(', ');
@@ -158,7 +180,7 @@ export function buildImagePromptAndNegative(
       baselineNegative
     ].filter(Boolean).join(', ');
 
-    const finalPrompt = `${masterStylePrefix}. ${masterStylePrompt}. [ACTION: ${prompt}, ${cameraContext}]. ${dynamicAttire}. [REFERENCE MEDIUM: ${styleDna}].${STRICT_STYLE_SUFFIX}`;
+    const finalPrompt = `${masterStylePrefix}. ${masterStylePrompt}. [ACTION: ${prompt}, ${cameraContext}]. ${dynamicAttire}. [REFERENCE MEDIUM: ${styleDna}]. ${mangaPromptSuffix}.${STRICT_STYLE_SUFFIX}`;
     return { finalPrompt, finalNegative, referenceImageMediaIds: [mediaId] };
   } else {
     const finalNegative = [
@@ -168,7 +190,7 @@ export function buildImagePromptAndNegative(
       baselineNegative
     ].filter(Boolean).join(', ');
 
-    const finalPrompt = `${masterStylePrefix}. ${masterStylePrompt}. ${cameraContext}. ${prompt}. ${dynamicAttire}.${STRICT_STYLE_SUFFIX}`;
+    const finalPrompt = `${masterStylePrefix}. ${masterStylePrompt}. ${cameraContext}. ${prompt}. ${dynamicAttire}. ${mangaPromptSuffix}.${STRICT_STYLE_SUFFIX}`;
     return { finalPrompt, finalNegative };
   }
 }
@@ -204,16 +226,38 @@ export async function directShot(
     { scale: 'Wide', angle: 'Epic wide cinematic climax view, panoramic environmental composition', tag: '大団円・全景' }
   ];
 
-  const preset = CINEMATIC_SHOT_PRESETS[(cutId - 1) % CINEMATIC_SHOT_PRESETS.length];
+  const MANGA_SHOT_PRESETS = [
+    { scale: 'Splash', angle: 'Massive full-page splash panel, dynamic character pose breaking out of the frame, extreme impact, speed lines', tag: '見開き大ゴマ' },
+    { scale: 'Close-up', angle: 'Intense macro eye close-up, heavy screen tones, speed lines radiating, dramatic monologue expression', tag: '迫真アップ・モノローグ' },
+    { scale: 'Medium', angle: 'Webtoon style vertical flow, character in mid-action, dynamic diagonal angle, bold SFX onomatopoeia', tag: 'Webtoon風斜め・SFX' },
+    { scale: 'Wide', angle: 'Establishing shot with detailed pen-and-ink architecture, deep shadows, cinematic comic perspective', tag: '背景描写・トーン表現' },
+    { scale: 'Close-up', angle: 'Dutch tilt angular comic panel, character screaming or reacting with intense emotional distortion, bold line art', tag: '斜めリアクション' },
+    { scale: 'Medium', angle: 'Dramatic high-contrast cel-shaded lighting, character holding a dynamic combat or decisive pose, speed lines', tag: '決めポーズ・集中線' },
+    { scale: 'Wide', angle: 'Sweeping comic book splash page, multiple focal points, epic environmental scale, detailed crosshatching', tag: 'エピック大ゴマ' },
+    { scale: 'Medium', angle: 'Intense standoff over-the-shoulder panel, heavy tension, screentone gradients, dramatic shadows', tag: '対峙・緊張感' },
+    { scale: 'Close-up', angle: 'Extreme close-up on mouth/jaw with gritted teeth, heavy inking, dramatic SFX text floating', tag: '口元アップ・SFX' },
+    { scale: 'Medium', angle: 'Dynamic leaping/running action, extreme foreshortening, kinetic speed lines, borderless panel', tag: 'アクション・遠近法' },
+    { scale: 'Close-up', angle: 'Tearful or highly emotional character face, glowing eyes, fine delicate line art, emotional screentones', tag: '感情爆発・トーン' },
+    { scale: 'Wide', angle: 'Cinematic climax splash panel, full environment integration, spectacular pen and ink mastery', tag: 'クライマックス見開き' }
+  ];
+
+  const presetsToUse = settings.isMangaMode ? MANGA_SHOT_PRESETS : CINEMATIC_SHOT_PRESETS;
+  const preset = presetsToUse[(cutId - 1) % presetsToUse.length];
   const kenBurnsPresets: KenBurnsPreset[] = ['zoom-in', 'zoom-out', 'pan-left', 'pan-right', 'tilt-up', 'tilt-down'];
   const kbPreset = kenBurnsPresets[(cutId - 1) % kenBurnsPresets.length];
 
-  const directorPrompt = `You are a film director designing a visual shot for a historical drama.
+  const directorRole = settings.isMangaMode ? "comic book/manga storyboard artist" : "film director";
+  const mangaExtraDirecting = settings.isMangaMode 
+    ? "Include explicit instructions for pen-inking, screentones, cel-shading, dynamic facial expressions, and comic-style impact." 
+    : "";
+
+  const directorPrompt = `You are a ${directorRole} designing a visual shot for a historical drama.
 Context: "${prompt}".
 Style: "${rawStyle}".
 ${characterGuidance}
 Requested Framing: ${preset.scale} (${preset.angle}).
 Avoid scale errors. If wide shot, character MUST be small and buildings realistic. If close-up, show head/shoulders with natural proportions.
+${mangaExtraDirecting}
 
 Output ONLY valid JSON:
 {

@@ -1,7 +1,7 @@
 import React from 'react';
 import { Cut, VideoModelType, RecommendationModel } from '../types';
 import { normalizeKenBurnsPreset } from '../services/browserVideoService';
-
+import { VIDEO_MODELS_REGISTRY, resolveVideoModel } from '../config/studioDefinitions';
 
 interface CutCardProps {
   cut: Cut;
@@ -33,10 +33,14 @@ export const CutCard: React.FC<CutCardProps> = ({
 
   const cycleModel = (e: React.MouseEvent) => {
     e.stopPropagation();
-    const models: RecommendationModel[] = ['omni-flash', 'veo-lite', 'none'];
-    const currentIndex = models.indexOf(cut.targetVideoModel);
-    const nextIndex = (currentIndex + 1) % models.length;
-    const nextModel = models[nextIndex];
+    // 定義レジストリから動的にモデルリストを構築（+ 'none'）
+    const modelOptions: RecommendationModel[] = [
+      ...VIDEO_MODELS_REGISTRY.map(m => m.id as RecommendationModel),
+      'none'
+    ];
+    const currentIndex = modelOptions.indexOf(cut.targetVideoModel);
+    const nextIndex = (currentIndex + 1) % modelOptions.length;
+    const nextModel = modelOptions[nextIndex];
     onUpdateModel(episodeId, cut.id, nextModel);
     if (nextModel !== 'none') onUpdateSelection(episodeId, cut.id, true);
     else onUpdateSelection(episodeId, cut.id, false);
@@ -118,12 +122,14 @@ export const CutCard: React.FC<CutCardProps> = ({
             onClick={cycleModel}
             className={`px-1.5 py-0.5 rounded-sm text-[7px] font-black uppercase tracking-tighter backdrop-blur-md border transition-all ${
               cut.targetVideoModel === 'omni-flash' ? 'bg-purple-600/80 border-purple-400 text-white' :
+              cut.targetVideoModel === 'veo-fast' ? 'bg-indigo-600/80 border-indigo-400 text-white' :
               cut.targetVideoModel === 'veo-lite' ? 'bg-blue-600/80 border-blue-400 text-white' :
               'bg-white/10 border-white/10 text-white/30'
             }`}
           >
-            {cut.targetVideoModel === 'omni-flash' ? 'Omni ⚡' : 
-             cut.targetVideoModel === 'veo-lite' ? 'Veo Lite' : 'Still Only'}
+            {cut.targetVideoModel === 'none' 
+              ? 'Still Only' 
+              : resolveVideoModel(cut.targetVideoModel).name.replace(' - ', ' ')}
           </div>
         </div>
 

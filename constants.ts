@@ -121,17 +121,26 @@ export const TASTES: Record<string, string> = {
     "Masterpiece fine art classical oil painting, elegant Art Nouveau aesthetic, romantic classical realism, seamless full-bleed composition without frame or borders, flowing organic decorative curves and subtle botanical motifs gently blended into the background, delicate translucent sheer lace and silk drapery, luminous porcelain skin, soft diffused museum lighting, rich muted amber and cyan oil palette, timeless classical masterpiece, absolutely NO decorative frame, NO border, NO window arch, edge-to-edge artwork"
 };
 
-export const IMAGE_MODELS = [
-  { name: '🍌 Nano Banana 2 Lite', label: '🍌 2 Lite（超爆速 / 0pt）', description: '下書き・大量プレビュー確認向け' },
-  { name: '🍌 Nano Banana 2', label: '🍌 Banana 2（高速・高画質 / 0pt）★推奨', description: '速度と描画精度のバランスが最も優れた標準モデル' },
-  { name: '🍌 Nano Banana Pro', label: '🍌 Banana Pro（最高峰シネマ / 0pt）', description: '圧倒的ディテールとライティング。キメカット向け' }
-];
+import {
+  IMAGE_MODELS_REGISTRY,
+  VIDEO_MODELS_REGISTRY,
+  CAMERA_WORK_REGISTRY,
+  resolveImageModel,
+  resolveVideoModel,
+  resolveCameraWork
+} from './config/studioDefinitions';
 
-export const VIDEO_MODELS = [
-  { id: 'veo-lite', name: 'Veo 3.1 - Lite', label: 'Veo 3.1 Lite（8秒 / 5pt）★コスパ最強', defaultDuration: 8 },
-  { id: 'omni-flash', name: 'Omni 1.1 Flash', label: 'Omni 1.1 Flash（4秒 / 15pt）⚡高速', defaultDuration: 4 },
-  { id: 'veo-fast', name: 'Veo 3.1 - Fast', label: 'Veo 3.1 Fast（8秒 / 10pt）🚀高速シネマ', defaultDuration: 8 }
-];
+export {
+  IMAGE_MODELS_REGISTRY,
+  VIDEO_MODELS_REGISTRY,
+  CAMERA_WORK_REGISTRY,
+  resolveImageModel,
+  resolveVideoModel,
+  resolveCameraWork
+};
+
+export const IMAGE_MODELS = IMAGE_MODELS_REGISTRY;
+export const VIDEO_MODELS = VIDEO_MODELS_REGISTRY;
 
 export const VIDEO_RATIO_OPTIONS = [
   { label: 'なし(0%)', value: 'none' },
@@ -165,16 +174,10 @@ export const VOICE_CHARACTERS = [
   { id: 'kenji', name: '健二 (Kenji)', style: '力強い少年・中低音' }
 ];
 
-export const CAMERA_WORK_OPTIONS = [
-  { label: '固定（フィックス）', value: 'Static camera, perfectly still frame' },
-  { label: 'ゆっくりズームイン', value: 'Slow cinematic zoom in towards the subject' },
-  { label: 'ゆっくりズームアウト', value: 'Slow cinematic zoom out revealing the surroundings' },
-  { label: 'パン（左右へ移動）', value: 'Slow horizontal panning shot' },
-  { label: 'ティルト（上下へ移動）', value: 'Slow vertical tilting shot' },
-  { label: '手持ち風（微細な揺れ）', value: 'Handheld camera style, slight organic shake, realistic vibration' },
-  { label: '被写体を追従（トラッキング）', value: 'Tracking shot, camera follows the subject closely' },
-  { label: 'ダイナミックアクション', value: 'Dynamic high-speed action camera, aggressive movement' }
-];
+export const CAMERA_WORK_OPTIONS = CAMERA_WORK_REGISTRY.map(c => ({
+  label: c.label,
+  value: c.motionPrompt
+}));
 
 export const sanitizeFilename = (name: string) => (name || '').replace(/[\\/:*?"<>|]/g, '').trim();
 

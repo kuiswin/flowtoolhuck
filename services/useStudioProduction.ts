@@ -1,7 +1,16 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { Flow } from 'flow-sdk';
 import { Episode, Cut, GeneratorSettings, VideoModelType, GenerationTask, SeriesManifest } from '../types';
-import { IMAGE_MODELS, VIDEO_MODELS, DEFAULT_ASPECT_RATIO, CUTS_PER_EPISODE, TASTES } from '../constants';
+import { 
+  IMAGE_MODELS, 
+  VIDEO_MODELS, 
+  DEFAULT_ASPECT_RATIO, 
+  CUTS_PER_EPISODE, 
+  TASTES,
+  resolveImageModel,
+  resolveVideoModel,
+  resolveCameraWork
+} from '../constants';
 import { safeJsonParse, callWithRetry, formatErrorMessage, createDefaultCut } from './utils';
 import { saveStory, getAllReferenceAssets, saveReferenceAsset } from './db';
 import { downloadZip } from './exportService';
@@ -252,14 +261,22 @@ export function useStudioProduction({ settings, logs, addLog, refreshStories }: 
     const { epId, cutId } = task;
     updateCut(epId, cutId, { isGeneratingImage: true });
 
-    addLog(`🎨 Ep.${epId} C${cutId.toString().padStart(2, '0')}: 画像生成中 [${settings.imageModel}]...`, 'process');
+    // 定義レジストリから完全解決（キー、ラベル、表示名のいずれからでも確実に解決）
+    const modelDef = resolveImageModel(task.imageModel || settings.imageModel);
+
+    addLog(`🎨 Ep.${epId} C${cutId.toString().padStart(2, '0')}: 画像生成中 [${modelDef.label}]...`, 'process');
 
     try {
-      const modelInfo = IMAGE_MODELS.find(m => m.label === settings.imageModel) || IMAGE_MODELS[1];
       const { finalPrompt, finalNegative, referenceImageMediaIds } = buildImagePromptAndNegative(task, settings, activeReferenceRef.current);
       
       const res = await callWithRetry(
-        () => Flow.generate.image({ prompt: finalPrompt, negativePrompt: finalNegative, modelDisplayName: modelInfo.name, aspectRatio: DEFAULT_ASPECT_RATIO as any, referenceImageMediaIds }),
+        () => Flow.generate.image({ 
+          prompt: finalPrompt, 
+          negativePrompt: finalNegative, 
+          modelDisplayName: modelDef.name, 
+          aspectRatio: DEFAULT_ASPECT_RATIO as any, 
+          referenceImageMediaIds 
+        }),
         (attempt, max, delay) => addLog(`Retrying Image (attempt ${attempt}/${max}) after ${delay} ms...`, 'warning'),
         5, 90000
       );
@@ -277,21 +294,30 @@ export function useStudioProduction({ settings, logs, addLog, refreshStories }: 
       addLog(`⚠️ Ep.${epId} C${cutId.toString().padStart(2, '0')}: 画像がないため動画生成をスキップ`, 'warning');
       return;
     }
-    const modelInfo = VIDEO_MODELS.find(m => m.id === modelType) || VIDEO_MODELS[0];
-    updateCut(epId, cutId, { isGeneratingVideo: true, videoModelUsed: modelInfo.name });
-    addLog(`🎥 Ep.${epId} C${cutId.toString().padStart(2, '0')}: 動画生成開始 (${modelInfo.name})`, 'info');
+    // 動画モデル定義から安全に解決（デフォルト値・尺・コストを自動取得）
+    const modelDef = resolveVideoModel(modelType);
+    updateCut(epId, cutId, { isGeneratingVideo: true, videoModelUsed: modelDef.name });
+    addLog(`🎥 Ep.${epId} C${cutId.toString().padStart(2, '0')}: 動画生成開始 (${modelDef.name})`, 'info');
 
     try {
-      const cameraInstruction = cut.cameraMotion ? ` [Camera Motion: ${cut.cameraMotion}]` : '';
+      // カメラモーションを定義レジストリから解決して自然に注入
+      const cameraMotionText = cut.cameraMotion || (cut.cameraWork ? resolveCameraWork(cut.cameraWork).motionPrompt : '');
+      const cameraInstruction = cameraMotionText ? ` [Camera Motion: ${cameraMotionText}]` : '';
       const finalVideoPrompt = `${cut.promptEn}${cameraInstruction}`;
 
       const res = await callWithRetry(
-        () => Flow.generate.video({ prompt: finalVideoPrompt, firstFrameImageMediaId: cut.imageMediaId, modelDisplayName: modelInfo.name, durationSeconds: modelInfo.defaultDuration, aspectRatio: DEFAULT_ASPECT_RATIO as any }),
+        () => Flow.generate.video({ 
+          prompt: finalVideoPrompt, 
+          firstFrameImageMediaId: cut.imageMediaId, 
+          modelDisplayName: modelDef.name, 
+          durationSeconds: modelDef.defaultDuration, 
+          aspectRatio: DEFAULT_ASPECT_RATIO as any 
+        }),
         (attempt, max, delay) => addLog(`Retrying Video (attempt ${attempt}/${max}) after ${delay} ms...`, 'warning'),
         5, 180000, '動画生成'
       );
-      updateCut(epId, cutId, { videoBase64: res.base64, videoMediaId: res.mediaId, isGeneratingVideo: false, videoDuration: modelInfo.defaultDuration });
-      addLog(`🎬 Ep.${epId} C${cutId.toString().padStart(2, '0')}: 動画生成完了 (${modelInfo.defaultDuration}s)`, 'success');
+      updateCut(epId, cutId, { videoBase64: res.base64, videoMediaId: res.mediaId, isGeneratingVideo: false, videoDuration: modelDef.defaultDuration });
+      addLog(`🎬 Ep.${epId} C${cutId.toString().padStart(2, '0')}: 動画生成完了 (${modelDef.defaultDuration}s)`, 'success');
     } catch (err) {
       updateCut(epId, cutId, { isGeneratingVideo: false, error: '動画失敗' });
       addLog(`❌ Ep.${epId} C${cutId.toString().padStart(2, '0')}: 動画失敗 - ${formatErrorMessage(err)}`, 'error');
@@ -316,7 +342,7 @@ export function useStudioProduction({ settings, logs, addLog, refreshStories }: 
     updateEpisode(epId, { isBatchGeneratingVideos: true });
     for (const cut of ep.cuts) {
       if (cut.isSelectedForVideo && !cut.videoMediaId) {
-        const targetModel = (cut.targetVideoModel && cut.targetVideoModel !== 'none') ? cut.targetVideoModel : 'veo-lite';
+        const targetModel = resolveVideoModel(cut.targetVideoModel || settings.videoModel).id;
         await generateVideo(epId, cut.id, targetModel as VideoModelType);
       }
     }
@@ -734,7 +760,7 @@ Output JSON ONLY:
               if (isAbortedRef.current) break;
               const currentCut = episodesRef.current.find(e => e.id === epId)?.cuts.find(c => c.id === cutTask.id);
               if (currentCut?.imageMediaId) {
-                const targetModel = (currentCut.targetVideoModel && currentCut.targetVideoModel !== 'none') ? currentCut.targetVideoModel : 'veo-lite';
+                const targetModel = resolveVideoModel(currentCut.targetVideoModel || settings.videoModel).id;
                 await generateVideo(epId, cutTask.id, targetModel as VideoModelType);
               }
             }

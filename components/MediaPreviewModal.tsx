@@ -1,6 +1,14 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Cut, VideoModelType, KenBurnsPreset } from '../types';
-import { CAMERA_WORK_OPTIONS, IMAGE_MODELS, KEN_BURNS_PRESETS, sanitizeFilename } from '../constants';
+import { 
+  CAMERA_WORK_OPTIONS, 
+  IMAGE_MODELS, 
+  VIDEO_MODELS_REGISTRY,
+  KEN_BURNS_PRESETS, 
+  sanitizeFilename,
+  resolveImageModel,
+  resolveVideoModel
+} from '../constants';
 import { Flow } from 'flow-sdk';
 import { callWithRetry } from '../services/utils';
 import { extractHighlights } from '../services/directorService';
@@ -367,8 +375,21 @@ export const MediaPreviewModal: React.FC<MediaPreviewModalProps> = ({
                             <SectionLabel>動画生成</SectionLabel>
                             <PillButton variant="filled" className="bg-amber-600 hover:bg-amber-500 text-white font-black h-[42px]" onClick={onBrowserAnimate} disabled={cut.isGeneratingVideo || !cut.imageBase64}>⚡ ブラウザで即座に動画化 (0pt)</PillButton>
                             <div className="grid grid-cols-2 gap-2">
-                                <PillButton variant="filled" className={`bg-purple-600 text-white font-black h-[40px] text-[10px] ${isOmniRec ? 'ring-2 ring-amber-400' : ''}`} onClick={() => onAnimate('omni-flash')} disabled={cut.isGeneratingVideo || !cut.imageMediaId}>🎬 Omni (4s)</PillButton>
-                                <PillButton variant="filled" className={`bg-blue-600 text-white font-black h-[40px] text-[10px] ${isVeoRec ? 'ring-2 ring-amber-400' : ''}`} onClick={() => onAnimate('veo-lite')} disabled={cut.isGeneratingVideo || !cut.imageMediaId}>🎬 Veo (8s)</PillButton>
+                                {VIDEO_MODELS_REGISTRY.slice(0, 2).map(m => {
+                                    const isSelected = cut.targetVideoModel === m.id;
+                                    const colorClass = m.id === 'omni-flash' ? 'bg-purple-600' : 'bg-blue-600';
+                                    return (
+                                        <PillButton 
+                                            key={m.id}
+                                            variant="filled" 
+                                            className={`${colorClass} text-white font-black h-[40px] text-[10px] ${isSelected ? 'ring-2 ring-amber-400' : ''}`} 
+                                            onClick={() => onAnimate(m.id)} 
+                                            disabled={cut.isGeneratingVideo || !cut.imageMediaId}
+                                        >
+                                            🎬 {m.name} ({m.defaultDuration}s)
+                                        </PillButton>
+                                    );
+                                })}
                             </div>
                             {videoSrc && (
                                 <PillButton variant="outline" className="h-10 mt-2 border-amber-500/50 text-amber-500 font-black" onClick={handleDownloadVideo} disabled={downloadState !== 'idle'} icon={<span className="material-symbols-outlined text-[18px]">download</span>}>
@@ -379,7 +400,13 @@ export const MediaPreviewModal: React.FC<MediaPreviewModalProps> = ({
                     </div>
 
                     <div className="p-4 lg:p-6 bg-[#161616] border-t border-white/10 shrink-0 z-10">
-                        <PillButton variant="solid" className="w-full h-11 bg-white text-black font-black" disabled={cut.isGeneratingImage || isRewriting} onClick={() => onRegenerateImage(currentImageModel || IMAGE_MODELS[1].label, cut.promptEn, cut.negativePrompt)} icon={<span className="material-symbols-outlined">image</span>}>
+                        <PillButton 
+                          variant="solid" 
+                          className="w-full h-11 bg-white text-black font-black" 
+                          disabled={cut.isGeneratingImage || isRewriting} 
+                          onClick={() => onRegenerateImage(resolveImageModel(currentImageModel).label, cut.promptEn, cut.negativePrompt)} 
+                          icon={<span className="material-symbols-outlined">image</span>}
+                        >
                             {cut.isGeneratingImage ? '描画中...' : '画像を再描画'}
                         </PillButton>
                     </div>

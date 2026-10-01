@@ -58,6 +58,7 @@ async function runBuild() {
     'src',
     'components',
     'services',
+    'config',
   ];
 
   for (const item of syncItems) {

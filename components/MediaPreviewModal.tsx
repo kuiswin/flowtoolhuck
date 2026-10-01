@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Cut, VideoModelType, KenBurnsPreset } from '../types';
-import { PillButton, SectionLabel, TextInput, FieldDropdown, ToggleSwitch } from './Primitives';
-import { VOICE_CHARACTERS, CAMERA_WORK_OPTIONS, IMAGE_MODELS, KEN_BURNS_PRESETS, sanitizeFilename } from '../constants';
+import { CAMERA_WORK_OPTIONS, IMAGE_MODELS, KEN_BURNS_PRESETS, sanitizeFilename } from '../constants';
 import { Flow } from 'flow-sdk';
 import { callWithRetry } from '../services/utils';
 import { extractHighlights } from '../services/directorService';
@@ -12,6 +11,7 @@ interface MediaPreviewModalProps {
     isOpen: boolean;
     cut: Cut;
     episodeId: number;
+    currentImageModel?: string;
     onClose: () => void;
     onAnimate: (m: VideoModelType) => void;
     onBrowserAnimate: () => void;
@@ -20,7 +20,7 @@ interface MediaPreviewModalProps {
 }
 
 export const MediaPreviewModal: React.FC<MediaPreviewModalProps> = ({
-    isOpen, cut, episodeId, onClose, onAnimate, onBrowserAnimate, onUpdateCut, onRegenerateImage
+    isOpen, cut, episodeId, currentImageModel, onClose, onAnimate, onBrowserAnimate, onUpdateCut, onRegenerateImage
 }) => {
     const videoRef = useRef<HTMLVideoElement>(null);
     const [aiWish, setAiWish] = useState('');
@@ -102,7 +102,7 @@ export const MediaPreviewModal: React.FC<MediaPreviewModalProps> = ({
             if (refinedPrompt) {
                 onUpdateCut({ promptEn: refinedPrompt });
                 setAiWish('');
-                onRegenerateImage(IMAGE_MODELS[1].label, refinedPrompt, cut.negativePrompt);
+                onRegenerateImage(currentImageModel || IMAGE_MODELS[1].label, refinedPrompt, cut.negativePrompt);
             }
         } catch (err) { console.error(err); } finally { setIsRewriting(false); }
     };
@@ -379,7 +379,7 @@ export const MediaPreviewModal: React.FC<MediaPreviewModalProps> = ({
                     </div>
 
                     <div className="p-4 lg:p-6 bg-[#161616] border-t border-white/10 shrink-0 z-10">
-                        <PillButton variant="solid" className="w-full h-11 bg-white text-black font-black" disabled={cut.isGeneratingImage || isRewriting} onClick={() => onRegenerateImage(IMAGE_MODELS[1].label, cut.promptEn, cut.negativePrompt)} icon={<span className="material-symbols-outlined">image</span>}>
+                        <PillButton variant="solid" className="w-full h-11 bg-white text-black font-black" disabled={cut.isGeneratingImage || isRewriting} onClick={() => onRegenerateImage(currentImageModel || IMAGE_MODELS[1].label, cut.promptEn, cut.negativePrompt)} icon={<span className="material-symbols-outlined">image</span>}>
                             {cut.isGeneratingImage ? '描画中...' : '画像を再描画'}
                         </PillButton>
                     </div>

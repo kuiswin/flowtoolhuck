@@ -282,8 +282,11 @@ export function useStudioProduction({ settings, logs, addLog, refreshStories }: 
     addLog(`🎥 Ep.${epId} C${cutId.toString().padStart(2, '0')}: 動画生成開始 (${modelInfo.name})`, 'info');
 
     try {
+      const cameraInstruction = cut.cameraMotion ? ` [Camera Motion: ${cut.cameraMotion}]` : '';
+      const finalVideoPrompt = `${cut.promptEn}${cameraInstruction}`;
+
       const res = await callWithRetry(
-        () => Flow.generate.video({ prompt: cut.promptEn, firstFrameImageMediaId: cut.imageMediaId, modelDisplayName: modelInfo.name, durationSeconds: modelInfo.defaultDuration, aspectRatio: DEFAULT_ASPECT_RATIO as any }),
+        () => Flow.generate.video({ prompt: finalVideoPrompt, firstFrameImageMediaId: cut.imageMediaId, modelDisplayName: modelInfo.name, durationSeconds: modelInfo.defaultDuration, aspectRatio: DEFAULT_ASPECT_RATIO as any }),
         (attempt, max, delay) => addLog(`Retrying Video (attempt ${attempt}/${max}) after ${delay} ms...`, 'warning'),
         5, 180000, '動画生成'
       );
@@ -312,7 +315,10 @@ export function useStudioProduction({ settings, logs, addLog, refreshStories }: 
     setIsProducing(true);
     updateEpisode(epId, { isBatchGeneratingVideos: true });
     for (const cut of ep.cuts) {
-      if (cut.isSelectedForVideo && !cut.videoMediaId) await generateVideo(epId, cut.id, 'veo-lite');
+      if (cut.isSelectedForVideo && !cut.videoMediaId) {
+        const targetModel = (cut.targetVideoModel && cut.targetVideoModel !== 'none') ? cut.targetVideoModel : 'veo-lite';
+        await generateVideo(epId, cut.id, targetModel as VideoModelType);
+      }
     }
     updateEpisode(epId, { isBatchGeneratingVideos: false });
     setIsProducing(false);
@@ -722,13 +728,14 @@ Output JSON ONLY:
           addLog(`🎉 【第${epId}話】「${currentPlan.titleJp}」の先行プレビュー制作が完了しました！`, 'success');
 
           const cutsToAnimate = episodeCuts.filter(c => c.isSelectedForVideo);
-          if ((settings.autoVideo || settings.videoRatio !== 'none') && cutsToAnimate.length > 0 && !isAbortedRef.current) {
+          if (settings.autoVideo && cutsToAnimate.length > 0 && !isAbortedRef.current) {
             updateEpisode(epId, { isBatchGeneratingVideos: true });
             for (const cutTask of cutsToAnimate) {
               if (isAbortedRef.current) break;
               const currentCut = episodesRef.current.find(e => e.id === epId)?.cuts.find(c => c.id === cutTask.id);
               if (currentCut?.imageMediaId) {
-                await generateVideo(epId, cutTask.id, 'veo-lite');
+                const targetModel = (currentCut.targetVideoModel && currentCut.targetVideoModel !== 'none') ? currentCut.targetVideoModel : 'veo-lite';
+                await generateVideo(epId, cutTask.id, targetModel as VideoModelType);
               }
             }
             updateEpisode(epId, { isBatchGeneratingVideos: false });

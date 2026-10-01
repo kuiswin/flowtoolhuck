@@ -21,8 +21,22 @@ Output JSON: {
 /**
  * シリーズ全体のグランドデザイン（全話プロット）を生成するためのプロンプト
  */
-export function buildGrandDesignPrompt(count: number, country: string, theme: string, era?: string, isMangaMode?: boolean): string {
+export function buildGrandDesignPrompt(count: number, country: string, theme: string, era?: string, isMangaMode?: boolean, isMvMode?: boolean): string {
   const worldSetting = era && era !== theme ? `${theme} (時代: ${era}, 地域: ${country})` : `${theme} (${country})`;
+  if (isMvMode) {
+    return `Create a ${count}-track music video visual series grand design with Concept & Theme: "${worldSetting}".
+Analyze the atmospheric mood, ambient lighting, nostalgic or serene emotion, and visual continuity suitable for an aesthetic music video.
+Keep the mood subdued, ennui, and poetic without dramatic conflicts or chaotic action.
+Output ONLY valid JSON:
+{
+  "seriesTitle": "Aesthetic MV Concept Collection",
+  "overallSynopsis": "Overview of the musical and visual atmosphere across all parts",
+  "episodesPlan": [
+    { "epNumber": 1, "titleJp": "日本語トラック/情景タイトル", "titleEn": "English Track Title", "summary": "情景と空気感の描写（日本語2〜3行）" }
+  ]
+}
+`;
+  }
   const mangaInstruction = isMangaMode 
     ? "Design the pacing and narrative structure specifically for a highly dynamic comic/manga serialization (including dramatic cliffhangers and fast-paced story development)." 
     : "";
@@ -129,12 +143,22 @@ export function extractHighlights(narrationText: string, suggestedWords: string[
  * 各話の脚本（12カット分）および時代考証をAIに動的生成させるプロンプト
  * （世界観・テーマからGeminiが時代考証・衣装・NG要素およびカットごとの金文字強調キーワードを自律生成）
  */
-export function buildScriptPrompt(epId: number, currentPlan: SeriesEpisodePlan, country: string, theme: string, era?: string, isMangaMode?: boolean): string {
+export function buildScriptPrompt(
+  epId: number, 
+  currentPlan: SeriesEpisodePlan, 
+  country: string, 
+  theme: string, 
+  era?: string, 
+  isMangaMode?: boolean,
+  isMvMode?: boolean
+): string {
   const worldSetting = era && era !== theme ? `${theme} (時代: ${era}, 地域: ${country})` : `${theme} (${country})`;
   
-  const directorRole = isMangaMode 
-    ? "world-class comic/manga author and storyboard artist" 
-    : "world-class historical drama director";
+  const directorRole = isMvMode
+    ? "world-class music video (MV) director and visual poet"
+    : isMangaMode 
+      ? "world-class comic/manga author and storyboard artist" 
+      : "world-class historical drama director";
     
   const mangaInstructions = isMangaMode 
     ? `MANGA/COMIC DIRECTING:
@@ -144,38 +168,54 @@ Design full-bleed, borderless manga artwork filling the entire frame. Include ex
 Direct each cut with striking manga visual dynamics (epic splash double spreads, intense eye close-ups, dynamic action poses, deep screentone shadows).`
     : "";
 
-  return `You are a ${directorRole} and historical researcher.
-Create a 12-cut drama story skeleton for Episode ${epId} ("${currentPlan.titleJp}").
+  const mvInstructions = isMvMode
+    ? `MUSIC VIDEO (MV) CONTINUITY DIRECTING:
+1. Seamless Environmental Continuity & Ennui Mood:
+This is a music video sequence where the music is the hero and the visual is an ambient, aesthetic backdrop.
+ABSOLUTELY NO dramatic conflict, no battles, no shouting, no plot twists, no theatrical drama.
+Maintain a steady, melancholic, nostalgic, or calm ennui atmosphere (e.g. strolling through the field, gentle breeze, quiet city streets, subtle everyday micro-moments).
+The 12 cuts must represent a seamless, cohesive flow in the SAME continuous world and atmosphere.
+2. Poetic & Lyrical Narration:
+narrationJp MUST be short, poetic lyrics or contemplative phrases (approx 15-30 Japanese characters per cut), NOT long dramatic exposition or character lines.
+3. Aesthetic Subtitle Highlights:
+For EACH cut, select 1 to 2 tender poetic words (e.g. "風", "夕暮れ", "記憶", "微熱", "青空") present in narrationJp for the highlights array.`
+    : "";
+
+  const contextTitle = isMvMode ? "Music Video Sequence" : "Drama Episode";
+
+  return `You are a ${directorRole} and visual researcher.
+Create a 12-cut ${contextTitle} for Episode ${epId} ("${currentPlan.titleJp}").
 World Theme & Setting: "${worldSetting}".
 
-${mangaInstructions}
+${isMvMode ? mvInstructions : mangaInstructions}
 
-STRICT HISTORICAL ACCURACY:
-Dynamically analyze the period, setting, and atmosphere implied by "${worldSetting}". Determine authentic period attire and identify modern anachronisms that must NEVER appear.
+${isMvMode ? 'ATMOSPHERIC & VISUAL HARMONY:' : 'STRICT HISTORICAL ACCURACY:'}
+Dynamically analyze the period, setting, and atmosphere implied by "${worldSetting}". Determine authentic aesthetic attire and identify elements that would break the mood and must NEVER appear.
 
 CRITICAL SUBTITLE HIGHLIGHTS:
-For EACH cut, select 1 to 2 dramatic key terms (2 to 4 characters each, which MUST BE EXACTLY present in narrationJp) for the "highlights" array to be highlighted in gold text.
+For EACH cut, select 1 to 2 key terms (which MUST BE EXACTLY present in narrationJp) for the "highlights" array to be highlighted in gold text.
 
 Output ONLY valid JSON matching this exact structure:
 {
   "titleJp": "${currentPlan.titleJp}",
   "titleEn": "${currentPlan.titleEn}",
-  "summary": "話のあらすじ（日本語）",
-  "eraAnalysisJp": "時代背景と舞台設定の考証解説（日本語）",
-  "authenticAttireEn": "Detailed English prompt for authentic historical costume and attire of ${worldSetting}",
-  "forbiddenKeywordsEn": "Comma-separated English negative keywords for anachronisms that must NEVER appear in ${worldSetting} (e.g. smartphones, wristwatches, modern glasses, sneakers, modern clothing, electricity poles, asphalt)",
-  "forbiddenAnachronisms": ["日本語の禁止要素1", "日本語の禁止要素2"],
-  "coverCatchphraseJp": "超ド迫力キャッチコピー",
+  "summary": "${isMvMode ? '楽曲の世界観・全体の雰囲気（日本語2〜3行）' : '話のあらすじ（日本語）'}",
+  "eraAnalysisJp": "${isMvMode ? 'MVのビジュアルコンセプトと情緒の解説（日本語）' : '時代背景と舞台設定の考証解説（日本語）'}",
+  "authenticAttireEn": "Detailed English prompt for natural attire and wardrobe matching ${worldSetting}",
+  "forbiddenKeywordsEn": "${isMvMode ? 'screaming, angry, weapon, battle, aggressive combat, chaotic destruction, theatrical over-acting' : 'Comma-separated English negative keywords for anachronisms that must NEVER appear in ' + worldSetting}",
+  "forbiddenAnachronisms": ["${isMvMode ? '激しい叫びや戦闘' : '日本語の禁止要素1'}", "${isMvMode ? '過剰な劇的演出' : '日本語の禁止要素2'}"],
+  "coverCatchphraseJp": "${isMvMode ? '楽曲に寄り添うエモーショナルなフレーズ' : '超ド迫力キャッチコピー'}",
   "highlightWords": ["代表キーワード1", "代表キーワード2"],
   "cuts": [
     { 
       "id": 1, 
       "basicPlot": "Cinematic visual description of the cut in English", 
-      "narrationJp": "重厚なナレーション（日本語）",
+      "narrationJp": "${isMvMode ? '短く詩的な歌詞・ポエム（日本語20〜30文字）' : '重厚なナレーション（日本語）'}",
       "highlights": ["ナレーション内の重要語1", "ナレーション内の重要語2"]
     }
   ]
-}`;
+}
+`;
 }
 import { 
   buildDynamicAntiPreviousNegative, 
@@ -227,12 +267,13 @@ export async function directShot(
     : 'No specific reference asset.';
 
   // 定義テーブルから本カットの演出プリセットを取得
-  const preset = getStoryboardPreset(cutId, settings.isMangaMode);
+  const preset = getStoryboardPreset(cutId, settings.isMvMode, settings.isMangaMode);
   const kbPreset: KenBurnsPreset = settings.isMangaMode 
     ? 'none' 
     : resolveCameraWork(preset.tag).recommendedKenBurns;
 
-  const directorRole = settings.isMangaMode ? "comic book/manga storyboard artist" : "film director";
+  const directorRole = settings.isMvMode ? "music video (MV) visual director" : settings.isMangaMode ? "comic book/manga storyboard artist" : "film director";
+  const mvExtraDirecting = settings.isMvMode ? "MANDATORY FOR MV MODE: Atmospheric, ambient, and seamless continuity. Subdued, introspective, and aesthetic expression. No shouting, no melodramatic action poses, no theatrical over-acting. Natural, gentle movements or contemplative gaze matching the background mood." : "";
   const mangaExtraDirecting = settings.isMangaMode 
     ? "MANDATORY FOR MANGA: Full-bleed edge-to-edge artwork ONLY. Never generate panel borders, white gutters, frames, or blank margins. Fill the entire canvas with dynamic pen-inking, screentones, cel-shading, dynamic facial expressions, and comic-style impact." 
     : "";
@@ -255,6 +296,7 @@ ${previousContrastMandate}
 
 Avoid scale errors. If wide shot, character MUST be small and buildings realistic. If close-up, show head/shoulders with natural proportions.
 ${mangaExtraDirecting}
+${mvExtraDirecting}
 
 Output ONLY valid JSON:
 {

@@ -125,6 +125,7 @@ import {
   IMAGE_MODELS_REGISTRY,
   VIDEO_MODELS_REGISTRY,
   CAMERA_WORK_REGISTRY,
+  MV_THEMES,
   resolveImageModel,
   resolveVideoModel,
   resolveCameraWork
@@ -134,6 +135,7 @@ export {
   IMAGE_MODELS_REGISTRY,
   VIDEO_MODELS_REGISTRY,
   CAMERA_WORK_REGISTRY,
+  MV_THEMES,
   resolveImageModel,
   resolveVideoModel,
   resolveCameraWork

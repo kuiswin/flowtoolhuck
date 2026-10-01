@@ -110,6 +110,7 @@ export interface GeneratorSettings {
   taste: string;
   customTaste?: string;
   isMangaMode?: boolean;
+  isMvMode?: boolean;
   imageModel: string;
   defaultVideoModel: string;
   videoModel?: string;
@@ -129,6 +130,7 @@ export interface GenerationTask {
   negativePrompt?: string;
   styleKey: string;
   imageModel: string;
+  isMvMode?: boolean;
   eraAnalysis?: string;
   forbiddenAnachronisms?: string[];
   authenticAttireEn?: string;

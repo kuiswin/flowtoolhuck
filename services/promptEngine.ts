@@ -71,19 +71,33 @@ export function buildDynamicAntiPreviousNegative(previous?: PreviousShotContext)
 
 /**
  * 各カット番号に対応するストーリーボード演出プリセットを取得
+ * （シネマ / 音楽MV / 漫画モードを自動切り替え）
  */
-export function getStoryboardPreset(cutId: number, isMangaMode?: boolean): { scale: string; angle: string; tag: string } {
+export function getStoryboardPreset(
+  cutId: number, 
+  isMvMode?: boolean, 
+  isMangaMode?: boolean
+): { scale: string; angle: string; tag: string } {
   const index = Math.max(0, cutId - 1) % TWELVE_CUT_STORYBOARD_PRESETS.length;
   const def = TWELVE_CUT_STORYBOARD_PRESETS[index];
+  
+  let angle = def.cinematicAngle;
+  if (isMvMode) {
+    angle = def.mvAngle;
+  } else if (isMangaMode) {
+    angle = def.mangaAngle;
+  }
+
   return {
     scale: def.scale,
-    angle: isMangaMode ? def.mangaAngle : def.cinematicAngle,
+    angle: angle,
     tag: def.tag
   };
 }
 
 /**
  * 6層レイヤーに基づき、プロンプトとネガティブプロンプトを完全合成
+ * （音楽MVモード時はアンニュイ情景美と穏やかなライティングを注入し、激しいアクション・叫びを完全排除）
  */
 export function buildFinalCinematicPromptAndNegative(
   task: GenerationTask,
@@ -92,21 +106,27 @@ export function buildFinalCinematicPromptAndNegative(
 ): { finalPrompt: string; finalNegative: string; referenceImageMediaIds?: string[] } {
   const { prompt, negativePrompt, styleKey, forbiddenAnachronisms, authenticAttireEn, forbiddenKeywordsEn } = task;
   const rawStyle = TASTES[styleKey] || '';
+  const isMv = settings.isMvMode || task.isMvMode;
 
   // Layer 1: Master Style Anchor
   const masterStylePrefix = `Masterpiece, authentic ${rawStyle}. Consistent visual art style in ${rawStyle}.`;
   const masterStylePrompt = `[MASTER ART STYLE: ${rawStyle}, strictly maintain identical visual medium and rendering consistency across scenes]`;
 
   // Layer 2 & 3: Camera Context & Action
-  const cameraContext = 'Cinematic composition, dynamic natural pose, natural human anatomy, solid torso, complete body framing, grounded perspective, 8k resolution';
+  const cameraContext = isMv 
+    ? 'Candid atmospheric indie music video still, natural human anatomy, unposed natural posture, soft rim lighting, serene breathing space, cinematic 35mm photography aesthetic, 8k resolution'
+    : 'Cinematic composition, dynamic natural pose, natural human anatomy, solid torso, complete body framing, grounded perspective, 8k resolution';
   
   // Layer 4: Period Attire
   const dynamicAttire = authenticAttireEn ? `[PERIOD ATTIRE: ${authenticAttireEn}]` : '';
 
-  // Layer 5: Manga Mode Suffix
-  const mangaPromptSuffix = settings.isMangaMode 
-    ? 'manga style, full-bleed edge-to-edge artwork, borderless composition, filling entire canvas without margins, dynamic pen and ink, screentone, cel shading, intense dramatic expressions, extreme high contrast, bold line art, speed lines' 
-    : '';
+  // Layer 5: Mode Suffix (MVアンニュイ情景 または 漫画演出)
+  let modePromptSuffix = '';
+  if (isMv) {
+    modePromptSuffix = 'poetic indie music video visual, contemplative atmosphere, gentle ambient wind, quiet emotion, cinematic color grading, beautiful subtle mood, no dramatic conflict';
+  } else if (settings.isMangaMode) {
+    modePromptSuffix = 'manga style, full-bleed edge-to-edge artwork, borderless composition, filling entire canvas without margins, dynamic pen and ink, screentone, cel shading, intense dramatic expressions, extreme high contrast, bold line art, speed lines';
+  }
 
   // Layer 6: Negative Rules (厳密な優先度で結合)
   const isIllustration = styleKey.includes('アニメ') || styleKey.includes('イラスト') || styleKey.includes('マンガ') || styleKey.includes('セル画');
@@ -114,9 +134,15 @@ export function buildFinalCinematicPromptAndNegative(
 
   const dynamicForbidden = forbiddenKeywordsEn || (forbiddenAnachronisms || []).join(', ');
 
+  // MVモード専用アンチネガティブ（叫び、劇的な怒り、過剰アクション、武器を排除）
+  const mvAntiDramaticNegative = isMv 
+    ? 'violent action, aggressive shouting, screaming mouth wide open, intense crying, dynamic combat, weapons, explosion, exaggerated action pose, heroic flexing'
+    : '';
+
   const negativeLayers: string[] = [
     BASELINE_NEGATIVE_TOKENS.anatomicalIntegrity,
     BASELINE_NEGATIVE_TOKENS.antiReferenceStiffness,
+    mvAntiDramaticNegative,
     dynamicForbidden,
     illustrationNegative,
     BASELINE_NEGATIVE_TOKENS.antiFrameAndBorder,
@@ -130,7 +156,7 @@ export function buildFinalCinematicPromptAndNegative(
     if (eraNegative) negativeLayers.push(eraNegative);
 
     const finalNegative = negativeLayers.filter(Boolean).join(', ');
-    const finalPrompt = `${masterStylePrefix}. ${masterStylePrompt}. [ACTION: ${prompt}, ${cameraContext}]. ${dynamicAttire}. [REFERENCE MEDIUM: ${styleDna || ''}]. ${mangaPromptSuffix}.${STRICT_STYLE_SUFFIX}`;
+    const finalPrompt = `${masterStylePrefix}. ${masterStylePrompt}. [ACTION: ${prompt}, ${cameraContext}]. ${dynamicAttire}. [REFERENCE MEDIUM: ${styleDna || ''}]. ${modePromptSuffix}.${STRICT_STYLE_SUFFIX}`;
 
     return {
       finalPrompt,
@@ -139,7 +165,7 @@ export function buildFinalCinematicPromptAndNegative(
     };
   } else {
     const finalNegative = negativeLayers.filter(Boolean).join(', ');
-    const finalPrompt = `${masterStylePrefix}. ${masterStylePrompt}. ${cameraContext}. ${prompt}. ${dynamicAttire}. ${mangaPromptSuffix}.${STRICT_STYLE_SUFFIX}`;
+    const finalPrompt = `${masterStylePrefix}. ${masterStylePrompt}. ${cameraContext}. ${prompt}. ${dynamicAttire}. ${modePromptSuffix}.${STRICT_STYLE_SUFFIX}`;
 
     return {
       finalPrompt,

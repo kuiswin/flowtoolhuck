@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { SectionLabel, PillButton, FieldDropdown, SegmentedToggle, ToggleSwitch, NumberChoice } from './Primitives';
 import { GeneratorSettings, ReferenceAsset } from '../types';
-import { THEMES, TASTES, IMAGE_MODELS, VIDEO_RATIO_OPTIONS } from '../constants';
+import { THEMES, MV_THEMES, TASTES, IMAGE_MODELS, VIDEO_RATIO_OPTIONS } from '../constants';
 import { StudioLogs, LogEntry } from './StudioLogs';
 import { ReferenceVault } from './ReferenceVault';
 import { getAllReferenceAssets } from '../services/db';
@@ -117,11 +117,35 @@ export const StudioSidebar: React.FC<StudioSidebarProps> = ({
           disabled={isProducing}
         />
 
-        <SectionLabel>世界観・テーマ</SectionLabel>
+        {/* ── 音楽MVモード切替 ── */}
+        <div className="flex flex-col gap-1 p-2 rounded-xl bg-gradient-to-r from-purple-950/40 to-indigo-950/30 border border-purple-500/30">
+          <ToggleSwitch 
+            label="🎵 音楽MVモード (アンニュイ情景連続)" 
+            checked={!!settings.isMvMode} 
+            onChange={v => {
+              setSettings(s => ({
+                ...s,
+                isMvMode: v,
+                theme: v 
+                  ? (MV_THEMES.includes(s.theme) ? s.theme : MV_THEMES[0])
+                  : (THEMES.includes(s.theme) ? s.theme : THEMES[0]),
+                era: v 
+                  ? (MV_THEMES.includes(s.theme) ? s.theme : MV_THEMES[0])
+                  : (THEMES.includes(s.theme) ? s.theme : THEMES[0]),
+              }));
+            }} 
+            disabled={isProducing}
+          />
+          <span className="text-[10px] text-purple-300/80 px-1 leading-tight">
+            激しいストーリーや決め台詞を抑え、音楽を聞かせるアンニュイで心地よい情景の連続性を演出。
+          </span>
+        </div>
+
+        <SectionLabel>{settings.isMvMode ? 'MV世界観・シチュエーション' : '世界観・テーマ'}</SectionLabel>
         <FieldDropdown 
-          label="世界観・テーマ" 
+          label={settings.isMvMode ? 'MVシチュエーション (10選)' : '世界観・テーマ'} 
           value={settings.theme} 
-          options={THEMES} 
+          options={settings.isMvMode ? MV_THEMES : THEMES} 
           onChange={v => setSettings(s => ({ ...s, theme: v, era: v }))} 
           disabled={isProducing} 
         />
@@ -133,17 +157,6 @@ export const StudioSidebar: React.FC<StudioSidebarProps> = ({
           onChange={v => setSettings(s => ({ ...s, taste: v }))} 
           disabled={isProducing || settings.productionMode === 'style-matrix' || !!settings.selectedAssetId} 
         />
-
-        <div className="flex flex-col gap-1 mt-1">
-          <ToggleSwitch 
-            label="📖 漫画演出モード (コミックカット割り)" 
-            checked={!!settings.isMangaMode} 
-            onChange={v => setSettings(s => ({ ...s, isMangaMode: v }))} 
-          />
-          <span className="text-[10px] text-gray-400 px-2 leading-tight">
-            コマ割り構図、集中線、フキダシ・モノローグ・オノマトペ(SFX)演出をGeminiプロンプトに反映。
-          </span>
-        </div>
 
         <SectionLabel>自動化設定</SectionLabel>
         <div className="flex flex-col gap-2.5">

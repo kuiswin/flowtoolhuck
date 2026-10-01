@@ -242,86 +242,113 @@ export const POSE_CONTRAST_RULES: Array<{
   }
 ];
 
-// ── 6. 12カット・ストーリー展開プリセット（シネマ＆漫画） ─────────────────
+// ── 6. 音楽MV用テーマ定義（10選） ────────────────────────────────────
+export const MV_THEMES = [
+  '🌿 草原の風と夕暮れ（あてもなく歩く帰り道・揺れる草木と黄金の光）',
+  '☕ 雨の日の純喫茶（曇った窓ガラス・温かい珈琲の湯気・静かな読書）',
+  '🌃 深夜2時の部屋（薄暗い間接照明・青白いPC画面・ベッドサイドのチル）',
+  '🚗 都会の夜間ドライブ（雨に濡れた高速道路・流れるテールランプ・首都高）',
+  '🏖️ 誰もいない晩夏の砂浜（静かに寄せては返す波・夕凪・足跡）',
+  '🚉 夕暮れのローカル線無人駅（吹き抜ける風・夕日差すベンチ・遠い鉄橋）',
+  '🌆 ビルの屋上・街を見下ろす微風（茜色から紫へのマジックアワー・佇む背中）',
+  '🏙️ 霧が立ち込める早朝の街（まだ誰もいない静まり返った交差点・朝露）',
+  '🌌 満天の星空と焚き火（静寂の森・揺らめく小さな炎・火の粉と夜空）',
+  '🎨 木漏れ日のアトリエ（白いカーテンの揺れ・散らかったパレット・午後の光）'
+];
+
+// ── 7. 12カット・ストーリー展開プリセット（シネマ・漫画・音楽MV） ────────
 export interface StoryShotPreset {
   scale: string;
   tag: string;
   cinematicAngle: string;
   mangaAngle: string;
+  mvAngle: string;
 }
 
 export const TWELVE_CUT_STORYBOARD_PRESETS: StoryShotPreset[] = [
   {
     scale: 'Wide',
-    tag: '俯瞰・世界観',
+    tag: '引き・世界観',
     cinematicAngle: 'High-angle landscape view looking down from above, character is an active figure in the historic townscape, sweeping atmospheric environment',
-    mangaAngle: 'Massive full-bleed edge-to-edge opening splash illustration, grand world setting, extreme atmospheric depth, speed lines'
+    mangaAngle: 'Massive full-bleed edge-to-edge opening splash illustration, grand world setting, extreme atmospheric depth, speed lines',
+    mvAngle: 'Cinematic establishing wide landscape, atmospheric natural scenery, subject walking or standing naturally in the distance, gentle wind, beautiful natural light, serene music video opening'
   },
   {
-    scale: 'Close-up',
-    tag: '迫真・導入',
+    scale: 'Medium',
+    tag: '佇まい・アンニュイ',
     cinematicAngle: 'Dramatic low-angle worm\'s-eye view looking up from below, intense cinematic perspective showing head and shoulders firmly grounded, dynamic sky background',
-    mangaAngle: 'Intense macro eye close-up filling the frame, heavy screen tones, speed lines radiating, dramatic monologue expression, borderless'
+    mangaAngle: 'Intense macro eye close-up filling the frame, heavy screen tones, speed lines radiating, dramatic monologue expression, borderless',
+    mvAngle: 'Relaxed medium shot, subject in contemplative quiet pose, looking away calmly, soft natural rim lighting, unposed candid aesthetic'
   },
   {
-    scale: 'Medium',
-    tag: '見返り・移動',
+    scale: 'Close-up',
+    tag: '情緒的ディテール',
     cinematicAngle: 'Looking back over the shoulder while walking away, dynamic three-quarter view, candid emotional glance',
-    mangaAngle: 'Webtoon style vertical flow, character in mid-action, dynamic diagonal angle, bold SFX onomatopoeia, full-bleed composition'
+    mangaAngle: 'Webtoon style vertical flow, character in mid-action, dynamic diagonal angle, bold SFX onomatopoeia, full-bleed composition',
+    mvAngle: 'Artistic detail close-up, focusing on hands, feet walking, gently swaying grass, or atmospheric texture, emotional shallow depth of field'
   },
   {
     scale: 'Wide',
-    tag: '引き・環境対話',
+    tag: '逆光・光の移ろい',
     cinematicAngle: 'Cinematic wide horizontal shot, street-level atmospheric perspective with environment and props, character interacting with setting',
-    mangaAngle: 'Establishing shot with detailed pen-and-ink architecture, deep shadows, cinematic comic perspective, full-bleed edge-to-edge'
+    mangaAngle: 'Establishing shot with detailed pen-and-ink architecture, deep shadows, cinematic comic perspective, full-bleed edge-to-edge',
+    mvAngle: 'Wide horizontal shot with golden hour backlight or moody dusk glow, warm rim illumination, quiet environmental harmony'
   },
   {
-    scale: 'Close-up',
-    tag: '斜めドアップ',
+    scale: 'Medium',
+    tag: '後ろ姿・風情',
     cinematicAngle: 'Dutch tilt angled close-up, dramatic diagonal framing focusing on eyes and expression',
-    mangaAngle: 'Dutch tilt angular composition, character reacting with intense emotional distortion, bold line art, borderless'
+    mangaAngle: 'Dutch tilt angular composition, character reacting with intense emotional distortion, bold line art, borderless',
+    mvAngle: 'Over-the-shoulder or three-quarter back view, hair and clothes gently swaying in the breeze, gazing into the vast open horizon'
   },
   {
-    scale: 'Medium',
-    tag: '決意・立ち姿',
+    scale: 'Close-up',
+    tag: '伏し目・静寂',
     cinematicAngle: 'Low-angle medium shot looking up towards character standing strong, solid upper body posture',
-    mangaAngle: 'Dramatic high-contrast cel-shaded lighting, character holding a decisive standing pose, speed lines, full-bleed'
+    mangaAngle: 'Dramatic high-contrast cel-shaded lighting, character holding a decisive standing pose, speed lines, full-bleed',
+    mvAngle: 'Gentle side profile close-up, downcast tranquil gaze, subtle melancholic expression, soft cinematic bokeh, quiet emotion'
   },
   {
     scale: 'Wide',
-    tag: '俯瞰・群衆',
+    tag: '風景・呼吸感',
     cinematicAngle: 'High-angle downward view from balcony or hill, character walking naturally among townspeople on the ground',
-    mangaAngle: 'Sweeping manga double-page spread style, multiple focal points, epic environmental scale, detailed crosshatching, borderless edge-to-edge'
+    mangaAngle: 'Sweeping manga double-page spread style, multiple focal points, epic environmental scale, detailed crosshatching, borderless edge-to-edge',
+    mvAngle: 'Expansive environmental composition, subject integrated as a small harmonious part of the scenery, vast sky, breathing space'
   },
   {
     scale: 'Medium',
-    tag: '対峙・心理戦',
+    tag: '小休止・自然体',
     cinematicAngle: 'Over-the-shoulder perspective looking past the character towards the scene ahead, tense atmosphere',
-    mangaAngle: 'Intense standoff over-the-shoulder framing, heavy tension, screentone gradients, dramatic shadows, full-bleed'
+    mangaAngle: 'Intense standoff over-the-shoulder framing, heavy tension, screentone gradients, dramatic shadows, full-bleed',
+    mvAngle: 'Casual candid medium framing, pausing naturally, sitting peacefully or leaning gently, neutral serene vibe, no dramatic tension'
   },
   {
     scale: 'Close-up',
-    tag: '感情の機微',
+    tag: 'マクロ・テクスチャ',
     cinematicAngle: 'Side profile close-up silhouette with warm lantern rim light, dramatic lighting',
-    mangaAngle: 'Extreme close-up on mouth/jaw with gritted teeth, heavy inking, dramatic stylized emotion, borderless'
+    mangaAngle: 'Extreme close-up on mouth/jaw with gritted teeth, heavy inking, dramatic stylized emotion, borderless',
+    mvAngle: 'Atmospheric macro focus, dappled sunlight, soft shadows, raindrops, or gentle light leak reflection, evocative visual texture'
   },
   {
     scale: 'Medium',
-    tag: 'アクション・転機',
+    tag: '歩き出し・流れる時',
     cinematicAngle: 'Centered cinematic medium portrait, dramatic side-lighting, dignified historic presence',
-    mangaAngle: 'Dynamic leaping/running action, extreme foreshortening, kinetic speed lines, borderless edge-to-edge artwork'
+    mangaAngle: 'Dynamic leaping/running action, extreme foreshortening, kinetic speed lines, borderless edge-to-edge artwork',
+    mvAngle: 'Smooth moving perspective, walking forward at a gentle pace, natural relaxed gait, candid indie music video frame'
   },
   {
     scale: 'Close-up',
-    tag: 'クライマックス表情',
+    tag: 'アンニュイ表情',
     cinematicAngle: 'Macro emotional close-up capturing intense gaze and lip expression',
-    mangaAngle: 'Tearful or highly emotional character face, glowing eyes, fine delicate line art, emotional screentones, borderless'
+    mangaAngle: 'Tearful or highly emotional character face, glowing eyes, fine delicate line art, emotional screentones, borderless',
+    mvAngle: 'Subtle expressive close-up, calm peaceful face, soft diffused ambient lighting, neutral gentle aura, serene beauty'
   },
   {
     scale: 'Wide',
-    tag: '大団円・全景',
+    tag: '余韻・アウトロ',
     cinematicAngle: 'Epic wide cinematic climax view, panoramic environmental composition',
-    mangaAngle: 'Cinematic climax splash artwork, full environment integration, spectacular pen and ink mastery, full-bleed borderless'
+    mangaAngle: 'Cinematic climax splash artwork, full environment integration, spectacular pen and ink mastery, full-bleed borderless',
+    mvAngle: 'Epic serene wide lingering view, subject melting into the vast landscape, fading twilight, timeless poetic stillness'
   }
 ];
 

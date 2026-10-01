@@ -178,9 +178,14 @@ export const NumberChoice: React.FC<{
 );
 
 export const ToggleSwitch: React.FC<{
-  label: string; checked: boolean; onChange: (val: boolean) => void;
-}> = ({ label, checked, onChange }) => (
-  <button onClick={() => onChange(!checked)} className="flex items-center justify-between w-full px-2 py-1 select-none cursor-pointer">
+  label: string; checked: boolean; onChange: (val: boolean) => void; disabled?: boolean;
+}> = ({ label, checked, onChange, disabled }) => (
+  <button 
+    type="button" 
+    disabled={disabled}
+    onClick={() => !disabled && onChange(!checked)} 
+    className={`flex items-center justify-between w-full px-2 py-1 select-none ${disabled ? 'opacity-40 cursor-not-allowed' : 'cursor-pointer'}`}
+  >
     <span className="text-[11px] font-medium text-white/60 tracking-[0.1px]">{label}</span>
     <div className={`w-10 h-5 rounded-full transition-colors relative ${checked ? 'bg-[#969696]' : 'bg-[#333]'}`}>
       <div className={`absolute top-1 w-3 h-3 rounded-full bg-white transition-all ${checked ? 'left-6' : 'left-1'}`} />

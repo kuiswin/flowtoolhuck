@@ -13,6 +13,7 @@ import { Flow } from 'flow-sdk';
 import { callWithRetry } from '../services/utils';
 import { extractHighlights } from '../services/directorService';
 import { normalizeKenBurnsPreset } from '../services/browserVideoService';
+import { TextInput, SectionLabel, PillButton, ToggleSwitch, FieldDropdown } from './Primitives';
 
 
 interface MediaPreviewModalProps {
@@ -102,15 +103,15 @@ export const MediaPreviewModal: React.FC<MediaPreviewModalProps> = ({
         setIsRewriting(true);
         try {
             const rewritePrompt = `Rewrite the image generation prompt based on: "${aiWish}". Original: ${cut.promptEn}. Output ONLY English prompt.`;
-            const { text } = await callWithRetry(
+            const { text } = await callWithRetry<any>(
                 () => Flow.generate.text(rewritePrompt, { systemInstruction: "Expert cinematic prompt engineer." }),
                 undefined, 4
             );
-            const refinedPrompt = text.trim();
+            const refinedPrompt = (text || '').trim();
             if (refinedPrompt) {
                 onUpdateCut({ promptEn: refinedPrompt });
                 setAiWish('');
-                onRegenerateImage(currentImageModel || IMAGE_MODELS[1].label, refinedPrompt, cut.negativePrompt);
+                onRegenerateImage(resolveImageModel(currentImageModel).label, refinedPrompt, cut.negativePrompt);
             }
         } catch (err) { console.error(err); } finally { setIsRewriting(false); }
     };

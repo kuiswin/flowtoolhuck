@@ -16,6 +16,15 @@ export interface ReferenceAsset {
   createdAt: string;
 }
 
+export type ComicPanelLayout = 'splash' | 'vertical-split' | 'horizontal-split' | 'focus-grid' | 'standard';
+
+export interface ComicPanelMeta {
+  layout: ComicPanelLayout;
+  isDoublePageSplash?: boolean;
+  sfxOnomatopoeia?: string;
+  dialogueType?: 'monologue' | 'shout' | 'whisper' | 'narration';
+}
+
 export interface Cut {
   id: number;
   promptEn: string;
@@ -24,6 +33,11 @@ export interface Cut {
   negativePrompt?: string; 
   
   shotScale?: string;
+  cinematicAngle?: string;
+  cameraWork?: string;
+  scenePlot?: string;
+  comicPanel?: ComicPanelMeta;
+
   kenBurnsPreset?: KenBurnsPreset; 
   cameraMotion?: string;
 
@@ -98,6 +112,7 @@ export interface GeneratorSettings {
   isMangaMode?: boolean;
   imageModel: string;
   defaultVideoModel: string;
+  videoModel?: string;
   videoRatio: VideoRatio;
   episodeCount: number;
   previewCutCount: number; 

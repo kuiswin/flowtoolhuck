@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { Flow } from 'flow-sdk';
-import { Episode, Cut, GeneratorSettings, VideoModelType, GenerationTask, SeriesManifest } from '../types';
+import { Episode, Cut, GeneratorSettings, VideoModelType, GenerationTask, SeriesManifest, SeriesEpisodePlan } from '../types';
 import { 
   IMAGE_MODELS, 
   VIDEO_MODELS, 
@@ -14,6 +14,7 @@ import {
 import { safeJsonParse, callWithRetry, formatErrorMessage, createDefaultCut } from './utils';
 import { saveStory, getAllReferenceAssets, saveReferenceAsset } from './db';
 import { downloadZip } from './exportService';
+import { renderFullEpisodeMovie, renderKenBurnsVideo } from './browserVideoService';
 import { 
   directShot, 
   buildImagePromptAndNegative, 
@@ -269,7 +270,7 @@ export function useStudioProduction({ settings, logs, addLog, refreshStories }: 
     try {
       const { finalPrompt, finalNegative, referenceImageMediaIds } = buildImagePromptAndNegative(task, settings, activeReferenceRef.current);
       
-      const res = await callWithRetry(
+      const res = await callWithRetry<any>(
         () => Flow.generate.image({ 
           prompt: finalPrompt, 
           negativePrompt: finalNegative, 
@@ -305,7 +306,7 @@ export function useStudioProduction({ settings, logs, addLog, refreshStories }: 
       const cameraInstruction = cameraMotionText ? ` [Camera Motion: ${cameraMotionText}]` : '';
       const finalVideoPrompt = `${cut.promptEn}${cameraInstruction}`;
 
-      const res = await callWithRetry(
+      const res = await callWithRetry<any>(
         () => Flow.generate.video({ 
           prompt: finalVideoPrompt, 
           firstFrameImageMediaId: cut.imageMediaId, 
@@ -375,12 +376,12 @@ export function useStudioProduction({ settings, logs, addLog, refreshStories }: 
           addLog('🔍 キャラクターDNA抽出中...', 'process');
           const uploadRes = await Flow.upload({ base64: asset.base64, mimeType: asset.mimeType as any, name: `Ref: ${asset.name}` });
           const screeningPrompt = buildCharacterScreeningPrompt(settings.era, settings.country);
-          const screenRes = await callWithRetry(
+          const screenRes = await callWithRetry<any>(
             () => Flow.generate.text(screeningPrompt, { images: [{ base64: asset.base64, mimeType: asset.mimeType }] }),
             (attempt, max, delay) => addLog(`Retrying DNA Analysis (attempt ${attempt}/${max}) after ${delay} ms...`, 'warning'),
             5
           );
-          const screening = safeJsonParse(screenRes.text, { characterDna: '', styleDna: '', antiPoseNegative: '', eraNegative: '' });
+          const screening = safeJsonParse<any>(screenRes.text, { characterDna: '', styleDna: '', antiPoseNegative: '', eraNegative: '' });
           activeReferenceRef.current = {
             mediaId: uploadRes.mediaId,
             characterDna: screening.characterDna,
@@ -453,23 +454,23 @@ Output JSON ONLY:
   "titleEn": "English Episode Title",
   "summary": "Short 2-line summary"
 }`;
-          const planRes = await callWithRetry(
+          const planRes = await callWithRetry<any>(
             () => Flow.generate.text(planPrompt),
             undefined, 4
           );
-          const generatedPlan = safeJsonParse(planRes.text, {
+          const generatedPlan = safeJsonParse<any>(planRes.text, {
             titleJp: settings.theme.split('（')[0].replace(/^[^\w\s\u4e00-\u9faf]+/, '').trim() || '運命の物語',
             titleEn: 'The Tale of Destiny',
             summary: `${settings.theme}の世界観で描かれるドラマ`
           });
 
           const scriptPrompt = buildScriptPrompt(1, generatedPlan as any, settings.country, settings.theme, settings.era, settings.isMangaMode);
-          const scriptRes = await callWithRetry(
+          const scriptRes = await callWithRetry<any>(
             () => Flow.generate.text(scriptPrompt),
             (attempt, max, delay) => addLog(`Retrying Script Plot (attempt ${attempt}/${max}) after ${delay} ms...`, 'warning'),
             5
           );
-          const parsed = safeJsonParse(scriptRes.text, { titleJp: generatedPlan.titleJp, titleEn: generatedPlan.titleEn, cuts: [] });
+          const parsed = safeJsonParse<any>(scriptRes.text, { titleJp: generatedPlan.titleJp, titleEn: generatedPlan.titleEn, cuts: [] });
           sharedScript = {
             ...parsed,
             titleJp: parsed.titleJp || generatedPlan.titleJp,
@@ -561,12 +562,12 @@ Output JSON ONLY:
       if (!seriesManifestRef.current) {
         addLog(`📜 全${settings.episodeCount}話の大河ドラマグランドデザインをAIに策定依頼中... [世界観・テーマ: ${settings.theme}]`, 'process');
         const designPrompt = buildGrandDesignPrompt(settings.episodeCount, settings.country, settings.theme, settings.era, settings.isMangaMode);
-        const designRes = await callWithRetry(
+        const designRes = await callWithRetry<any>(
           () => Flow.generate.text(designPrompt),
           (attempt, max, delay) => addLog(`Retrying Grand Design (attempt ${attempt}/${max}) after ${delay} ms...`, 'warning'),
           5
         );
-        const design = safeJsonParse(designRes.text, { seriesTitle: 'Untitled Series', overallSynopsis: '', episodesPlan: [] });
+        const design = safeJsonParse<any>(designRes.text, { seriesTitle: 'Untitled Series', overallSynopsis: '', episodesPlan: [] });
 
         seriesManifestRef.current = {
           seriesTitle: design.seriesTitle,
@@ -635,11 +636,11 @@ Output JSON ONLY:
 
           let newPlan: SeriesEpisodePlan;
           try {
-            const planRes = await callWithRetry(
+            const planRes = await callWithRetry<any>(
               () => Flow.generate.text(nextPlanPrompt),
               undefined, 4
             );
-            newPlan = safeJsonParse(planRes.text, {
+            newPlan = safeJsonParse<SeriesEpisodePlan>(planRes.text, {
               epNumber: epNum,
               titleJp: `第${epNum}話 運命の分岐点`,
               titleEn: `Episode ${epNum} Turning Point`,
@@ -695,13 +696,13 @@ Output JSON ONLY:
           updateEpisode(epId, { isGenerating: true });
 
           const scriptPrompt = buildScriptPrompt(epId, currentPlan, settings.country, settings.theme, settings.era, settings.isMangaMode);
-          const scriptRes = await callWithRetry(
+          const scriptRes = await callWithRetry<any>(
             () => Flow.generate.text(scriptPrompt),
             (attempt, max, delay) => addLog(`Retrying Script Plot (attempt ${attempt}/${max}) after ${delay} ms...`, 'warning'),
             5
           );
 
-          const sharedScript = safeJsonParse(scriptRes.text, { titleJp: currentPlan.titleJp, titleEn: currentPlan.titleEn, cuts: [] });
+          const sharedScript: any = safeJsonParse<any>(scriptRes.text, { titleJp: currentPlan.titleJp, titleEn: currentPlan.titleEn, cuts: [] });
           addLog(`✨ 【第${epId}話】脚本＆時代考証が完成！（考証: ${sharedScript.eraAnalysisJp?.slice(0, 24) || '完了'}...）`, 'success');
 
           const ratio = settings.videoRatio;

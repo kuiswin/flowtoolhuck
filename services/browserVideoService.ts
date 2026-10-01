@@ -224,7 +224,7 @@ export async function renderFullEpisodeMovie(
     codec: 'avc',
     bitrate: 8000000, 
     frameRate: fps
-  });
+  } as any);
   output.addVideoTrack(canvasSource);
   await output.start();
 
@@ -340,7 +340,7 @@ export async function renderKenBurnsVideo(cut: Cut, durationSec: number = 4): Pr
     target: new BufferTarget(),
   });
 
-  const canvasSource = new CanvasSource(canvas as any, { codec: 'avc', frameRate: fps });
+  const canvasSource = new CanvasSource(canvas as any, { codec: 'avc', frameRate: fps } as any);
   output.addVideoTrack(canvasSource);
   await output.start();
 

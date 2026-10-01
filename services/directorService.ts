@@ -98,7 +98,7 @@ export function buildScriptPrompt(epId: number, currentPlan: SeriesEpisodePlan, 
     
   const mangaInstructions = isMangaMode 
     ? `MANGA/COMIC DIRECTING:
-Design dynamic comic panels (large splash panels, webtoon vertical flow, dynamic diagonal composition).
+Design dynamic comic moments and compositions (full-bleed splash artwork, webtoon vertical flow, dynamic diagonal composition).
 Include expressive dialogues (Spoken Dialogue), inner thoughts (Monologue), narration, and dramatic onomatopoeia (SFX) smoothly integrated into the script plot.`
     : "";
 
@@ -158,11 +158,14 @@ export function buildImagePromptAndNegative(
   // アニメ・イラスト系の場合のネガティブ自動付与
   const isIllustration = styleKey.includes('アニメ') || styleKey.includes('イラスト') || styleKey.includes('マンガ') || styleKey.includes('セル画');
   const illustrationNegative = isIllustration ? 'photorealistic, realistic photo, hyperrealistic photograph, 3d render, cgi, ' : '';
-  const baselineNegative = `${illustrationNegative}frame, border, picture frame, ornate frame, arch frame, decorative border, pixel art, 8-bit, 16-bit, lowres, worst quality, text, watermark, signature, blurry`;
+  const mangaNegative = settings.isMangaMode 
+    ? 'white border, white margin, white gutter, border, frame, paper margin, comic panel outline, panel border, outer frame, picture frame, blank edge, cropped border, boxed layout, empty spacing, ' 
+    : '';
+  const baselineNegative = `${illustrationNegative}${mangaNegative}frame, border, picture frame, ornate frame, arch frame, decorative border, pixel art, 8-bit, 16-bit, lowres, worst quality, text, watermark, signature, blurry`;
 
-  // 漫画演出モード時のプロンプト拡張
+  // 漫画演出モード時のプロンプト拡張（余白・枠線を完全排除し画面いっぱいに描画）
   const mangaPromptSuffix = settings.isMangaMode 
-    ? 'manga style, comic book panel, pen and ink, screentone, cel shading, dynamic dramatic expressions, extreme high contrast, bold line art, action lines, speed lines' 
+    ? 'manga style, full-bleed edge-to-edge artwork, borderless composition, filling entire canvas without margins, dynamic pen and ink, screentone, cel shading, intense dramatic expressions, extreme high contrast, bold line art, speed lines' 
     : '';
 
   // AIが動的考証した時代衣装・除外ワード
@@ -227,28 +230,29 @@ export async function directShot(
   ];
 
   const MANGA_SHOT_PRESETS = [
-    { scale: 'Splash', angle: 'Massive full-page splash panel, dynamic character pose breaking out of the frame, extreme impact, speed lines', tag: '見開き大ゴマ' },
-    { scale: 'Close-up', angle: 'Intense macro eye close-up, heavy screen tones, speed lines radiating, dramatic monologue expression', tag: '迫真アップ・モノローグ' },
-    { scale: 'Medium', angle: 'Webtoon style vertical flow, character in mid-action, dynamic diagonal angle, bold SFX onomatopoeia', tag: 'Webtoon風斜め・SFX' },
-    { scale: 'Wide', angle: 'Establishing shot with detailed pen-and-ink architecture, deep shadows, cinematic comic perspective', tag: '背景描写・トーン表現' },
-    { scale: 'Close-up', angle: 'Dutch tilt angular comic panel, character screaming or reacting with intense emotional distortion, bold line art', tag: '斜めリアクション' },
-    { scale: 'Medium', angle: 'Dramatic high-contrast cel-shaded lighting, character holding a dynamic combat or decisive pose, speed lines', tag: '決めポーズ・集中線' },
-    { scale: 'Wide', angle: 'Sweeping comic book splash page, multiple focal points, epic environmental scale, detailed crosshatching', tag: 'エピック大ゴマ' },
-    { scale: 'Medium', angle: 'Intense standoff over-the-shoulder panel, heavy tension, screentone gradients, dramatic shadows', tag: '対峙・緊張感' },
-    { scale: 'Close-up', angle: 'Extreme close-up on mouth/jaw with gritted teeth, heavy inking, dramatic SFX text floating', tag: '口元アップ・SFX' },
-    { scale: 'Medium', angle: 'Dynamic leaping/running action, extreme foreshortening, kinetic speed lines, borderless panel', tag: 'アクション・遠近法' },
-    { scale: 'Close-up', angle: 'Tearful or highly emotional character face, glowing eyes, fine delicate line art, emotional screentones', tag: '感情爆発・トーン' },
-    { scale: 'Wide', angle: 'Cinematic climax splash panel, full environment integration, spectacular pen and ink mastery', tag: 'クライマックス見開き' }
+    { scale: 'Splash', angle: 'Massive full-bleed edge-to-edge illustration, dynamic character pose breaking across the entire screen, extreme impact, borderless, speed lines', tag: '見開き大ゴマ(全景)' },
+    { scale: 'Close-up', angle: 'Intense macro eye close-up filling the frame, heavy screen tones, speed lines radiating, dramatic monologue expression, borderless', tag: '迫真アップ・モノローグ' },
+    { scale: 'Medium', angle: 'Webtoon style vertical flow, character in mid-action, dynamic diagonal angle, bold SFX onomatopoeia, full-bleed composition', tag: 'Webtoon風斜め・SFX' },
+    { scale: 'Wide', angle: 'Establishing shot with detailed pen-and-ink architecture, deep shadows, cinematic comic perspective, full-bleed edge-to-edge', tag: '背景描写・トーン表現' },
+    { scale: 'Close-up', angle: 'Dutch tilt angular composition, character screaming or reacting with intense emotional distortion, bold line art, borderless', tag: '斜めリアクション' },
+    { scale: 'Medium', angle: 'Dramatic high-contrast cel-shaded lighting, character holding a dynamic combat or decisive pose, speed lines, full-bleed', tag: '決めポーズ・集中線' },
+    { scale: 'Wide', angle: 'Sweeping manga double-page spread style, multiple focal points, epic environmental scale, detailed crosshatching, borderless edge-to-edge', tag: 'エピック大ゴマ' },
+    { scale: 'Medium', angle: 'Intense standoff over-the-shoulder framing, heavy tension, screentone gradients, dramatic shadows, full-bleed', tag: '対峙・緊張感' },
+    { scale: 'Close-up', angle: 'Extreme close-up on mouth/jaw with gritted teeth, heavy inking, dramatic stylized emotion, borderless', tag: '口元アップ・SFX' },
+    { scale: 'Medium', angle: 'Dynamic leaping/running action, extreme foreshortening, kinetic speed lines, borderless edge-to-edge artwork', tag: 'アクション・遠近法' },
+    { scale: 'Close-up', angle: 'Tearful or highly emotional character face, glowing eyes, fine delicate line art, emotional screentones, borderless', tag: '感情爆発・トーン' },
+    { scale: 'Wide', angle: 'Cinematic climax splash artwork, full environment integration, spectacular pen and ink mastery, full-bleed borderless', tag: 'クライマックス見開き' }
   ];
 
   const presetsToUse = settings.isMangaMode ? MANGA_SHOT_PRESETS : CINEMATIC_SHOT_PRESETS;
   const preset = presetsToUse[(cutId - 1) % presetsToUse.length];
   const kenBurnsPresets: KenBurnsPreset[] = ['zoom-in', 'zoom-out', 'pan-left', 'pan-right', 'tilt-up', 'tilt-down'];
-  const kbPreset = kenBurnsPresets[(cutId - 1) % kenBurnsPresets.length];
+  // 漫画モード時はカメラを静止（none）にして漫画の紙面クオリティを維持
+  const kbPreset = settings.isMangaMode ? 'none' : kenBurnsPresets[(cutId - 1) % kenBurnsPresets.length];
 
   const directorRole = settings.isMangaMode ? "comic book/manga storyboard artist" : "film director";
   const mangaExtraDirecting = settings.isMangaMode 
-    ? "Include explicit instructions for pen-inking, screentones, cel-shading, dynamic facial expressions, and comic-style impact." 
+    ? "MANDATORY FOR MANGA: Full-bleed edge-to-edge artwork ONLY. Never generate panel borders, white gutters, frames, or blank margins. Fill the entire canvas with dynamic pen-inking, screentones, cel-shading, dynamic facial expressions, and comic-style impact." 
     : "";
 
   const directorPrompt = `You are a ${directorRole} designing a visual shot for a historical drama.

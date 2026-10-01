@@ -179,8 +179,69 @@ Output ONLY valid JSON matching this exact structure:
 }
 
 /**
+ * 直前のカットの構図・ポーズ・アングルを排除するための強力な動的ネガティブプロンプトを構築
+ */
+export function buildAntiPreviousCompositionNegative(
+  prevScale?: string,
+  prevAngle?: string,
+  prevPrompt?: string
+): string {
+  const antiTerms: string[] = [];
+
+  if (prevScale) {
+    const lowerScale = prevScale.toLowerCase();
+    if (lowerScale.includes('close')) {
+      antiTerms.push('extreme close-up', 'macro face', 'zoomed in headshot', 'cropped head', 'face filling screen');
+    } else if (lowerScale.includes('wide') || lowerScale.includes('splash')) {
+      antiTerms.push('distant tiny figure', 'bird eye view', 'extreme wide shot', 'sweeping landscape', 'panoramic view');
+    } else if (lowerScale.includes('medium')) {
+      antiTerms.push('standard medium shot', 'static bust portrait', 'waist-up centered portrait');
+    }
+    antiTerms.push(`identical ${prevScale} framing`, `same shot scale as previous scene`);
+  }
+
+  if (prevAngle) {
+    const lowerAngle = prevAngle.toLowerCase();
+    if (lowerAngle.includes('high-angle') || lowerAngle.includes('downward') || lowerAngle.includes('俯瞰')) {
+      antiTerms.push('high angle looking down', 'overhead camera', 'bird-eye perspective', 'looking down from sky');
+    } else if (lowerAngle.includes('low-angle') || lowerAngle.includes('worm') || lowerAngle.includes('煽り')) {
+      antiTerms.push('low angle looking up', 'worm-eye perspective', 'looking up towards sky');
+    }
+  }
+
+  // 直前カットが「座り」「あぐら」「床」だった場合、次のカットでの座りポーズを完全禁止
+  if (prevPrompt) {
+    const lowerPrompt = prevPrompt.toLowerCase();
+    if (lowerPrompt.includes('sit') || lowerPrompt.includes('sitting') || lowerPrompt.includes('floor') || lowerPrompt.includes('ground') || lowerPrompt.includes('cross-legged')) {
+      antiTerms.push('sitting on floor', 'sitting down', 'seated', 'crossed legs', 'kneeling', 'squatting', 'floor sitting pose', 'looking up from floor', 'sitting on tatami');
+    }
+    if (lowerPrompt.includes('stand') || lowerPrompt.includes('standing')) {
+      antiTerms.push('stiff standing pose', 'static upright standing');
+    }
+  }
+
+  antiTerms.push(
+    'identical composition to previous cut',
+    'repeating previous scene composition',
+    'same camera angle as previous cut',
+    'monotonous repetitive pose',
+    'identical background perspective',
+    'repetitive framing'
+  );
+
+  return antiTerms.join(', ');
+}
+
+export interface PreviousShotInfo {
+  scale?: string;
+  angle?: string;
+  prompt?: string;
+  tag?: string;
+}
+
+/**
  * 画像生成用の最終プロンプトとネガティブプロンプトを構築
- * （AIが動的考証した衣装と禁止ワードを反映）
+ * （AIが動的考証した衣装と禁止ワード、直前構図除外、参照画像ポーズ固定防止を反映）
  */
 export function buildImagePromptAndNegative(
   task: GenerationTask,
@@ -194,9 +255,12 @@ export function buildImagePromptAndNegative(
   const masterStylePrefix = `Masterpiece, authentic ${rawStyle}. Consistent visual art style in ${rawStyle}.`;
   const masterStylePrompt = `[MASTER ART STYLE: ${rawStyle}, strictly maintain identical visual medium and rendering consistency across scenes]`;
 
-  const cameraContext = 'Cinematic composition, natural human anatomy, solid torso, complete upper body, grounded perspective, 8k resolution';
+  const cameraContext = 'Cinematic composition, dynamic natural pose, natural human anatomy, solid torso, complete body framing, grounded perspective, 8k resolution';
   const antiGulliverAndGoreNegative = 'giant, giantess, floating head, severed body, floating torso, half body cut off by scenery, scale error, diorama, simple mugshot';
   
+  // 参照画像からの「ポーズ固着（床座り、正面固定等）」を粉砕するネガティブ
+  const antiReferencePoseNegative = 'identical pose as reference image, repeating reference image pose, sitting on floor, crossed legs on floor, static mugshot pose, repeating reference angle';
+
   // アニメ・イラスト系の場合のネガティブ自動付与
   const isIllustration = styleKey.includes('アニメ') || styleKey.includes('イラスト') || styleKey.includes('マンガ') || styleKey.includes('セル画');
   const illustrationNegative = isIllustration ? 'photorealistic, realistic photo, hyperrealistic photograph, 3d render, cgi, ' : '';
@@ -218,10 +282,11 @@ export function buildImagePromptAndNegative(
     const { styleDna, antiPoseNegative, eraNegative, mediaId } = activeReference;
     const finalNegative = [
       antiGulliverAndGoreNegative,
+      antiReferencePoseNegative,
       dynamicForbidden,
       antiPoseNegative,
       eraNegative,
-      negativePrompt,
+      negativePrompt, // 直前の構図ネガティブ（最重要）
       baselineNegative
     ].filter(Boolean).join(', ');
 
@@ -231,7 +296,7 @@ export function buildImagePromptAndNegative(
     const finalNegative = [
       antiGulliverAndGoreNegative,
       dynamicForbidden,
-      negativePrompt,
+      negativePrompt, // 直前の構図ネガティブ（最重要）
       baselineNegative
     ].filter(Boolean).join(', ');
 
@@ -242,27 +307,28 @@ export function buildImagePromptAndNegative(
 
 /**
  * カットごとの演出データ（構図、テロップ、ケンバーン効果）をAIで決定
+ * 直前カットの構図を分析し、最大級のコントラスト演出と直前構図ネガティブを生成
  */
 export async function directShot(
   task: GenerationTask,
   settings: GeneratorSettings,
   activeReference: any,
-  previousShotScale?: string,
+  previousShotInfo?: PreviousShotInfo,
   addLog?: (msg: string, type?: any) => void
 ): Promise<Partial<Cut>> {
   const { cutId, prompt, styleKey } = task;
   const rawStyle = TASTES[styleKey] || '';
   const characterGuidance = activeReference 
-    ? `Protagonist: ${activeReference.characterDna}. She is the central heroine.` 
+    ? `Protagonist: ${activeReference.characterDna}. She is the central heroine. NOTE: Adopt only her appearance (face, hair, eyes); DO NOT copy her reference pose.` 
     : 'No specific reference asset.';
 
   const CINEMATIC_SHOT_PRESETS = [
-    { scale: 'Wide', angle: 'High-angle landscape view looking down from the sky, character is a tiny figure walking on the ground road, realistic building proportions, sweeping historic townscape', tag: '俯瞰・遠景(人物小)' },
+    { scale: 'Wide', angle: 'High-angle landscape view looking down from above, character is an active figure in the historic townscape, sweeping atmospheric environment', tag: '俯瞰・遠景(人物小)' },
     { scale: 'Close-up', angle: 'Dramatic low-angle worm\'s-eye view looking up from below, intense cinematic perspective showing head and shoulders firmly grounded, dynamic sky background', tag: '煽り・クローズアップ' },
-    { scale: 'Medium', angle: 'Looking back over the shoulder from behind, dynamic three-quarter view, candid emotional glance', tag: '見返り・背後視点' },
-    { scale: 'Wide', angle: 'Cinematic wide horizontal shot, street-level atmospheric perspective with environment and props', tag: '引き・世界観' },
+    { scale: 'Medium', angle: 'Looking back over the shoulder while walking away, dynamic three-quarter view, candid emotional glance', tag: '見返り・背後視点' },
+    { scale: 'Wide', angle: 'Cinematic wide horizontal shot, street-level atmospheric perspective with environment and props, character interacting with setting', tag: '引き・世界観' },
     { scale: 'Close-up', angle: 'Dutch tilt angled close-up, dramatic diagonal framing focusing on eyes and expression', tag: '斜めドアップ' },
-    { scale: 'Medium', angle: 'Low-angle medium shot looking up towards character, solid upper body posture', tag: '煽り・上半身' },
+    { scale: 'Medium', angle: 'Low-angle medium shot looking up towards character standing strong, solid upper body posture', tag: '煽り・上半身' },
     { scale: 'Wide', angle: 'High-angle downward view from balcony or hill, character walking naturally among townspeople on the ground', tag: '俯瞰・群衆' },
     { scale: 'Medium', angle: 'Centered cinematic medium portrait, dramatic side-lighting, dignified historic presence', tag: '正面(1話1回)' },
     { scale: 'Close-up', angle: 'Side profile close-up silhouette with warm lantern rim light', tag: '横顔・陰影' },
@@ -277,7 +343,7 @@ export async function directShot(
     { scale: 'Medium', angle: 'Webtoon style vertical flow, character in mid-action, dynamic diagonal angle, bold SFX onomatopoeia, full-bleed composition', tag: 'Webtoon風斜め・SFX' },
     { scale: 'Wide', angle: 'Establishing shot with detailed pen-and-ink architecture, deep shadows, cinematic comic perspective, full-bleed edge-to-edge', tag: '背景描写・トーン表現' },
     { scale: 'Close-up', angle: 'Dutch tilt angular composition, character screaming or reacting with intense emotional distortion, bold line art, borderless', tag: '斜めリアクション' },
-    { scale: 'Medium', angle: 'Dramatic high-contrast cel-shaded lighting, character holding a dynamic combat or decisive pose, speed lines, full-bleed', tag: '決めポーズ・集中線' },
+    { scale: 'Medium', angle: 'Dramatic high-contrast cel-shaded lighting, character holding a dynamic combat or decisive standing pose, speed lines, full-bleed', tag: '決めポーズ・集中線' },
     { scale: 'Wide', angle: 'Sweeping manga double-page spread style, multiple focal points, epic environmental scale, detailed crosshatching, borderless edge-to-edge', tag: 'エピック大ゴマ' },
     { scale: 'Medium', angle: 'Intense standoff over-the-shoulder framing, heavy tension, screentone gradients, dramatic shadows, full-bleed', tag: '対峙・緊張感' },
     { scale: 'Close-up', angle: 'Extreme close-up on mouth/jaw with gritted teeth, heavy inking, dramatic stylized emotion, borderless', tag: '口元アップ・SFX' },
@@ -297,21 +363,38 @@ export async function directShot(
     ? "MANDATORY FOR MANGA: Full-bleed edge-to-edge artwork ONLY. Never generate panel borders, white gutters, frames, or blank margins. Fill the entire canvas with dynamic pen-inking, screentones, cel-shading, dynamic facial expressions, and comic-style impact." 
     : "";
 
+  const previousContrastMandate = previousShotInfo?.scale
+    ? `CRITICAL CINEMATIC CONTRAST MANDATE:
+The PREVIOUS CUT (Cut ${cutId - 1}) was framed as: [${previousShotInfo.scale}] with angle: "${previousShotInfo.angle || previousShotInfo.tag || ''}".
+Context of previous cut: "${previousShotInfo.prompt?.slice(0, 120) || ''}".
+MANDATORY RULE: This Cut ${cutId} MUST BE RADICALLY DIFFERENT from the previous cut!
+- If the previous cut was seated or on the floor, THIS CUT MUST BE standing, walking, in motion, or a dramatic bust portrait!
+- NEVER repeat the same camera distance, angle, or character posture as the previous cut.
+- Requested Framing for THIS cut is: ${preset.scale} (${preset.angle}).`
+    : `Requested Framing: ${preset.scale} (${preset.angle}).`;
+
   const directorPrompt = `You are a ${directorRole} designing a visual shot for a historical drama.
 Context: "${prompt}".
 Style: "${rawStyle}".
 ${characterGuidance}
-Requested Framing: ${preset.scale} (${preset.angle}).
+${previousContrastMandate}
+
 Avoid scale errors. If wide shot, character MUST be small and buildings realistic. If close-up, show head/shoulders with natural proportions.
 ${mangaExtraDirecting}
 
 Output ONLY valid JSON:
 {
-  "enhancedPrompt": "Extremely detailed scene description in English including lighting, props, historical attire, atmosphere, shot angle",
+  "enhancedPrompt": "Extremely detailed scene description in English including lighting, props, historical attire, atmosphere, shot angle, and distinct character pose/action",
   "cameraWork": "${preset.tag}",
   "cinematicAngle": "${preset.angle}",
   "shotScale": "${preset.scale}"
 }`;
+
+  const antiPreviousNegative = buildAntiPreviousCompositionNegative(
+    previousShotInfo?.scale,
+    previousShotInfo?.angle,
+    previousShotInfo?.prompt
+  );
 
   try {
     const res = await Flow.generate.text(directorPrompt);
@@ -320,6 +403,7 @@ Output ONLY valid JSON:
     if (parsed && parsed.enhancedPrompt) {
       return {
         promptEn: parsed.enhancedPrompt,
+        negativePrompt: antiPreviousNegative,
         cameraWork: parsed.cameraWork || preset.tag,
         cinematicAngle: parsed.cinematicAngle || preset.angle,
         shotScale: parsed.shotScale || preset.scale,
@@ -332,6 +416,7 @@ Output ONLY valid JSON:
 
   return {
     promptEn: `${preset.angle}. ${prompt}`,
+    negativePrompt: antiPreviousNegative,
     cameraWork: preset.tag,
     cinematicAngle: preset.angle,
     shotScale: preset.scale,

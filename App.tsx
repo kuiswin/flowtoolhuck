@@ -77,7 +77,7 @@ export default function App() {
               key={ep.id} ep={ep} onGenerateRemaining={handleGenerateRemaining} onBulkVideo={handleBulkVideo} onBulkBrowserVideo={handleBulkBrowserVideo} onExportFullMovie={handleExportFullMovie} onDownloadZip={(e) => downloadZip(e, addLog, activeSeriesManifest || undefined, logs)} onAnimateRequest={generateVideo} onPreviewCut={(eId, cut) => setPreviewingCutData({ epId: eId, cut })} onUpdateCut={updateCutWrapped} onRetry={(type, eId, cId) => {
                 const epFound = episodes.find(e => e.id === eId);
                 const cutFound = epFound?.cuts.find(c => c.id === cId);
-                if (type === 'image' && cutFound) generateImage({ epId: eId, cutId: cId, prompt: cutFound.promptEn, styleKey: settings.taste, imageModel: settings.imageModel, eraAnalysis: epFound?.eraAnalysis, forbiddenAnachronisms: epFound?.forbiddenAnachronisms });
+                if (type === 'image' && cutFound) generateImage({ epId: eId, cutId: cId, prompt: cutFound.promptEn, negativePrompt: cutFound.negativePrompt, styleKey: settings.taste, imageModel: settings.imageModel, eraAnalysis: epFound?.eraAnalysis, forbiddenAnachronisms: epFound?.forbiddenAnachronisms });
                 else if (type === 'video' && cutFound) generateVideo(eId, cId, (cutFound.targetVideoModel === 'none' ? 'veo-lite' : cutFound.targetVideoModel) as VideoModelType);
               }} 
             />

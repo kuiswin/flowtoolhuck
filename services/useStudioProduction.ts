@@ -12,7 +12,8 @@ import {
   buildGrandDesignPrompt, 
   buildNextEpisodePlanPrompt,
   buildScriptPrompt,
-  extractHighlights
+  extractHighlights,
+  PreviousShotInfo
 } from './directorService';
 import { LogEntry } from '../components/StudioLogs';
 
@@ -189,20 +190,58 @@ export function useStudioProduction({ settings, logs, addLog, refreshStories }: 
   };
 
   const runTasks = async (tasks: GenerationTask[]) => {
-    queueRef.current = [...tasks];
+    // ── Phase 1: 演出・構図決定フェーズ（直列連鎖で前カットの構図を完全に追跡＆ネガティブ化） ──
+    const preparedTasks: GenerationTask[] = [];
+    let previousShotInfo: PreviousShotInfo | undefined = undefined;
+
+    // 最初のタスクの直前カットが既存エピソードにあれば初期値として設定
+    if (tasks.length > 0) {
+      const firstTask = tasks[0];
+      const prevCut = episodesRef.current.find(e => e.id === firstTask.epId)?.cuts.find(c => c.id === firstTask.cutId - 1);
+      if (prevCut && prevCut.shotScale) {
+        previousShotInfo = {
+          scale: prevCut.shotScale,
+          angle: prevCut.cinematicAngle,
+          prompt: prevCut.promptEn,
+          tag: prevCut.cameraWork
+        };
+      }
+    }
+
+    for (let i = 0; i < tasks.length; i++) {
+      if (isAbortedRef.current) break;
+      const task = tasks[i];
+      updateCut(task.epId, task.cutId, { isDirecting: true });
+      addLog(`🎬 Ep.${task.epId} C${task.cutId.toString().padStart(2, '0')}: 構図演出・プロンプト最適化中...${previousShotInfo?.scale ? ` (前カット [${previousShotInfo.scale}] の構図をネガティブ除外し対比構図を策定)` : ''}`, 'info');
+
+      const directedUpdates = await directShot(task, settings, activeReferenceRef.current, previousShotInfo, addLog);
+      updateCut(task.epId, task.cutId, directedUpdates);
+
+      previousShotInfo = {
+        scale: directedUpdates.shotScale,
+        angle: directedUpdates.cinematicAngle,
+        prompt: directedUpdates.promptEn || task.prompt,
+        tag: directedUpdates.cameraWork
+      };
+
+      preparedTasks.push({
+        ...task,
+        prompt: directedUpdates.promptEn || task.prompt,
+        negativePrompt: directedUpdates.negativePrompt
+      });
+    }
+
+    if (isAbortedRef.current) return;
+
+    // ── Phase 2: 画像生成フェーズ（確定したプロンプト＆直前構図ネガティブで並列実行） ──
+    queueRef.current = [...preparedTasks];
     const concurrency = Math.max(1, settings.parallelCount || 2);
-    let lastAssignedScale = '';
     const workers = Array(concurrency).fill(null).map(async () => {
       while (queueRef.current.length > 0) {
         if (isAbortedRef.current) break;
         const task = queueRef.current.shift();
         if (!task) break;
-        updateCut(task.epId, task.cutId, { isDirecting: true });
-        addLog(`🎬 Ep.${task.epId} C${task.cutId.toString().padStart(2, '0')}: 構図演出・プロンプト最適化中...`, 'info');
-        const directedUpdates = await directShot(task, settings, activeReferenceRef.current, lastAssignedScale, addLog);
-        if (directedUpdates.shotScale) lastAssignedScale = directedUpdates.shotScale;
-        updateCut(task.epId, task.cutId, directedUpdates);
-        await generateImage({ ...task, prompt: directedUpdates.promptEn || task.prompt });
+        await generateImage(task);
       }
     });
     await Promise.all(workers);

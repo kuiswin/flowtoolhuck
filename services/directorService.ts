@@ -21,9 +21,6 @@ Output JSON: {
 /**
  * シリーズ全体のグランドデザイン（全話プロット）を生成するためのプロンプト
  */
-/**
- * シリーズ全体のグランドデザイン（全話プロット）を生成するためのプロンプト
- */
 export function buildGrandDesignPrompt(count: number, country: string, theme: string, era?: string, isMangaMode?: boolean): string {
   const worldSetting = era && era !== theme ? `${theme} (時代: ${era}, 地域: ${country})` : `${theme} (${country})`;
   const mangaInstruction = isMangaMode 
@@ -39,6 +36,49 @@ Output ONLY valid JSON:
   "episodesPlan": [
     { "epNumber": 1, "titleJp": "日本語タイトル", "titleEn": "English Title", "summary": "話のあらすじ" }
   ]
+}
+`;
+}
+
+/**
+ * 続編エピソード（第N話）のプロットを自律策定するためのプロンプト
+ */
+export function buildNextEpisodePlanPrompt(
+  nextEpId: number,
+  seriesTitle: string,
+  overallSynopsis: string,
+  previousEpisodes: Array<{ epNumber: number; titleJp: string; summary?: string }>,
+  country: string,
+  theme: string,
+  era?: string,
+  isMangaMode?: boolean
+): string {
+  const worldSetting = era && era !== theme ? `${theme} (時代: ${era}, 地域: ${country})` : `${theme} (${country})`;
+  const prevSummary = previousEpisodes
+    .map(p => `第${p.epNumber}話「${p.titleJp}」: ${p.summary || ''}`)
+    .join('\n');
+  const mangaInstruction = isMangaMode 
+    ? "Design with intense comic/manga cliffhangers, high emotional stakes, and dynamic story pacing." 
+    : "";
+
+  return `You are a world-class drama director and screenwriter.
+We are continuing the serialization of the drama series "${seriesTitle}".
+World Theme & Setting: "${worldSetting}".
+Overall Synopsis: "${overallSynopsis}".
+
+Previous Episodes Narrative History:
+${prevSummary}
+
+Now, create the compelling story outline for the NEXT episode (Episode ${nextEpId}).
+It must naturally build upon the climax of the previous episodes and introduce exciting developments.
+${mangaInstruction}
+
+Output ONLY valid JSON:
+{
+  "epNumber": ${nextEpId},
+  "titleJp": "日本語サブタイトル",
+  "titleEn": "English Title",
+  "summary": "第${nextEpId}話のあらすじ・展開（日本語2〜3行）"
 }`;
 }
 

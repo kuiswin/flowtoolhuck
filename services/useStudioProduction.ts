@@ -10,6 +10,7 @@ import {
   buildImagePromptAndNegative, 
   buildCharacterScreeningPrompt, 
   buildGrandDesignPrompt, 
+  buildNextEpisodePlanPrompt,
   buildScriptPrompt,
   extractHighlights
 } from './directorService';
@@ -25,6 +26,7 @@ interface UseStudioProductionProps {
 export function useStudioProduction({ settings, logs, addLog, refreshStories }: UseStudioProductionProps) {
   const [episodes, setEpisodes] = useState<Episode[]>([]);
   const [isProducing, setIsProducing] = useState(false);
+  const [activeSeriesManifest, setActiveSeriesManifest] = useState<SeriesManifest | null>(null);
   const isAbortedRef = useRef(false);
   const queueRef = useRef<GenerationTask[]>([]);
   const episodesRef = useRef<Episode[]>([]);
@@ -68,6 +70,7 @@ export function useStudioProduction({ settings, logs, addLog, refreshStories }: 
 
   const resumeSeries = useCallback(async (manifest: SeriesManifest, onAssetRestored?: (assetId: number) => void) => {
     seriesManifestRef.current = manifest;
+    setActiveSeriesManifest({ ...manifest });
     addLog(`📂 シリーズ「${manifest.seriesTitle}」の設計図を読込（全${manifest.totalEpisodes}話中 ${manifest.completedEpisodeIds?.length || 0}話完了済み）。`, 'process');
     
     const resumedEpisodes: Episode[] = manifest.episodesPlan.map(p => {
@@ -510,6 +513,7 @@ Output JSON ONLY:
           } : undefined,
           settings: settings
         };
+        setActiveSeriesManifest({ ...seriesManifestRef.current });
 
         const initialEpisodes: Episode[] = design.episodesPlan.map(p => ({
           id: p.epNumber,
@@ -528,16 +532,92 @@ Output JSON ONLY:
           theme: settings.theme
         }));
         setEpisodes(initialEpisodes);
+        episodesRef.current = initialEpisodes;
         addLog(`🏛️ シリーズ設計図「${design.seriesTitle}」策定完了！（全${design.episodesPlan.length}話のプロット確定）`, 'success');
       }
 
       const manifest = seriesManifestRef.current!;
 
+      // 続編・再開時の未策定エピソードの自動拡張
+      const completedIds = manifest.completedEpisodeIds || [];
+      const nextEpId = completedIds.length > 0 ? Math.max(...completedIds) + 1 : 1;
+      const existingPlanCount = manifest.episodesPlan?.length || 0;
+      // ユーザー設定の生成話数、または次に生成すべき話数（最低限次話）の大きい方を目標とする
+      const targetMaxEpId = Math.max(nextEpId, existingPlanCount, settings.episodeCount);
+
+      if (targetMaxEpId > existingPlanCount) {
+        manifest.episodesPlan = manifest.episodesPlan || [];
+        for (let epNum = existingPlanCount + 1; epNum <= targetMaxEpId; epNum++) {
+          if (isAbortedRef.current) break;
+          addLog(`📖 【第${epNum}話】これまでの展開を踏まえた続編プロットをAIに策定依頼中...`, 'process');
+
+          const nextPlanPrompt = buildNextEpisodePlanPrompt(
+            epNum,
+            manifest.seriesTitle,
+            manifest.overallSynopsis || '',
+            manifest.episodesPlan.map(p => ({ epNumber: p.epNumber, titleJp: p.titleJp, summary: p.summary })),
+            settings.country,
+            settings.theme,
+            settings.era,
+            settings.isMangaMode
+          );
+
+          let newPlan: SeriesEpisodePlan;
+          try {
+            const planRes = await callWithRetry(
+              () => Flow.generate.text(nextPlanPrompt),
+              undefined, 4
+            );
+            newPlan = safeJsonParse(planRes.text, {
+              epNumber: epNum,
+              titleJp: `第${epNum}話 運命の分岐点`,
+              titleEn: `Episode ${epNum} Turning Point`,
+              summary: `これまでの物語から続く新たなドラマと波乱の展開`
+            });
+          } catch (e) {
+            newPlan = {
+              epNumber: epNum,
+              titleJp: `第${epNum}話 運命の継承`,
+              titleEn: `Episode ${epNum} Destiny`,
+              summary: `第${epNum - 1}話から続く物語`
+            };
+          }
+
+          manifest.episodesPlan.push(newPlan);
+          manifest.totalEpisodes = manifest.episodesPlan.length;
+
+          const newEpisodeCard: Episode = {
+            id: epNum,
+            internalId: crypto.randomUUID(),
+            titleJp: newPlan.titleJp,
+            titleEn: newPlan.titleEn,
+            summary: newPlan.summary,
+            cuts: Array.from({ length: CUTS_PER_EPISODE }, (_, j) => createDefaultCut(j + 1, '脚本策定待ち...', '', false)),
+            isGenerating: false,
+            isGeneratingRemainingImages: false,
+            isBatchGeneratingVideos: false,
+            isPreviewDone: false,
+            isDone: false,
+            taste: settings.taste,
+            era: settings.era,
+            theme: settings.theme
+          };
+
+          setEpisodes(prev => {
+            if (prev.some(e => e.id === epNum)) return prev;
+            return [...prev, newEpisodeCard];
+          });
+          episodesRef.current = [...episodesRef.current.filter(e => e.id !== epNum), newEpisodeCard];
+          addLog(`✨ 【第${epNum}話】プロット策定完了: 『${newPlan.titleJp}』`, 'success');
+        }
+        setActiveSeriesManifest({ ...manifest });
+      }
+
       for (let i = 0; i < (manifest.episodesPlan?.length || 0); i++) {
-        const epId = i + 1;
+        const currentPlan = manifest.episodesPlan[i];
+        const epId = currentPlan.epNumber || (i + 1);
         if (manifest.completedEpisodeIds.includes(epId)) continue;
         if (isAbortedRef.current) break;
-        const currentPlan = manifest.episodesPlan[i];
 
         try {
           addLog(`📖 【第${epId}話】「${currentPlan.titleJp}」の脚本・時代考証をAIに執筆依頼中...`, 'process');
@@ -619,6 +699,7 @@ Output JSON ONLY:
 
           manifest.completedEpisodeIds = Array.from(new Set([...manifest.completedEpisodeIds, epId]));
           manifest.currentEpisodeId = epId + 1;
+          setActiveSeriesManifest({ ...manifest });
 
           const freshEp = episodesRef.current.find(e => e.id === epId)!;
           if (settings.autoDownload && !isAbortedRef.current) {
@@ -641,5 +722,13 @@ Output JSON ONLY:
     }
   };
 
-  return { episodes, isProducing, startProduction, abortProduction, resumeSeries, activeSeriesManifest: seriesManifestRef.current, handleGenerateRemaining, handleBulkVideo, handleBulkBrowserVideo, handleExportFullMovie, generateImage, generateVideo, generateBrowserVideo, updateCut, clearEpisodes: () => setEpisodes([]) };
+  const clearEpisodes = useCallback(() => {
+    setEpisodes([]);
+    episodesRef.current = [];
+    seriesManifestRef.current = null;
+    setActiveSeriesManifest(null);
+    addLog('🧹 制作データを全消去しました。', 'info');
+  }, [addLog]);
+
+  return { episodes, isProducing, startProduction, abortProduction, resumeSeries, activeSeriesManifest, handleGenerateRemaining, handleBulkVideo, handleBulkBrowserVideo, handleExportFullMovie, generateImage, generateVideo, generateBrowserVideo, updateCut, clearEpisodes };
 }

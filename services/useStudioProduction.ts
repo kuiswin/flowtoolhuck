@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { Flow } from 'flow-sdk';
-import { Episode, Cut, GeneratorSettings, VideoModelType, GenerationTask, SeriesManifest, ComicPanelLayout } from '../types';
+import { Episode, Cut, GeneratorSettings, VideoModelType, GenerationTask, SeriesManifest } from '../types';
 import { IMAGE_MODELS, VIDEO_MODELS, DEFAULT_ASPECT_RATIO, CUTS_PER_EPISODE, TASTES } from '../constants';
 import { safeJsonParse, callWithRetry, formatErrorMessage, createDefaultCut } from './utils';
 import { saveStory, getAllReferenceAssets, saveReferenceAsset } from './db';
@@ -194,14 +194,12 @@ export function useStudioProduction({ settings, logs, addLog, refreshStories }: 
         if (isAbortedRef.current) break;
         const task = queueRef.current.shift();
         if (!task) break;
-        const cCut = episodesRef.current.find(e => e.id === task.epId)?.cuts.find(c => c.id === task.cutId);
-        const taskWithComic = { ...task, comicPanel: cCut?.comicPanel };
         updateCut(task.epId, task.cutId, { isDirecting: true });
         addLog(`🎬 Ep.${task.epId} C${task.cutId.toString().padStart(2, '0')}: 構図演出・プロンプト最適化中...`, 'info');
-        const directedUpdates = await directShot(taskWithComic, settings, activeReferenceRef.current, lastAssignedScale, addLog);
+        const directedUpdates = await directShot(task, settings, activeReferenceRef.current, lastAssignedScale, addLog);
         if (directedUpdates.shotScale) lastAssignedScale = directedUpdates.shotScale;
         updateCut(task.epId, task.cutId, directedUpdates);
-        await generateImage({ ...taskWithComic, prompt: directedUpdates.promptEn || task.prompt });
+        await generateImage({ ...task, prompt: directedUpdates.promptEn || task.prompt });
       }
     });
     await Promise.all(workers);
@@ -212,14 +210,7 @@ export function useStudioProduction({ settings, logs, addLog, refreshStories }: 
     const { epId, cutId } = task;
     updateCut(epId, cutId, { isGeneratingImage: true });
 
-    const currentEp = episodesRef.current.find(e => e.id === epId);
-    const currentCut = currentEp?.cuts.find(c => c.id === cutId);
-
-    if (currentCut?.comicPanel && currentCut.comicPanel.layout !== 'none') {
-      addLog(`🎨 Ep.${epId} C${cutId.toString().padStart(2, '0')}: 漫画コマ [${currentCut.comicPanel.step}/${currentCut.comicPanel.totalSteps}] の個別シーンを作画中 [${settings.imageModel}]...`, 'process');
-    } else {
-      addLog(`🎨 Ep.${epId} C${cutId.toString().padStart(2, '0')}: 画像生成中 [${settings.imageModel}]...`, 'process');
-    }
+    addLog(`🎨 Ep.${epId} C${cutId.toString().padStart(2, '0')}: 画像生成中 [${settings.imageModel}]...`, 'process');
 
     try {
       const modelInfo = IMAGE_MODELS.find(m => m.label === settings.imageModel) || IMAGE_MODELS[1];
@@ -418,23 +409,12 @@ Output JSON ONLY:
             const narration = cutData.narrationJp || cutData.narration || '';
             const plot = cutData.basicPlot || cutData.promptEn || cutData.prompt || '';
             const cutHighlights = cutData.highlights || sharedScript.highlightWords || [];
-            const comicLayout = (cutData.comicPanelLayout || 'none') as ComicPanelLayout;
-            const comicStep = Number(cutData.comicStep) || 1;
-            const comicTotalSteps = Number(cutData.comicTotalSteps) || 1;
-            const comicParentCutId = Number(cutData.comicParentCutId) || (j + 1);
-
             return {
               id: j + 1,
               narration,
               plot,
               isSelected: getIsSelected(j),
-              highlights: extractHighlights(narration, cutHighlights),
-              comicPanel: settings.isMangaMode && comicLayout !== 'none' ? {
-                layout: comicLayout,
-                step: comicStep,
-                totalSteps: comicTotalSteps,
-                parentCutId: comicParentCutId
-              } : undefined
+              highlights: extractHighlights(narration, cutHighlights)
             };
           });
         }
@@ -459,7 +439,6 @@ Output JSON ONLY:
             cuts: baseCutsData.map(c => {
               const cut = createDefaultCut(c.id, c.narration, c.plot, c.isSelected);
               cut.telop.highlights = c.highlights;
-              if (c.comicPanel) cut.comicPanel = c.comicPanel;
               return cut;
             }),
             isGenerating: true,
@@ -594,20 +573,6 @@ Output JSON ONLY:
             // AI指定のハイライト、またはエピソード代表キーワード、または漢字熟語自動抽出を適用
             const cutHighlights = cutData.highlights || sharedScript.highlightWords || [];
             cut.telop.highlights = extractHighlights(narration, cutHighlights);
-
-            const comicLayout = (cutData.comicPanelLayout || 'none') as ComicPanelLayout;
-            const comicStep = Number(cutData.comicStep) || 1;
-            const comicTotalSteps = Number(cutData.comicTotalSteps) || 1;
-            const comicParentCutId = Number(cutData.comicParentCutId) || (j + 1);
-
-            if (settings.isMangaMode && comicLayout !== 'none') {
-              cut.comicPanel = {
-                layout: comicLayout,
-                step: comicStep,
-                totalSteps: comicTotalSteps,
-                parentCutId: comicParentCutId
-              };
-            }
 
             return cut;
           });

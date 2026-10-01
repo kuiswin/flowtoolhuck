@@ -1,12 +1,11 @@
 import React from 'react';
 import { Cut, VideoModelType, RecommendationModel } from '../types';
 import { normalizeKenBurnsPreset } from '../services/browserVideoService';
-import { getComicCompositeSlots, getComicPanelBadge } from '../services/comicPanelService';
+
 
 interface CutCardProps {
   cut: Cut;
   episodeId: number;
-  allCuts?: Cut[];
   onAnimateRequest: (epId: number, cutId: number, modelType: VideoModelType) => void;
   onPreviewCut: (epId: number, cutId: number) => void;
   onUpdateSelection: (epId: number, cutId: number, isSelected: boolean) => void;
@@ -15,7 +14,7 @@ interface CutCardProps {
 }
 
 export const CutCard: React.FC<CutCardProps> = ({ 
-  cut, episodeId, allCuts, onAnimateRequest, onPreviewCut, onUpdateSelection, onUpdateModel, onRetry 
+  cut, episodeId, onAnimateRequest, onPreviewCut, onUpdateSelection, onUpdateModel, onRetry 
 }) => {
   const imageSrc = cut.imageBase64 ? `data:image/png;base64,${cut.imageBase64}` : null;
   const videoSrc = cut.videoBase64 ? `data:video/mp4;base64,${cut.videoBase64}` : null;
@@ -60,28 +59,6 @@ export const CutCard: React.FC<CutCardProps> = ({
       <div className="relative aspect-[9/16] bg-black flex items-center justify-center overflow-hidden">
         {videoSrc ? (
           <video src={videoSrc} className="w-full h-full object-cover" autoPlay loop muted playsInline />
-        ) : (cut.comicPanel && cut.comicPanel.layout !== 'none' && cut.comicPanel.layout !== 'spread-splash') ? (
-          <div className="w-full h-full relative overflow-hidden bg-[#0c0c0c]">
-            {getComicCompositeSlots(cut, allCuts || [cut]).map(slot => (
-              <div 
-                key={slot.slotIndex}
-                className="absolute inset-0 w-full h-full pointer-events-none overflow-hidden"
-                style={{ clipPath: slot.clipPath }}
-              >
-                {slot.imageSrc ? (
-                  <img 
-                    src={slot.imageSrc} 
-                    alt={slot.label} 
-                    className={`w-full h-full object-cover ${slot.isNew ? 'animate-in fade-in zoom-in-95 duration-500' : ''}`} 
-                  />
-                ) : (
-                  <div className="w-full h-full bg-[#181818] flex items-center justify-center border border-white/5">
-                    <span className="text-[7px] text-white/25 font-bold uppercase tracking-wider">{slot.label}</span>
-                  </div>
-                )}
-              </div>
-            ))}
-          </div>
         ) : imageSrc ? (
           <div className="w-full h-full overflow-hidden">
             <img 
@@ -116,12 +93,7 @@ export const CutCard: React.FC<CutCardProps> = ({
           </div>
         )}
 
-        {/* コマ割りバッジ */}
-        {cut.comicPanel && getComicPanelBadge(cut.comicPanel) && (
-          <div className="absolute bottom-1.5 right-1.5 px-1.5 py-0.5 rounded-sm bg-purple-600/90 border border-purple-400 text-[7px] font-black text-white uppercase tracking-tighter shadow-lg z-10">
-            {getComicPanelBadge(cut.comicPanel)}
-          </div>
-        )}
+
 
         <div className="absolute top-1.5 left-1.5 flex flex-col gap-1 z-10">
           <div className="flex gap-1">

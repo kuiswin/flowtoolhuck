@@ -97,27 +97,11 @@ export function buildScriptPrompt(epId: number, currentPlan: SeriesEpisodePlan, 
     : "world-class historical drama director";
     
   const mangaInstructions = isMangaMode 
-    ? `MANGA/COMIC DIRECTING & AUTONOMOUS PANEL SEQUENCING:
+    ? `MANGA/COMIC DIRECTING:
 1. Dynamic Comic Storytelling:
-Design full-bleed, borderless manga artwork. Include expressive dialogues (Spoken Dialogue), inner thoughts (Monologue), narration, and dramatic onomatopoeia (SFX) smoothly integrated into narrationJp.
-
-2. AUTONOMOUS COMIC PANEL SEQUENCE (CRITICAL):
-Analyze this episode's drama. Pick ONE sequence of consecutive cuts (2 to 4 cuts, e.g. Cuts 4-5 for 2 cuts, Cuts 7-9 for 3 cuts, or Cuts 6-9 for 4 cuts) representing the peak action, duel, revelation, or climax.
-Select the layout that best fits the mood:
-- "diagonal-2" (2 cuts): Dynamic diagonal split action for high-tension duels/standoffs!
-- "vertical-2" (2 cuts): 2-panel vertical sequence (overview -> intense reaction)!
-- "vertical-3" (3 cuts): 3-panel step-by-step action buildup (approach -> strike -> aftermath)!
-- "t-split-3" (3 cuts): Big upper splash + 2 bottom split reaction panels!
-- "grid-4" (4 cuts): 2x2 4-panel rapid action/reaction burst!
-- OR "spread-splash" (1 to 2 cuts): Epic double-page spread climax that shatters all frames!
-
-For cuts in the chosen sequence:
-- Set "comicPanelLayout" to the chosen layout name.
-- Set "comicTotalSteps" to the number of cuts in that sequence (2, 3, or 4; for spread-splash use 1 or 2).
-- Set "comicParentCutId" to the cut ID of the FIRST cut in this sequence.
-- Set "comicStep" sequentially (1 for 1st cut, 2 for 2nd cut, 3 for 3rd cut, 4 for 4th cut).
-- The parent cut's basicPlot MUST describe the complete multi-panel composition.
-- For all other cuts OUTSIDE the sequence: set "comicPanelLayout": "none", "comicStep": 1, "comicTotalSteps": 1, "comicParentCutId": cutId.`
+Design full-bleed, borderless manga artwork filling the entire frame. Include expressive dialogues (Spoken Dialogue), inner thoughts (Monologue), narration, and dramatic onomatopoeia (SFX) smoothly integrated into narrationJp.
+2. Dramatic Comic Compositions:
+Direct each cut with striking manga visual dynamics (epic splash double spreads, intense eye close-ups, dynamic action poses, deep screentone shadows).`
     : "";
 
   return `You are a ${directorRole} and historical researcher.
@@ -148,11 +132,7 @@ Output ONLY valid JSON matching this exact structure:
       "id": 1, 
       "basicPlot": "Cinematic visual description of the cut in English", 
       "narrationJp": "重厚なナレーション（日本語）",
-      "highlights": ["ナレーション内の重要語1", "ナレーション内の重要語2"],
-      "comicPanelLayout": "none | diagonal-2 | vertical-2 | vertical-3 | t-split-3 | grid-4 | spread-splash",
-      "comicStep": 1,
-      "comicTotalSteps": 1,
-      "comicParentCutId": 1
+      "highlights": ["ナレーション内の重要語1", "ナレーション内の重要語2"]
     }
   ]
 }`;
@@ -185,20 +165,9 @@ export function buildImagePromptAndNegative(
     : '';
   const baselineNegative = `${illustrationNegative}${mangaNegative}frame, border, picture frame, ornate frame, arch frame, decorative border, pixel art, 8-bit, 16-bit, lowres, worst quality, text, watermark, signature, blurry`;
 
-  // コマ割り各シーンに応じた単独作画指示（1コマごとに画面いっぱいの迫真シーンを描く）
-  const comicPanel = (task as any).comicPanel;
-  let comicLayoutPrompt = '';
-  if (settings.isMangaMode && comicPanel && comicPanel.layout !== 'none') {
-    if (comicPanel.layout === 'spread-splash') {
-      comicLayoutPrompt = 'Breathtaking double-page spread manga climax splash artwork, monumental epic scale, boundary-breaking dynamic composition bursting across the screen, ultimate visual impact, borderless full-bleed edge-to-edge';
-    } else {
-      comicLayoutPrompt = `Dramatic sequential manga scene [Story Moment ${comicPanel.step}/${comicPanel.totalSteps}]. Intense dynamic scene, extreme high-energy manga illustration, masterwork inking and screentones, borderless full-bleed edge-to-edge`;
-    }
-  }
-
   // 漫画演出モード時のプロンプト拡張（余白・枠線を完全排除し画面いっぱいに描画）
   const mangaPromptSuffix = settings.isMangaMode 
-    ? `manga style, ${comicLayoutPrompt ? comicLayoutPrompt + ', ' : ''}full-bleed edge-to-edge artwork, borderless composition, filling entire canvas without margins, dynamic pen and ink, screentone, cel shading, intense dramatic expressions, extreme high contrast, bold line art, speed lines` 
+    ? 'manga style, full-bleed edge-to-edge artwork, borderless composition, filling entire canvas without margins, dynamic pen and ink, screentone, cel shading, intense dramatic expressions, extreme high contrast, bold line art, speed lines' 
     : '';
 
   // AIが動的考証した時代衣装・除外ワード

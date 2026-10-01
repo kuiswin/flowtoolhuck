@@ -6,13 +6,12 @@ import { Flow } from 'flow-sdk';
 import { callWithRetry } from '../services/utils';
 import { extractHighlights } from '../services/directorService';
 import { normalizeKenBurnsPreset } from '../services/browserVideoService';
-import { getComicCompositeSlots, getComicPanelBadge } from '../services/comicPanelService';
+
 
 interface MediaPreviewModalProps {
     isOpen: boolean;
     cut: Cut;
     episodeId: number;
-    allCuts?: Cut[];
     onClose: () => void;
     onAnimate: (m: VideoModelType) => void;
     onBrowserAnimate: () => void;
@@ -21,7 +20,7 @@ interface MediaPreviewModalProps {
 }
 
 export const MediaPreviewModal: React.FC<MediaPreviewModalProps> = ({
-    isOpen, cut, episodeId, allCuts, onClose, onAnimate, onBrowserAnimate, onUpdateCut, onRegenerateImage
+    isOpen, cut, episodeId, onClose, onAnimate, onBrowserAnimate, onUpdateCut, onRegenerateImage
 }) => {
     const videoRef = useRef<HTMLVideoElement>(null);
     const [aiWish, setAiWish] = useState('');
@@ -218,35 +217,9 @@ export const MediaPreviewModal: React.FC<MediaPreviewModalProps> = ({
                 <div className="flex-1 bg-black relative flex items-center justify-center p-4 lg:p-10 min-h-0 overflow-hidden">
                     <div className="relative h-full w-full flex items-center justify-center">
                         <div className="relative h-full max-h-full aspect-[9/16] shadow-2xl rounded-xl overflow-hidden border border-white/10 group bg-[#111] flex items-center justify-center">
-                            {cut.comicPanel && getComicPanelBadge(cut.comicPanel) && (
-                                <div className="absolute top-4 left-4 z-50 px-2.5 py-1 rounded-md bg-purple-600/90 border border-purple-400 text-xs font-black text-white shadow-xl">
-                                    {getComicPanelBadge(cut.comicPanel)}
-                                </div>
-                            )}
+
                             {videoSrc ? (
                                 <video ref={videoRef} src={videoSrc} className="w-full h-full object-contain block" autoPlay loop playsInline />
-                            ) : (cut.comicPanel && cut.comicPanel.layout !== 'none' && cut.comicPanel.layout !== 'spread-splash') ? (
-                                <div className="w-full h-full relative overflow-hidden bg-[#0c0c0c]">
-                                    {getComicCompositeSlots(cut, allCuts || [cut]).map(slot => (
-                                        <div 
-                                            key={slot.slotIndex}
-                                            className="absolute inset-0 w-full h-full pointer-events-none overflow-hidden"
-                                            style={{ clipPath: slot.clipPath }}
-                                        >
-                                            {slot.imageSrc ? (
-                                                <img 
-                                                    src={slot.imageSrc} 
-                                                    alt={slot.label} 
-                                                    className={`w-full h-full object-contain block ${slot.isNew ? 'animate-in fade-in zoom-in-95 duration-500' : ''}`} 
-                                                />
-                                            ) : (
-                                                <div className="w-full h-full bg-[#181818] flex items-center justify-center border border-white/5">
-                                                    <span className="text-xs text-white/30 font-bold uppercase tracking-wider">{slot.label}</span>
-                                                </div>
-                                            )}
-                                        </div>
-                                    ))}
-                                </div>
                             ) : imageSrc ? (
                                 <div className="w-full h-full overflow-hidden">
                                     <img src={imageSrc} className={`w-full h-full object-contain block ${getKenBurnsClass()}`} alt="Preview" />

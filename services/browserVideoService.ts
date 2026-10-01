@@ -1,7 +1,7 @@
 import { Cut, Episode, KenBurnsPreset } from '../types';
 import { Output, Mp4OutputFormat, BufferTarget, CanvasSource } from 'mediabunny';
 import { renderCoverCanvas } from './exportService';
-import { drawComicCompositeOnCanvas } from './comicPanelService';
+
 
 /**
  * ケンバーンズ効果の文字列をケバブケースに正規化（キャメルケースや旧表記との互換性を確保）
@@ -287,20 +287,7 @@ export async function renderFullEpisodeMovie(
       }
       document.body.removeChild(video);
     } else if (cut.imageBase64) {
-      // 画像キャッシュマップを構築
-      const imagesMap = new Map<number, HTMLImageElement>();
-      for (const c of ep.cuts) {
-        if (c.imageBase64) {
-          const loadedImg = await new Promise<HTMLImageElement>((resolve) => {
-            const im = new Image();
-            im.onload = () => resolve(im);
-            im.src = `data:image/png;base64,${c.imageBase64}`;
-          });
-          imagesMap.set(c.id, loadedImg);
-        }
-      }
-
-      const img = imagesMap.get(cut.id) || await new Promise<HTMLImageElement>((resolve, reject) => {
+      const img = await new Promise<HTMLImageElement>((resolve, reject) => {
         const imgObj = new Image();
         imgObj.onload = () => resolve(imgObj);
         imgObj.onerror = reject;
@@ -315,11 +302,7 @@ export async function renderFullEpisodeMovie(
         ctx.fillStyle = 'black';
         ctx.fillRect(0, 0, width, height);
         
-        if (cut.comicPanel && cut.comicPanel.layout !== 'none' && cut.comicPanel.layout !== 'spread-splash') {
-          drawComicCompositeOnCanvas(ctx as any, width, height, cut, ep.cuts, imagesMap);
-        } else {
-          drawKenBurnsFrame(ctx, img, width, height, cut.kenBurnsPreset || 'none', progress);
-        }
+        drawKenBurnsFrame(ctx, img, width, height, cut.kenBurnsPreset || 'none', progress);
         drawBakedSubtitles(ctx, width, height, cut);
         
         await canvasSource.add(globalTime, 1 / fps);

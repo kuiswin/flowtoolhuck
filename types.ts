@@ -5,23 +5,6 @@ export type VideoRatio = 'none' | '30%' | '50%' | '100%';
 
 export type KenBurnsPreset = 'none' | 'zoom-in' | 'zoom-out' | 'pan-left' | 'pan-right' | 'tilt-up' | 'tilt-down';
 
-export type ComicPanelLayout = 
-  | 'none'              // 通常の1枚絵
-  | 'diagonal-2'        // 斜め2分割
-  | 'vertical-2'        // 上下2分割
-  | 'vertical-3'        // 縦3分割
-  | 't-split-3'         // 上大ゴマ + 下2分割
-  | 'grid-4'            // 2x2 4分割
-  | 'spread-splash';    // 超特大見開きスプラッシュ
-
-export interface ComicPanelMeta {
-  layout: ComicPanelLayout;
-  step: number;        // 1-indexed (例: 1, 2, 3)
-  totalSteps: number;  // 2, 3, 4, または 1 (spread-splash)
-  parentCutId: number; // 親となる画像生成カットの cutId
-  panelLabel?: string; // 例: '1コマ目(上段)', '2コマ目(中段)', '完成(全コマ)'
-}
-
 export interface ReferenceAsset {
   id?: number;
   name: string;
@@ -43,7 +26,6 @@ export interface Cut {
   shotScale?: string;
   kenBurnsPreset?: KenBurnsPreset; 
   cameraMotion?: string;
-  comicPanel?: ComicPanelMeta;
 
   summary?: string;
   isKeyScene?: boolean;

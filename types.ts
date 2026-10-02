@@ -5,9 +5,9 @@ export type VideoRatio = 'none' | '30%' | '50%' | '100%';
 
 export type KenBurnsPreset = 'none' | 'zoom-in' | 'zoom-out' | 'pan-left' | 'pan-right' | 'tilt-up' | 'tilt-down';
 
-export type TelopStyle = 'mv-blur-slide' | 'mv-kinetic-pop' | 'mv-neon-glow' | 'cinema-subtle' | 'brush-impact';
-export type TelopTransition = 'blur-slide-left' | 'blur-slide-up' | 'blur-slide-right' | 'zoom-in-bounce' | 'glow-fade' | 'glitch-pop';
-export type TelopPosition = 'bottom-left' | 'bottom-center' | 'center-stagger' | 'bottom-right';
+export type TelopStyle = 'mv-blur-slide' | 'mv-kinetic-pop' | 'mv-neon-glow' | 'cinema-subtle' | 'brush-impact' | 'mv-vertical-lyric' | 'mv-center-climax';
+export type TelopTransition = 'blur-slide-left' | 'blur-slide-up' | 'blur-slide-right' | 'zoom-in-bounce' | 'glow-fade' | 'glitch-pop' | 'animista-slide-bck' | 'aos-fade-soft' | 'gsap-kinetic-stagger';
+export type TelopPosition = 'bottom-left' | 'bottom-center' | 'center-stagger' | 'bottom-right' | 'top-cinema' | 'vertical-right' | 'vertical-left' | 'center-climax';
 
 export interface TelopConfig {
   fullText: string;

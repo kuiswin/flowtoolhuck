@@ -128,11 +128,13 @@ import {
   MV_THEMES,
   TELOP_STYLE_REGISTRY,
   TELOP_TRANSITION_REGISTRY,
+  TELOP_POSITION_REGISTRY,
   resolveImageModel,
   resolveVideoModel,
   resolveCameraWork,
   resolveTelopStyle,
   resolveTelopTransition,
+  resolveTelopPosition,
   resolveRecommendedTelopStaging
 } from './config/studioDefinitions';
 
@@ -143,11 +145,13 @@ export {
   MV_THEMES,
   TELOP_STYLE_REGISTRY,
   TELOP_TRANSITION_REGISTRY,
+  TELOP_POSITION_REGISTRY,
   resolveImageModel,
   resolveVideoModel,
   resolveCameraWork,
   resolveTelopStyle,
   resolveTelopTransition,
+  resolveTelopPosition,
   resolveRecommendedTelopStaging
 };
 

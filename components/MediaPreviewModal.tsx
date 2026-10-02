@@ -7,11 +7,13 @@ import {
   KEN_BURNS_PRESETS, 
   TELOP_STYLE_REGISTRY,
   TELOP_TRANSITION_REGISTRY,
+  TELOP_POSITION_REGISTRY,
   sanitizeFilename,
   resolveImageModel,
   resolveVideoModel,
   resolveTelopStyle,
   resolveTelopTransition,
+  resolveTelopPosition,
   resolveRecommendedTelopStaging
 } from '../constants';
 import { Flow } from 'flow-sdk';
@@ -184,6 +186,96 @@ const VOOK_TELOP_STYLES = `
         100% { opacity: 0; transform: translate(-5px, 2px); }
     }
 
+    @keyframes vook-animista-slide-bck {
+        0% {
+            opacity: 0;
+            transform: scale(2.2);
+            filter: blur(16px);
+        }
+        12% {
+            opacity: 1;
+            transform: scale(1);
+            filter: blur(0px);
+        }
+        74% {
+            opacity: 1;
+            transform: scale(1);
+            filter: blur(0px);
+        }
+        86% {
+            opacity: 0;
+            transform: scale(0.85);
+            filter: blur(12px);
+        }
+        100% {
+            opacity: 0;
+            transform: scale(2.2);
+            filter: blur(16px);
+        }
+    }
+
+    @keyframes vook-aos-fade-soft {
+        0% {
+            opacity: 0;
+            transform: translateY(16px);
+            filter: blur(4px);
+        }
+        14% {
+            opacity: 1;
+            transform: translateY(0);
+            filter: blur(0px);
+        }
+        76% {
+            opacity: 1;
+            transform: translateY(0);
+            filter: blur(0px);
+        }
+        88% {
+            opacity: 0;
+            transform: translateY(-8px);
+            filter: blur(6px);
+        }
+        100% {
+            opacity: 0;
+            transform: translateY(16px);
+            filter: blur(4px);
+        }
+    }
+
+    @keyframes vook-gsap-kinetic-stagger {
+        0% {
+            opacity: 0;
+            transform: scale(0.5) translateY(40px);
+            filter: blur(14px) brightness(1.6);
+        }
+        10% {
+            opacity: 1;
+            transform: scale(1.05) translateY(-2px);
+            filter: blur(0px) brightness(1.1);
+        }
+        16% {
+            transform: scale(1) translateY(0);
+            filter: blur(0px) brightness(1);
+        }
+        45% {
+            transform: scale(1.018) translateY(-2px);
+        }
+        74% {
+            opacity: 1;
+            transform: scale(1) translateY(0);
+            filter: blur(0px);
+        }
+        86% {
+            opacity: 0;
+            transform: scale(1.16) translateY(-18px);
+            filter: blur(14px) brightness(1.4);
+        }
+        100% {
+            opacity: 0;
+            transform: scale(0.5) translateY(40px);
+        }
+    }
+
     .vook-motion-blur-slide-left {
         animation: vook-blur-slide-left 4.4s cubic-bezier(0.16, 1, 0.3, 1) infinite;
     }
@@ -201,6 +293,21 @@ const VOOK_TELOP_STYLES = `
     }
     .vook-motion-glitch-pop {
         animation: vook-glitch-pop 4.4s ease-out infinite;
+    }
+    .vook-motion-animista-slide-bck {
+        animation: vook-animista-slide-bck 4.4s cubic-bezier(0.16, 1, 0.3, 1) infinite;
+    }
+    .vook-motion-aos-fade-soft {
+        animation: vook-aos-fade-soft 4.4s ease-out infinite;
+    }
+    .vook-motion-gsap-kinetic-stagger {
+        animation: vook-gsap-kinetic-stagger 4.4s cubic-bezier(0.16, 1, 0.3, 1) infinite;
+    }
+
+    .vertical-text-flow {
+        writing-mode: vertical-rl;
+        text-orientation: upright;
+        letter-spacing: 0.16em;
     }
 
     /* ド迫力テロップ用CSS（text-shadowによる疑似フチ取り） */
@@ -362,6 +469,9 @@ export const MediaPreviewModal: React.FC<MediaPreviewModalProps> = ({
 
         const transKey = cut.telop?.transition || 'blur-slide-left';
         const motionClass = 
+          transKey === 'animista-slide-bck' ? 'vook-motion-animista-slide-bck' :
+          transKey === 'aos-fade-soft' ? 'vook-motion-aos-fade-soft' :
+          transKey === 'gsap-kinetic-stagger' ? 'vook-motion-gsap-kinetic-stagger' :
           transKey === 'blur-slide-up' ? 'vook-motion-blur-slide-up' :
           transKey === 'blur-slide-right' ? 'vook-motion-blur-slide-right' :
           transKey === 'zoom-in-bounce' ? 'vook-motion-zoom-bounce' :
@@ -375,28 +485,97 @@ export const MediaPreviewModal: React.FC<MediaPreviewModalProps> = ({
         if (!isPlateStyle) {
             const lyricLines = buildLyricLines(text, highlights);
 
-            // レイアウトに応じた配置スタイリング
+            const isVertical = posKey === 'vertical-right' || posKey === 'vertical-left';
+            const isRightSide = posKey === 'vertical-right';
+            const isTop = posKey === 'top-cinema';
+            const isCenter = posKey === 'center-climax' || posKey === 'center-stagger';
             const isLeft = posKey === 'bottom-left';
+            const isRight = posKey === 'bottom-right';
 
-            // 単語ごとの水平オフセット（Vookステアステップ）
+            // 縦書きレイアウト（和モダン・エモMV風）
+            if (isVertical) {
+                return (
+                    <div 
+                        key={`${transKey}-${cut.telop?.style}-${posKey}-${text}`}
+                        className={`absolute top-[8%] ${isRightSide ? 'right-[5%]' : 'left-[5%]'} h-[80%] max-h-[82%] flex ${isRightSide ? 'flex-row-reverse' : 'flex-row'} items-start gap-3 pointer-events-none z-40 select-none`}
+                    >
+                        {lyricLines.map((line, wIdx) => {
+                            const delay = wIdx * 0.12;
+                            return (
+                                <div
+                                    key={wIdx}
+                                    className={`${motionClass} vertical-text-flow`}
+                                    style={{
+                                        animationDelay: `${delay}s`,
+                                        animationFillMode: 'both'
+                                    }}
+                                >
+                                    <div className={`inline-flex flex-col items-center backdrop-blur-md rounded-2xl transition-all shadow-2xl px-2 py-4 ${
+                                        line.hasHighlight 
+                                          ? 'bg-black/70 border border-amber-400/40 shadow-amber-500/20' 
+                                          : 'bg-black/50 border border-white/10'
+                                    }`}>
+                                        {line.segments.map((seg, sIdx) => (
+                                            <span
+                                                key={sIdx}
+                                                className="font-[900] select-none block"
+                                                style={{
+                                                    color: seg.isHighlight ? (seg.color || '#FFE600') : '#FFFFFF',
+                                                    fontSize: seg.isHighlight ? '2.1rem' : '1.35rem',
+                                                    textShadow: seg.isHighlight 
+                                                      ? '0 0 20px rgba(255, 230, 0, 0.95), 0 0 35px rgba(255, 200, 0, 0.6), 0 3px 8px rgba(0,0,0,0.95)' 
+                                                      : '0 2px 6px rgba(0,0,0,0.95), 0 0 4px rgba(0,0,0,0.85)',
+                                                    fontFamily: '"Zen Kaku Gothic New", "Montserrat", "Outfit", "Noto Sans JP", sans-serif',
+                                                    letterSpacing: '0.15em',
+                                                    lineHeight: 1.25,
+                                                    margin: seg.isHighlight ? '4px 0' : '1px 0'
+                                                }}
+                                            >
+                                                {seg.text}
+                                            </span>
+                                        ))}
+                                    </div>
+                                </div>
+                            );
+                        })}
+                    </div>
+                );
+            }
+
+            // 横書きレイアウト
+            const isClimax = posKey === 'center-climax';
             const xOffsets = isLeft 
                 ? ['0%', '4%', '8%', '12%']
+                : isRight
+                ? ['0%', '-4%', '-8%', '-12%']
                 : lyricLines.length === 1 ? ['0%'] :
                   lyricLines.length === 2 ? ['-8%', '8%'] :
                   ['-12%', '0%', '12%'];
 
-            const angles = isLeft ? [-1.5, 0.5, -1.0, 1.0] : [-3.0, 1.5, -2.0, 2.5];
+            const angles = isLeft ? [-1.5, 0.5, -1.0, 1.0] : 
+                           isRight ? [1.5, -0.5, 1.0, -1.0] : 
+                           isClimax ? [-1.0, 1.0, -0.5] :
+                           [-3.0, 1.5, -2.0, 2.5];
+
+            const containerPositionClass = 
+                isTop ? 'top-[7%] left-0 px-4 items-center justify-start' :
+                isCenter ? 'top-1/2 left-0 -translate-y-1/2 px-4 items-center justify-center' :
+                isLeft ? 'bottom-[6%] left-0 px-5 items-start justify-end' :
+                isRight ? 'bottom-[6%] right-0 px-5 items-end justify-end' :
+                'bottom-[8%] left-0 px-4 items-center justify-end';
+
+            const alignmentClass = isLeft ? 'items-start' : isRight ? 'items-end' : 'items-center';
 
             return (
                 <div 
                     key={`${transKey}-${cut.telop?.style}-${posKey}-${text}`}
-                    className={`absolute ${isLeft ? 'bottom-[6%] left-0 px-5 items-start' : 'bottom-[8%] left-0 px-4 items-center'} w-full flex flex-col justify-end pointer-events-none z-40`}
+                    className={`absolute ${containerPositionClass} w-full flex flex-col pointer-events-none z-40 select-none`}
                 >
-                    <div className={`flex flex-col ${isLeft ? 'items-start' : 'items-center'} gap-2 w-full max-w-[96%]`}>
+                    <div className={`flex flex-col ${alignmentClass} gap-2 w-full max-w-[96%]`}>
                         {lyricLines.map((line, wIdx) => {
                             const angle = angles[wIdx % angles.length];
                             const xOff = xOffsets[wIdx] || '0%';
-                            const delay = wIdx * 0.12; // Vook風スタッガー
+                            const delay = wIdx * 0.12;
 
                             return (
                                 <div
@@ -419,7 +598,9 @@ export const MediaPreviewModal: React.FC<MediaPreviewModalProps> = ({
                                                 className="font-[900] select-none inline-block align-baseline"
                                                 style={{
                                                     color: seg.isHighlight ? (seg.color || '#FFE600') : '#FFFFFF',
-                                                    fontSize: seg.isHighlight ? '2.35rem' : '1.45rem',
+                                                    fontSize: isClimax 
+                                                      ? (seg.isHighlight ? '3.0rem' : '1.75rem')
+                                                      : (seg.isHighlight ? '2.35rem' : '1.45rem'),
                                                     textShadow: seg.isHighlight 
                                                       ? '0 0 20px rgba(255, 230, 0, 0.95), 0 0 35px rgba(255, 200, 0, 0.6), 0 3px 8px rgba(0,0,0,0.95)' 
                                                       : '0 2px 6px rgba(0,0,0,0.95), 0 0 4px rgba(0,0,0,0.85)',
@@ -453,10 +634,17 @@ export const MediaPreviewModal: React.FC<MediaPreviewModalProps> = ({
             }
         });
 
+        const platePosClass = 
+            posKey === 'top-cinema' ? 'top-[6%] items-center' :
+            (posKey === 'center-climax' || posKey === 'center-stagger') ? 'top-1/2 -translate-y-1/2 items-center' :
+            posKey === 'bottom-left' ? 'bottom-[5%] items-start pl-6' :
+            posKey === 'bottom-right' ? 'bottom-[5%] items-end pr-6' :
+            'bottom-[5%] items-center';
+
         return (
             <div 
                 key={`${transKey}-${cut.telop?.style}-${posKey}-${text}`}
-                className={`absolute bottom-[5%] left-0 w-full px-4 flex flex-col items-center pointer-events-none z-40 ${motionClass}`}
+                className={`absolute ${platePosClass} left-0 w-full px-4 flex flex-col pointer-events-none z-40 ${motionClass}`}
                 style={{ animationFillMode: 'both' }}
             >
                 {/* テロップ背景プレート（約20%〜35%背景が透けて見えるシネマ風グラスモーフィズム） */}
@@ -640,25 +828,18 @@ export const MediaPreviewModal: React.FC<MediaPreviewModalProps> = ({
                                 <div className="grid grid-cols-1 gap-2">
                                     <FieldDropdown 
                                         label="テロップ配置構図" 
-                                        value={
-                                            cut.telop?.position === 'center-stagger' ? '画面中央 (サビ・躍動スタッガー)' :
-                                            cut.telop?.position === 'bottom-center' ? '下部中央 (安定・映画字幕)' :
-                                            '下部左寄せ (MVシネマ・ステアステップ)'
-                                        } 
-                                        options={[
-                                            '下部左寄せ (MVシネマ・ステアステップ)',
-                                            '画面中央 (サビ・躍動スタッガー)',
-                                            '下部中央 (安定・映画字幕)'
-                                        ]} 
-                                        onChange={label => {
-                                            const pos = label.includes('画面中央') ? 'center-stagger' :
-                                                        label.includes('下部中央') ? 'bottom-center' : 'bottom-left';
-                                            onUpdateCut({ 
-                                                telop: { 
-                                                    ...cut.telop!, 
-                                                    position: pos 
-                                                } 
-                                            });
+                                        value={TELOP_POSITION_REGISTRY.find(p => p.id === cut.telop?.position)?.name || TELOP_POSITION_REGISTRY[0].name} 
+                                        options={TELOP_POSITION_REGISTRY.map(p => p.name)} 
+                                        onChange={name => {
+                                            const found = TELOP_POSITION_REGISTRY.find(p => p.name === name);
+                                            if (found) {
+                                                onUpdateCut({ 
+                                                    telop: { 
+                                                        ...cut.telop!, 
+                                                        position: found.id 
+                                                    } 
+                                                });
+                                            }
                                         }} 
                                     />
                                 </div>

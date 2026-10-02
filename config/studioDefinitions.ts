@@ -400,10 +400,10 @@ export const TELOP_STYLE_REGISTRY: TelopStyleDefinition[] = [
   },
   {
     id: 'cinema-subtle',
-    name: 'シネマティック・ミニマル (静寂・映画風)',
+    name: 'シネマティック・ミニマル (静寂・AOS風)',
     description: '半透明グラスモーフィズムプレートと繊細な字間による上品な映画字幕演出',
     badgeColor: '#A78BFA',
-    defaultTransition: 'blur-slide-up',
+    defaultTransition: 'aos-fade-soft',
     defaultPosition: 'bottom-center'
   },
   {
@@ -413,6 +413,22 @@ export const TELOP_STYLE_REGISTRY: TelopStyleDefinition[] = [
     badgeColor: '#F59E0B',
     defaultTransition: 'blur-slide-right',
     defaultPosition: 'bottom-center'
+  },
+  {
+    id: 'mv-vertical-lyric',
+    name: 'エモ縦書きリリック (Eve/ヨルシカ・和モダン)',
+    description: 'サイドバーに繊細に流れる縦書きタイポグラフィ。視線を遮らず余白を美しく魅せる',
+    badgeColor: '#34D399',
+    defaultTransition: 'aos-fade-soft',
+    defaultPosition: 'vertical-right'
+  },
+  {
+    id: 'mv-center-climax',
+    name: '画面中央クライマックス (サビ・GSAP特大炸裂)',
+    description: 'サビの決めフレーズを画面中央にズドンと炸裂させる最大インパクト演出',
+    badgeColor: '#EC4899',
+    defaultTransition: 'animista-slide-bck',
+    defaultPosition: 'center-climax'
   }
 ];
 
@@ -424,12 +440,33 @@ export interface TelopTransitionDefinition {
 }
 
 export const TELOP_TRANSITION_REGISTRY: TelopTransitionDefinition[] = [
-  { id: 'blur-slide-left', name: '左からブラースライド', description: '左から横ブラーを伴い高速スライドイン', icon: 'arrow_forward' },
+  { id: 'animista-slide-bck', name: 'Animista奥からズームイン (slide-bck)', description: '3D空間の奥から手前にグッと飛び込む迫真モーション', icon: 'filter_tilt_shift' },
+  { id: 'gsap-kinetic-stagger', name: 'GSAP急減速スタッガー (呼吸＆残像)', description: '初速最速・終速ピタ止めと微細な呼吸フローティング', icon: 'speed' },
+  { id: 'aos-fade-soft', name: 'AOS上品ソフトフェード (静寂・映画風)', description: '繊細な浮遊感とソフトな透過で情景を邪魔しない', icon: 'opacity' },
+  { id: 'blur-slide-left', name: '左からブラースライド (Vook高速)', description: '左から横ブラーを伴い高速スライドイン', icon: 'arrow_forward' },
   { id: 'blur-slide-up', name: '下からブラースライド', description: '下から縦ブラーを伴いフワッと飛び込み', icon: 'arrow_upward' },
   { id: 'blur-slide-right', name: '右からブラースライド', description: '右から駆け抜けるようにスライドイン', icon: 'arrow_back' },
   { id: 'zoom-in-bounce', name: 'ズームイン・バウンス', description: '飛び込んで軽く弾むリズミカルな登場', icon: 'fit_screen' },
   { id: 'glow-fade', name: 'ネオン・グローフェード', description: '光の粒子がにじみ出るように静かに発光', icon: 'flare' },
   { id: 'glitch-pop', name: 'グリッチ・カットイン', description: 'デジタルなカットインで瞬時に切り替え', icon: 'bolt' }
+];
+
+export interface TelopPositionDefinition {
+  id: TelopPosition;
+  name: string;
+  description: string;
+  icon: string;
+}
+
+export const TELOP_POSITION_REGISTRY: TelopPositionDefinition[] = [
+  { id: 'bottom-center', name: '下部中央 (安定・映画字幕)', description: '最も視認性が高くどんなシーンにも馴染む王道配置', icon: 'align_horizontal_center' },
+  { id: 'bottom-left', name: '下部左 (Vookステアステップ)', description: '左下から階段状にリズミカルに並ぶ現代MV風配置', icon: 'align_horizontal_left' },
+  { id: 'top-cinema', name: '上部シネマ (空・天井天吊り)', description: '下部のキャラクターや地面を避け、上空の余白に浮遊', icon: 'vertical_align_top' },
+  { id: 'vertical-right', name: '右サイド縦書き (和モダン・エモ)', description: '画面右端に縦書きで流すヨルシカ・Eve風の洗練デザイン', icon: 'format_textdirection_r_to_l' },
+  { id: 'vertical-left', name: '左サイド縦書き (雑誌・アンニュイ)', description: '画面左端に縦書きで流す叙情的なタイポグラフィ', icon: 'format_textdirection_l_to_r' },
+  { id: 'center-climax', name: '画面中央ド迫力 (サビ爆発)', description: '画面ど真ん中に特大サイズで配置するキメ演出', icon: 'filter_center_focus' },
+  { id: 'center-stagger', name: '中央スタッガー (段違いリリック)', description: '中央付近で互い違いに跳ねるAdo風キネティック配置', icon: 'reorder' },
+  { id: 'bottom-right', name: '下部右 (アシンメトリー)', description: '右下に引き締めて配置するモダンレイアウト', icon: 'align_horizontal_right' }
 ];
 
 export function resolveTelopStyle(styleId?: string): TelopStyleDefinition {
@@ -440,8 +477,15 @@ export function resolveTelopTransition(transId?: string): TelopTransitionDefinit
   return TELOP_TRANSITION_REGISTRY.find(t => t.id === transId) || TELOP_TRANSITION_REGISTRY[0];
 }
 
+export function resolveTelopPosition(posId?: string): TelopPositionDefinition {
+  return TELOP_POSITION_REGISTRY.find(p => p.id === posId) || TELOP_POSITION_REGISTRY[0];
+}
+
 /**
- * カット番号と世界観に基づいてディレクターの推奨テロップ演出を解決
+ * カット番号と世界観に基づいてディレクターの推奨テロップ演出を解決（1/3 黄金比ディレクション）
+ * ・1/3 【静】（Aメロ・風景・アウトロ）: 上品なAOS風ソフトフェード × すりガラス（目が疲れない）
+ * ・1/3 【変】（Bメロ・展開）: 右側縦書き / 上部シネマで単調な下部固定を打破
+ * ・1/3 【動】（サビ・キメ）: Animista奥ズーム / GSAP急減速スタッガー × 画面中央特大インパクト
  */
 export function resolveRecommendedTelopStaging(cutId: number, isMvMode?: boolean, isHistorical?: boolean): {
   style: TelopStyle;
@@ -452,37 +496,69 @@ export function resolveRecommendedTelopStaging(cutId: number, isMvMode?: boolean
   const normCut = ((cutId - 1) % 12) + 1;
 
   if (isMvMode) {
-    if (normCut <= 3) {
-      // Aメロ（静かな導入）
+    if (normCut === 1 || normCut === 2) {
+      // 1. 【静】Aメロ導入（目が疲れない上品なAOS風フェード）
+      return {
+        style: 'cinema-subtle',
+        transition: 'aos-fade-soft',
+        position: 'bottom-center',
+        directorNote: `[Verse A・静] 物語の幕開け。AOS風の穏やかなフェードと上品なすりガラスで背景アートと人物の佇まいをじっくり魅せる。`
+      };
+    } else if (normCut === 3) {
+      // 2. 【静】Aメロ深まり（左下控えめスライド）
       return {
         style: 'mv-blur-slide',
         transition: 'blur-slide-left',
         position: 'bottom-left',
-        directorNote: `[Verse A] 静かなRestlessnessを表現。左下から滑らかなブラースライドでリリックを送り込み、余白を残して情景美を際立たせる。`
+        directorNote: `[Verse A・静] 左下に控えめなブラースライドを配置。画面右側の余白と空気を残す。`
       };
-    } else if (normCut <= 6) {
-      // Bメロ（テンポアップ・加速）
+    } else if (normCut === 4 || normCut === 5) {
+      // 3. 【変・空間演出】Bメロ展開（右サイド縦書き・エモ）
+      return {
+        style: 'mv-vertical-lyric',
+        transition: 'aos-fade-soft',
+        position: 'vertical-right',
+        directorNote: `[Verse B・変] 下部固定を脱却！右端に流れる縦書きタイポグラフィで楽曲の転調とエモーショナルな奥行きを創出。`
+      };
+    } else if (normCut === 6) {
+      // 4. 【変・空間演出】Bメロ加速（上部天吊りシネマ）
       return {
         style: 'mv-blur-slide',
         transition: 'blur-slide-up',
-        position: 'bottom-left',
-        directorNote: `[Verse B] ビートの加速に呼応。下から速度感のある縦ブラースライドで流し込み、疾走感を生み出す。`
+        position: 'top-cinema',
+        directorNote: `[Bridge・変] サビ前の緊張感。人物の足元や動作を邪魔しない上部天吊りシネマ配置で視線を上空へ誘導。`
       };
-    } else if (normCut <= 9) {
-      // サビ（感情のクライマックス）
+    } else if (normCut === 7 || normCut === 8) {
+      // 5. 【動】サビ最高潮（Animista奥ズーム × 中央特大インパクト）
+      return {
+        style: 'mv-center-climax',
+        transition: 'animista-slide-bck',
+        position: 'center-climax',
+        directorNote: `[Chorus・動★] サビの感情爆発！Animista奥ズームインと金色特大ネオングローで画面中央にズドンと炸裂させるキラーカット。`
+      };
+    } else if (normCut === 9) {
+      // 6. 【動】サビ駆け抜け（GSAP急減速スタッガー × キネティック）
       return {
         style: 'mv-kinetic-pop',
-        transition: 'zoom-in-bounce',
+        transition: 'gsap-kinetic-stagger',
         position: 'center-stagger',
-        directorNote: `[Chorus] 感情の最高潮！Ado風キネティック・タイポで重要語を画面中央に大胆配置し、インパクトのあるスタッガー登場で圧倒。`
+        directorNote: `[Chorus・動★] GSAP急減速スタッガー。単語ごとに時間差で跳ね上がり、ビートの疾走感とリリックを完全シンクロ。`
+      };
+    } else if (normCut === 10) {
+      // 7. 【変】Cメロ落ちサビ（左サイド縦書き）
+      return {
+        style: 'mv-vertical-lyric',
+        transition: 'aos-fade-soft',
+        position: 'vertical-left',
+        directorNote: `[Verse C・変] サビ終わりの静寂。左サイドの縦書きタイポグラフィで心に染み入るモノローグを演出。`
       };
     } else {
-      // アウトロ（余韻）
+      // 8. 【静】アウトロ（ネオングロー × 静かな余韻）
       return {
         style: 'mv-neon-glow',
         transition: 'glow-fade',
         position: 'bottom-center',
-        directorNote: `[Outro] 楽曲の余韻とフェード。柔らかなアンビエントネオングローで静寂と情緒を演出。`
+        directorNote: `[Outro・静] 楽曲のフェードアウト。柔らかなアンビエントネオンが静かに漂い、心地よい余韻を残す。`
       };
     }
   }
@@ -490,15 +566,15 @@ export function resolveRecommendedTelopStaging(cutId: number, isMvMode?: boolean
   if (isHistorical) {
     return {
       style: 'brush-impact',
-      transition: normCut % 2 === 0 ? 'blur-slide-up' : 'blur-slide-left',
-      position: 'bottom-center',
+      transition: normCut % 2 === 0 ? 'blur-slide-up' : 'animista-slide-bck',
+      position: normCut % 3 === 0 ? 'vertical-right' : 'bottom-center',
       directorNote: `重厚な歴史考証に基づき、視認性の高い墨文字インパクトフチ取りテロップで物語の威厳を表現。`
     };
   }
 
   return {
     style: 'cinema-subtle',
-    transition: 'blur-slide-up',
+    transition: 'aos-fade-soft',
     position: 'bottom-center',
     directorNote: `映像の没入感を阻害しないシネマ風グラスプレートテロップ。`
   };

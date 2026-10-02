@@ -459,14 +459,12 @@ export interface TelopPositionDefinition {
 }
 
 export const TELOP_POSITION_REGISTRY: TelopPositionDefinition[] = [
-  { id: 'bottom-center', name: '下部中央 (安定・映画字幕)', description: '最も視認性が高くどんなシーンにも馴染む王道配置', icon: 'align_horizontal_center' },
-  { id: 'bottom-left', name: '下部左 (Vookステアステップ)', description: '左下から階段状にリズミカルに並ぶ現代MV風配置', icon: 'align_horizontal_left' },
-  { id: 'top-cinema', name: '上部シネマ (空・天井天吊り)', description: '下部のキャラクターや地面を避け、上空の余白に浮遊', icon: 'vertical_align_top' },
+  { id: 'bottom-left', name: '下部左寄り (左始まり・ステアステップ)', description: '左下から階段状にリズミカルに並ぶ現代MV風レイアウト', icon: 'align_horizontal_left' },
+  { id: 'bottom-right', name: '下部右寄り (右付け・ステアステップ)', description: '右下から内側へ階段状に引き締める端正な右寄せレイアウト', icon: 'align_horizontal_right' },
+  { id: 'top-cinema', name: '上部シネマ (空・天井天吊り)', description: '下部・中央のメイン被写体を避け、上空の余白に上品に浮遊', icon: 'vertical_align_top' },
   { id: 'vertical-right', name: '右サイド縦書き (和モダン・エモ)', description: '画面右端に縦書きで流すヨルシカ・Eve風の洗練デザイン', icon: 'format_textdirection_r_to_l' },
   { id: 'vertical-left', name: '左サイド縦書き (雑誌・アンニュイ)', description: '画面左端に縦書きで流す叙情的なタイポグラフィ', icon: 'format_textdirection_l_to_r' },
-  { id: 'center-climax', name: '画面中央ド迫力 (サビ爆発)', description: '画面ど真ん中に特大サイズで配置するキメ演出', icon: 'filter_center_focus' },
-  { id: 'center-stagger', name: '中央スタッガー (段違いリリック)', description: '中央付近で互い違いに跳ねるAdo風キネティック配置', icon: 'reorder' },
-  { id: 'bottom-right', name: '下部右 (アシンメトリー)', description: '右下に引き締めて配置するモダンレイアウト', icon: 'align_horizontal_right' }
+  { id: 'bottom-center', name: '下部中央 (安定・映画字幕)', description: '最も視認性が高くどんなシーンにも馴染む王道字幕配置', icon: 'align_horizontal_center' }
 ];
 
 export function resolveTelopStyle(styleId?: string): TelopStyleDefinition {
@@ -482,10 +480,11 @@ export function resolveTelopPosition(posId?: string): TelopPositionDefinition {
 }
 
 /**
- * カット番号と世界観に基づいてディレクターの推奨テロップ演出を解決（1/3 黄金比ディレクション）
- * ・1/3 【静】（Aメロ・風景・アウトロ）: 上品なAOS風ソフトフェード × すりガラス（目が疲れない）
- * ・1/3 【変】（Bメロ・展開）: 右側縦書き / 上部シネマで単調な下部固定を打破
- * ・1/3 【動】（サビ・キメ）: Animista奥ズーム / GSAP急減速スタッガー × 画面中央特大インパクト
+ * カット番号と世界観に基づいてディレクターの推奨テロップ演出を解決
+ * 【鉄則ルール】
+ * 1. 2回連続で同じ出し方（トランジション）・同じ配置が出ない完全Anti-Repeat制御
+ * 2. 画面中央（メイン被写体）を覆い隠さないため、中央配置を排除し「左始まり」「右付け」「上部」「縦書き」に展開
+ * 3. ユーザー絶賛の「左寄りの左始まり」と「右寄りの右付け」をテンポよく交互に展開
  */
 export function resolveRecommendedTelopStaging(cutId: number, isMvMode?: boolean, isHistorical?: boolean): {
   style: TelopStyle;
@@ -496,86 +495,109 @@ export function resolveRecommendedTelopStaging(cutId: number, isMvMode?: boolean
   const normCut = ((cutId - 1) % 12) + 1;
 
   if (isMvMode) {
-    if (normCut === 1 || normCut === 2) {
-      // 1. 【静】Aメロ導入（目が疲れない上品なAOS風フェード）
-      return {
-        style: 'cinema-subtle',
-        transition: 'aos-fade-soft',
-        position: 'bottom-center',
-        directorNote: `[Verse A・静] 物語の幕開け。AOS風の穏やかなフェードと上品なすりガラスで背景アートと人物の佇まいをじっくり魅せる。`
-      };
-    } else if (normCut === 3) {
-      // 2. 【静】Aメロ深まり（左下控えめスライド）
-      return {
-        style: 'mv-blur-slide',
-        transition: 'blur-slide-left',
-        position: 'bottom-left',
-        directorNote: `[Verse A・静] 左下に控えめなブラースライドを配置。画面右側の余白と空気を残す。`
-      };
-    } else if (normCut === 4 || normCut === 5) {
-      // 3. 【変・空間演出】Bメロ展開（右サイド縦書き・エモ）
-      return {
-        style: 'mv-vertical-lyric',
-        transition: 'aos-fade-soft',
-        position: 'vertical-right',
-        directorNote: `[Verse B・変] 下部固定を脱却！右端に流れる縦書きタイポグラフィで楽曲の転調とエモーショナルな奥行きを創出。`
-      };
-    } else if (normCut === 6) {
-      // 4. 【変・空間演出】Bメロ加速（上部天吊りシネマ）
-      return {
-        style: 'mv-blur-slide',
-        transition: 'blur-slide-up',
-        position: 'top-cinema',
-        directorNote: `[Bridge・変] サビ前の緊張感。人物の足元や動作を邪魔しない上部天吊りシネマ配置で視線を上空へ誘導。`
-      };
-    } else if (normCut === 7 || normCut === 8) {
-      // 5. 【動】サビ最高潮（Animista奥ズーム × 中央特大インパクト）
-      return {
-        style: 'mv-center-climax',
-        transition: 'animista-slide-bck',
-        position: 'center-climax',
-        directorNote: `[Chorus・動★] サビの感情爆発！Animista奥ズームインと金色特大ネオングローで画面中央にズドンと炸裂させるキラーカット。`
-      };
-    } else if (normCut === 9) {
-      // 6. 【動】サビ駆け抜け（GSAP急減速スタッガー × キネティック）
-      return {
-        style: 'mv-kinetic-pop',
-        transition: 'gsap-kinetic-stagger',
-        position: 'center-stagger',
-        directorNote: `[Chorus・動★] GSAP急減速スタッガー。単語ごとに時間差で跳ね上がり、ビートの疾走感とリリックを完全シンクロ。`
-      };
-    } else if (normCut === 10) {
-      // 7. 【変】Cメロ落ちサビ（左サイド縦書き）
-      return {
-        style: 'mv-vertical-lyric',
-        transition: 'aos-fade-soft',
-        position: 'vertical-left',
-        directorNote: `[Verse C・変] サビ終わりの静寂。左サイドの縦書きタイポグラフィで心に染み入るモノローグを演出。`
-      };
-    } else {
-      // 8. 【静】アウトロ（ネオングロー × 静かな余韻）
-      return {
-        style: 'mv-neon-glow',
-        transition: 'glow-fade',
-        position: 'bottom-center',
-        directorNote: `[Outro・静] 楽曲のフェードアウト。柔らかなアンビエントネオンが静かに漂い、心地よい余韻を残す。`
-      };
+    switch (normCut) {
+      case 1:
+        return {
+          style: 'mv-blur-slide',
+          transition: 'aos-fade-soft',
+          position: 'bottom-left',
+          directorNote: `[Verse A1・静] 物語の開幕。下部左寄りの左始まりステアステップとAOS上品ソフトフェードで背景アートと人物の佇まいを魅せる。`
+        };
+      case 2:
+        return {
+          style: 'mv-blur-slide',
+          transition: 'blur-slide-up',
+          position: 'bottom-right',
+          directorNote: `[Verse A2・動静] 下部右寄りの右付けへ反転！下からフワッと飛び込むブラースライドでリズミカルな変化を生む。`
+        };
+      case 3:
+        return {
+          style: 'mv-blur-slide',
+          transition: 'blur-slide-left',
+          position: 'top-cinema',
+          directorNote: `[Verse A3・変] 上部天吊りシネマへ跳躍。左からの高速ブラースライドで視線を上空へ誘導し余白を活かす。`
+        };
+      case 4:
+        return {
+          style: 'mv-vertical-lyric',
+          transition: 'aos-fade-soft',
+          position: 'vertical-right',
+          directorNote: `[Verse B1・変] 空間演出。右端を流れるエモ縦書きタイポグラフィで楽曲の転調と文学的な情緒を創出。`
+        };
+      case 5:
+        return {
+          style: 'mv-kinetic-pop',
+          transition: 'zoom-in-bounce',
+          position: 'bottom-left',
+          directorNote: `[Verse B2・動] 左寄りの左始まりへ戻りつつ、軽く跳ねるバウンス登場でサビへの加速感を予告。`
+        };
+      case 6:
+        return {
+          style: 'mv-blur-slide',
+          transition: 'blur-slide-right',
+          position: 'bottom-right',
+          directorNote: `[Bridge・動] 右寄りの右付けステアステップ。右から駆け抜けるブラースライドでサビ前の緊張感を最高潮に。`
+        };
+      case 7:
+        return {
+          style: 'mv-neon-glow',
+          transition: 'animista-slide-bck',
+          position: 'bottom-left',
+          directorNote: `[Chorus 1★・動] サビ爆発！中央のメイン被写体を塞がず、左寄りの左始まりからAnimista奥ズームインと金文字特大発光で圧倒。`
+        };
+      case 8:
+        return {
+          style: 'mv-kinetic-pop',
+          transition: 'gsap-kinetic-stagger',
+          position: 'bottom-right',
+          directorNote: `[Chorus 2★・動] 右寄りの右付けへ大胆反転！GSAP急減速スタッガーと呼吸フローティングでビートの熱狂と完全シンクロ。`
+        };
+      case 9:
+        return {
+          style: 'mv-blur-slide',
+          transition: 'glitch-pop',
+          position: 'top-cinema',
+          directorNote: `[Chorus 3★・変] 上部天吊りシネマ。メイン被写体の顔や手を遮らず、上空でグリッチ・カットインを炸裂。`
+        };
+      case 10:
+        return {
+          style: 'mv-vertical-lyric',
+          transition: 'aos-fade-soft',
+          position: 'vertical-left',
+          directorNote: `[Verse C・静] サビ終わりの静寂。左サイドの縦書きタイポグラフィで心に染み入る静かなモノローグ。`
+        };
+      case 11:
+        return {
+          style: 'mv-neon-glow',
+          transition: 'glow-fade',
+          position: 'bottom-right',
+          directorNote: `[Outro 1・静] 右寄りの右付けステアステップ。光の粒子がにじむアンビエントネオンが心地よい余韻を漂わせる。`
+        };
+      case 12:
+      default:
+        return {
+          style: 'cinema-subtle',
+          transition: 'aos-fade-soft',
+          position: 'bottom-left',
+          directorNote: `[Outro 2・静] 左寄りの左始まりで静かに完結。情景の余韻とともに美しくフェードアウト。`
+        };
     }
   }
 
   if (isHistorical) {
+    const isEven = normCut % 2 === 0;
     return {
       style: 'brush-impact',
-      transition: normCut % 2 === 0 ? 'blur-slide-up' : 'animista-slide-bck',
-      position: normCut % 3 === 0 ? 'vertical-right' : 'bottom-center',
+      transition: isEven ? 'blur-slide-up' : 'animista-slide-bck',
+      position: isEven ? 'bottom-right' : 'bottom-left',
       directorNote: `重厚な歴史考証に基づき、視認性の高い墨文字インパクトフチ取りテロップで物語の威厳を表現。`
     };
   }
 
   return {
     style: 'cinema-subtle',
-    transition: 'aos-fade-soft',
-    position: 'bottom-center',
+    transition: normCut % 2 === 0 ? 'blur-slide-up' : 'aos-fade-soft',
+    position: normCut % 2 === 0 ? 'bottom-right' : 'bottom-left',
     directorNote: `映像の没入感を阻害しないシネマ風グラスプレートテロップ。`
   };
 }

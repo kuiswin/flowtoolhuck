@@ -558,13 +558,13 @@ export const MediaPreviewModal: React.FC<MediaPreviewModalProps> = ({
                            [-3.0, 1.5, -2.0, 2.5];
 
             const containerPositionClass = 
-                isTop ? 'top-[7%] left-0 px-4 items-center justify-start' :
-                isCenter ? 'top-1/2 left-0 -translate-y-1/2 px-4 items-center justify-center' :
-                isLeft ? 'bottom-[6%] left-0 px-5 items-start justify-end' :
-                isRight ? 'bottom-[6%] right-0 px-5 items-end justify-end' :
-                'bottom-[8%] left-0 px-4 items-center justify-end';
+                isTop ? 'top-[7%] left-0 right-0 px-4 items-center justify-start' :
+                isCenter ? 'top-1/2 left-0 right-0 -translate-y-1/2 px-4 items-center justify-center' :
+                isLeft ? 'bottom-[6%] left-0 right-0 px-5 items-start justify-end' :
+                isRight ? 'bottom-[6%] left-0 right-0 px-5 items-end justify-end' :
+                'bottom-[8%] left-0 right-0 px-4 items-center justify-end';
 
-            const alignmentClass = isLeft ? 'items-start' : isRight ? 'items-end' : 'items-center';
+            const alignmentClass = isLeft ? 'items-start text-left' : isRight ? 'items-end text-right' : 'items-center text-center';
 
             return (
                 <div 
@@ -580,7 +580,7 @@ export const MediaPreviewModal: React.FC<MediaPreviewModalProps> = ({
                             return (
                                 <div
                                     key={wIdx}
-                                    className={motionClass}
+                                    className={`${motionClass} ${isRight ? 'self-end' : isLeft ? 'self-start' : 'self-center'}`}
                                     style={{
                                         transform: `translateX(${xOff}) rotate(${angle}deg)`,
                                         animationDelay: `${delay}s`,
@@ -1002,10 +1002,7 @@ export const MediaPreviewModal: React.FC<MediaPreviewModalProps> = ({
                                 const currentStyle = resolveTelopStyle(cut.telop?.style || staging.style);
                                 const currentTrans = resolveTelopTransition(cut.telop?.transition || staging.transition);
                                 const currentPos = cut.telop?.position || staging.position;
-                                const posLabel = 
-                                    currentPos === 'center-stagger' ? '画面中央 (サビ・躍動スタッガー)' :
-                                    currentPos === 'bottom-center' ? '下部中央 (映画字幕・安定)' :
-                                    '下部左寄せ (MVシネマ・ステアステップ)';
+                                const posLabel = resolveTelopPosition(currentPos).name;
                                 const directorNote = cut.telop?.directorNote || staging.directorNote;
 
                                 return (

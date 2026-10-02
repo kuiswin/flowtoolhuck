@@ -163,34 +163,49 @@ export function extractHighlights(narrationText: string, suggestedWords: string[
   if (!narrationText || !narrationText.trim()) return [];
   const validHighlights: Array<{ word: string; color: string; sizeScale: number }> = [];
 
+  const neonColors = ['#FFE600', '#00F0FF', '#FF2A85', '#39FF14', '#FF7A00', '#BD00FF'];
+
   // 1. 指定された単語のうち、ナレーション本文に確実に含まれているものを採用
   for (const rawWord of suggestedWords) {
     const word = (rawWord || '').trim();
-    if (word && narrationText.includes(word) && word.length >= 1 && word.length <= 6) {
+    if (word && narrationText.includes(word) && word.length >= 1 && word.length <= 8) {
       if (!validHighlights.some(h => h.word === word)) {
-        validHighlights.push({ word, color: '#FFE600', sizeScale: 1.1 });
+        const color = neonColors[validHighlights.length % neonColors.length];
+        validHighlights.push({ word, color, sizeScale: 1.15 });
       }
     }
   }
 
-  // 2. もし本文に合致する指定単語が0件なら、ナレーション本文から漢字熟語（2〜4文字）を自動抽出
+  // 2. 複合熟語（「三種の神器」「風の谷」などの 漢字＋の＋漢字）を優先検索
+  if (validHighlights.length === 0) {
+    const compoundMatches = narrationText.match(/[\u4e00-\u9faf]{1,3}の[\u4e00-\u9faf]{1,3}/g);
+    if (compoundMatches && compoundMatches.length > 0) {
+      for (const word of Array.from(new Set(compoundMatches)).slice(0, 2)) {
+        const color = neonColors[validHighlights.length % neonColors.length];
+        validHighlights.push({ word, color, sizeScale: 1.15 });
+      }
+    }
+  }
+
+  // 3. 漢字熟語（2〜4文字）を抽出
   if (validHighlights.length === 0) {
     const kanjiMatches = narrationText.match(/[\u4e00-\u9faf]{2,4}/g);
     if (kanjiMatches && kanjiMatches.length > 0) {
-      // 重複を除去し、登場順に有力な熟語を最大2つピックアップ
       const candidates = Array.from(new Set(kanjiMatches)).filter(w => w.length >= 2 && w.length <= 4);
       for (const word of candidates.slice(0, 2)) {
-        validHighlights.push({ word, color: '#FFE600', sizeScale: 1.1 });
+        const color = neonColors[validHighlights.length % neonColors.length];
+        validHighlights.push({ word, color, sizeScale: 1.15 });
       }
     }
   }
 
-  // 3. それでも0件なら（ひらがな中心などの場合）、カタカナ単語または文中の代表語
+  // 4. カタカナ単語（2〜6文字）
   if (validHighlights.length === 0) {
     const katakanaMatches = narrationText.match(/[\u30a1-\u30f6]{2,6}/g);
     if (katakanaMatches && katakanaMatches.length > 0) {
       for (const word of Array.from(new Set(katakanaMatches)).slice(0, 2)) {
-        validHighlights.push({ word, color: '#FFE600', sizeScale: 1.1 });
+        const color = neonColors[validHighlights.length % neonColors.length];
+        validHighlights.push({ word, color, sizeScale: 1.15 });
       }
     }
   }

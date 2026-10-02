@@ -23,19 +23,20 @@ import { normalizeKenBurnsPreset } from '../services/browserVideoService';
 import { TextInput, SectionLabel, PillButton, ToggleSwitch, FieldDropdown } from './Primitives';
 
 const VOOK_TELOP_STYLES = `
-    @keyframes kb-zoom-in { 0% { transform: scale(1); } 100% { transform: scale(1.15); } }
-    @keyframes kb-zoom-out { 0% { transform: scale(1.15); } 100% { transform: scale(1); } }
-    @keyframes kb-pan-left { 0% { transform: translateX(5%); } 100% { transform: translateX(-5%); } }
-    @keyframes kb-pan-right { 0% { transform: translateX(-5%); } 100% { transform: translateX(5%); } }
-    @keyframes kb-tilt-up { 0% { transform: translateY(5%); } 100% { transform: translateY(-5%); } }
-    @keyframes kb-tilt-down { 0% { transform: translateY(-5%); } 100% { transform: translateY(5%); } }
-    
-    .animate-ken-burns-zoom-in { animation: kb-zoom-in 8s ease-in-out infinite alternate; }
-    .animate-ken-burns-zoom-out { animation: kb-zoom-out 8s ease-in-out infinite alternate; }
-    .animate-ken-burns-pan-left { animation: kb-pan-left 8s ease-in-out infinite alternate; scale: 1.1; }
-    .animate-ken-burns-pan-right { animation: kb-pan-right 8s ease-in-out infinite alternate; scale: 1.1; }
-    .animate-ken-burns-tilt-up { animation: kb-tilt-up 8s ease-in-out infinite alternate; scale: 1.1; }
-    .animate-ken-burns-tilt-down { animation: kb-tilt-down 8s ease-in-out infinite alternate; scale: 1.1; }
+    /* ── ケンバーンズ演出（プレビュー画面で美しくダイナミックに呼吸する6秒サイクル） ── */
+    @keyframes studio-kb-zoom-in { 0% { transform: scale(1.05); } 100% { transform: scale(1.22); } }
+    @keyframes studio-kb-zoom-out { 0% { transform: scale(1.22); } 100% { transform: scale(1.05); } }
+    @keyframes studio-kb-pan-left { 0% { transform: scale(1.18) translateX(4%); } 100% { transform: scale(1.18) translateX(-4%); } }
+    @keyframes studio-kb-pan-right { 0% { transform: scale(1.18) translateX(-4%); } 100% { transform: scale(1.18) translateX(4%); } }
+    @keyframes studio-kb-tilt-up { 0% { transform: scale(1.18) translateY(4%); } 100% { transform: scale(1.18) translateY(-4%); } }
+    @keyframes studio-kb-tilt-down { 0% { transform: scale(1.18) translateY(-4%); } 100% { transform: scale(1.18) translateY(4%); } }
+
+    .studio-kb-zoom-in { animation: studio-kb-zoom-in 6s ease-in-out infinite alternate !important; will-change: transform; transform-origin: center center; }
+    .studio-kb-zoom-out { animation: studio-kb-zoom-out 6s ease-in-out infinite alternate !important; will-change: transform; transform-origin: center center; }
+    .studio-kb-pan-left { animation: studio-kb-pan-left 6s ease-in-out infinite alternate !important; will-change: transform; transform-origin: center center; }
+    .studio-kb-pan-right { animation: studio-kb-pan-right 6s ease-in-out infinite alternate !important; will-change: transform; transform-origin: center center; }
+    .studio-kb-tilt-up { animation: studio-kb-tilt-up 6s ease-in-out infinite alternate !important; will-change: transform; transform-origin: center center; }
+    .studio-kb-tilt-down { animation: studio-kb-tilt-down 6s ease-in-out infinite alternate !important; will-change: transform; transform-origin: center center; }
 
     /* ── Vook風 テロップトランジション（入り → ホールド → 出/抜けの完全サイクル） ── */
     @keyframes vook-blur-slide-left {
@@ -304,6 +305,80 @@ const VOOK_TELOP_STYLES = `
         animation: vook-gsap-kinetic-stagger 4.4s cubic-bezier(0.16, 1, 0.3, 1) infinite;
     }
 
+    /* ── マルチディレクション・キネティック（行ごとの対向・多方向アニメーション） ── */
+    /* 1. 左イン → 右アウト（突き抜けスルー） */
+    @keyframes vook-in-left-out-right {
+        0% { opacity: 0; transform: translateX(-90px) skewX(-10deg); filter: blur(14px); }
+        14% { opacity: 1; transform: translateX(0) skewX(0deg); filter: blur(0px); }
+        76% { opacity: 1; transform: translateX(0) skewX(0deg); filter: blur(0px); }
+        88% { opacity: 0; transform: translateX(90px) skewX(10deg); filter: blur(14px); }
+        100% { opacity: 0; transform: translateX(-90px); }
+    }
+    /* 2. 右イン → 左アウト（突き抜けスルー） */
+    @keyframes vook-in-right-out-left {
+        0% { opacity: 0; transform: translateX(90px) skewX(10deg); filter: blur(14px); }
+        14% { opacity: 1; transform: translateX(0) skewX(0deg); filter: blur(0px); }
+        76% { opacity: 1; transform: translateX(0) skewX(0deg); filter: blur(0px); }
+        88% { opacity: 0; transform: translateX(-90px) skewX(-10deg); filter: blur(14px); }
+        100% { opacity: 0; transform: translateX(90px); }
+    }
+    /* 3. 上イン → 下アウト（重力落下スルー） */
+    @keyframes vook-in-top-out-down {
+        0% { opacity: 0; transform: translateY(-70px) scale(0.92); filter: blur(12px); }
+        14% { opacity: 1; transform: translateY(0) scale(1); filter: blur(0px); }
+        76% { opacity: 1; transform: translateY(0) scale(1); filter: blur(0px); }
+        88% { opacity: 0; transform: translateY(70px) scale(0.95); filter: blur(12px); }
+        100% { opacity: 0; transform: translateY(-70px); }
+    }
+    /* 4. 下イン → 上アウト（上昇スルー） */
+    @keyframes vook-in-bottom-out-up {
+        0% { opacity: 0; transform: translateY(70px) scale(0.92); filter: blur(12px); }
+        14% { opacity: 1; transform: translateY(0) scale(1); filter: blur(0px); }
+        76% { opacity: 1; transform: translateY(0) scale(1); filter: blur(0px); }
+        88% { opacity: 0; transform: translateY(-70px) scale(0.95); filter: blur(12px); }
+        100% { opacity: 0; transform: translateY(70px); }
+    }
+    /* 5. 左イン → 左アウト（来た方向へリバース） */
+    @keyframes vook-in-left-out-left {
+        0% { opacity: 0; transform: translateX(-80px); filter: blur(12px); }
+        14% { opacity: 1; transform: translateX(0); filter: blur(0px); }
+        76% { opacity: 1; transform: translateX(0); filter: blur(0px); }
+        88% { opacity: 0; transform: translateX(-80px); filter: blur(12px); }
+        100% { opacity: 0; transform: translateX(-80px); }
+    }
+    /* 6. 右イン → 右アウト（来た方向へリバース） */
+    @keyframes vook-in-right-out-right {
+        0% { opacity: 0; transform: translateX(80px); filter: blur(12px); }
+        14% { opacity: 1; transform: translateX(0); filter: blur(0px); }
+        76% { opacity: 1; transform: translateX(0); filter: blur(0px); }
+        88% { opacity: 0; transform: translateX(80px); filter: blur(12px); }
+        100% { opacity: 0; transform: translateX(80px); }
+    }
+    /* 7. 奥ズームイン → 上空昇天 */
+    @keyframes vook-in-zoom-out-up {
+        0% { opacity: 0; transform: scale(0.5); filter: blur(15px); }
+        15% { opacity: 1; transform: scale(1); filter: blur(0px); }
+        76% { opacity: 1; transform: scale(1); filter: blur(0px); }
+        88% { opacity: 0; transform: translateY(-70px) scale(1.05); filter: blur(12px); }
+        100% { opacity: 0; transform: scale(0.5); }
+    }
+    /* 8. 奥ズームイン → 下沈降 */
+    @keyframes vook-in-zoom-out-down {
+        0% { opacity: 0; transform: scale(0.5); filter: blur(15px); }
+        15% { opacity: 1; transform: scale(1); filter: blur(0px); }
+        76% { opacity: 1; transform: scale(1); filter: blur(0px); }
+        88% { opacity: 0; transform: translateY(70px) scale(1.05); filter: blur(12px); }
+        100% { opacity: 0; transform: scale(0.5); }
+    }
+
+    .vook-motion-in-left-out-right { animation: vook-in-left-out-right 4.5s cubic-bezier(0.16, 1, 0.3, 1) infinite; }
+    .vook-motion-in-right-out-left { animation: vook-in-right-out-left 4.5s cubic-bezier(0.16, 1, 0.3, 1) infinite; }
+    .vook-motion-in-top-out-down { animation: vook-in-top-out-down 4.5s cubic-bezier(0.16, 1, 0.3, 1) infinite; }
+    .vook-motion-in-bottom-out-up { animation: vook-in-bottom-out-up 4.5s cubic-bezier(0.16, 1, 0.3, 1) infinite; }
+    .vook-motion-in-left-out-left { animation: vook-in-left-out-left 4.5s cubic-bezier(0.16, 1, 0.3, 1) infinite; }
+    .vook-motion-in-right-out-right { animation: vook-in-right-out-right 4.5s cubic-bezier(0.16, 1, 0.3, 1) infinite; }
+    .vook-motion-in-zoom-out-up { animation: vook-in-zoom-out-up 4.5s cubic-bezier(0.16, 1, 0.3, 1) infinite; }
+    .vook-motion-in-zoom-out-down { animation: vook-in-zoom-out-down 4.5s cubic-bezier(0.16, 1, 0.3, 1) infinite; }
     .vertical-text-flow {
         writing-mode: vertical-rl;
         text-orientation: upright;
@@ -454,9 +529,58 @@ export const MediaPreviewModal: React.FC<MediaPreviewModalProps> = ({
 
     const getKenBurnsClass = () => {
         if (videoSrc || !imageSrc) return '';
-        const preset = normalizeKenBurnsPreset(cut.kenBurnsPreset);
-        if (preset === 'none') return '';
-        return `animate-ken-burns-${preset}`;
+        let preset = normalizeKenBurnsPreset(cut.kenBurnsPreset);
+        if (preset === 'none') {
+            // 未指定やnoneの場合でも、カットIDに応じたケンバーン演出で確実にプレビューを躍動させる！
+            const kbCycle: KenBurnsPreset[] = ['zoom-in', 'pan-left', 'zoom-out', 'pan-right', 'tilt-up', 'tilt-down'];
+            const idx = (cut.id || 1) % kbCycle.length;
+            preset = kbCycle[idx];
+        }
+        return `studio-kb-${preset}`;
+    };
+
+    // 極彩色ネオンパレット（黄色一色からの脱却：ゴールド、シアン、マゼンタ、ライム、オレンジ、パープル）
+    const NEON_PALETTE = [
+        { color: '#FFE600', glow: '0 0 16px rgba(255, 230, 0, 0.95), 0 0 28px rgba(255, 200, 0, 0.5), 0 2px 5px rgba(0,0,0,0.95)', border: 'border-amber-400/50', shadow: 'shadow-amber-500/25' },
+        { color: '#00F0FF', glow: '0 0 16px rgba(0, 240, 255, 0.95), 0 0 28px rgba(0, 200, 255, 0.5), 0 2px 5px rgba(0,0,0,0.95)', border: 'border-cyan-400/50', shadow: 'shadow-cyan-500/25' },
+        { color: '#FF2A85', glow: '0 0 16px rgba(255, 42, 133, 0.95), 0 0 28px rgba(255, 0, 100, 0.5), 0 2px 5px rgba(0,0,0,0.95)', border: 'border-pink-500/50', shadow: 'shadow-pink-500/25' },
+        { color: '#39FF14', glow: '0 0 16px rgba(57, 255, 20, 0.95), 0 0 28px rgba(40, 220, 0, 0.5), 0 2px 5px rgba(0,0,0,0.95)', border: 'border-emerald-400/50', shadow: 'shadow-emerald-500/25' },
+        { color: '#FF7A00', glow: '0 0 16px rgba(255, 122, 0, 0.95), 0 0 28px rgba(255, 80, 0, 0.5), 0 2px 5px rgba(0,0,0,0.95)', border: 'border-orange-400/50', shadow: 'shadow-orange-500/25' },
+        { color: '#BD00FF', glow: '0 0 16px rgba(189, 0, 255, 0.95), 0 0 28px rgba(160, 0, 240, 0.5), 0 2px 5px rgba(0,0,0,0.95)', border: 'border-purple-400/50', shadow: 'shadow-purple-500/25' }
+    ];
+
+    const getNeonTheme = (text: string, lineIdx: number, cutId: number, customColor?: string) => {
+        if (customColor && customColor !== '#FFE600') {
+            return {
+                color: customColor,
+                glow: `0 0 16px ${customColor}, 0 0 28px ${customColor}80, 0 2px 5px rgba(0,0,0,0.95)`,
+                border: 'border-white/40',
+                shadow: 'shadow-white/20'
+            };
+        }
+        let hash = 0;
+        for (let i = 0; i < text.length; i++) {
+            hash = (hash << 5) - hash + text.charCodeAt(i);
+        }
+        const idx = Math.abs(hash + lineIdx * 3 + cutId * 5) % NEON_PALETTE.length;
+        return NEON_PALETTE[idx];
+    };
+
+    // 複数行（2枠以上）の時に、行ごとに入り・出のベクトルをダイナミックに対向・ランダム化
+    const getLineMotion = (lineIdx: number, totalLines: number, baseMotion: string, cutId: number) => {
+        if (totalLines <= 1) return baseMotion;
+        
+        const motionPairs = [
+            ['vook-motion-in-left-out-right', 'vook-motion-in-right-out-left'], // 1: 左右すれ違い突き抜けスルー
+            ['vook-motion-in-top-out-down', 'vook-motion-in-bottom-out-up'],    // 2: 上下垂直クロス
+            ['vook-motion-in-top-out-down', 'vook-motion-in-right-out-left'],   // 3: 上から落下 ＆ 右から突き抜け
+            ['vook-motion-in-zoom-out-up', 'vook-motion-in-bottom-out-up'],     // 4: ズームイン昇天 ＆ 下からリフト
+            ['vook-motion-in-left-out-left', 'vook-motion-in-right-out-right'], // 5: 各自リバース戻り
+            ['vook-motion-in-zoom-out-down', 'vook-motion-in-left-out-right']   // 6: ズーム沈降 ＆ 左から右スルー
+        ];
+        const pairIdx = (cutId + lineIdx) % motionPairs.length;
+        const pair = motionPairs[pairIdx];
+        return pair[lineIdx % pair.length];
     };
 
     const renderTelopContent = () => {
@@ -469,7 +593,7 @@ export const MediaPreviewModal: React.FC<MediaPreviewModalProps> = ({
             : extractHighlights(text);
 
         const transKey = cut.telop?.transition || 'blur-slide-left';
-        const motionClass = 
+        const defaultMotionClass = 
           transKey === 'animista-slide-bck' ? 'vook-motion-animista-slide-bck' :
           transKey === 'aos-fade-soft' ? 'vook-motion-aos-fade-soft' :
           transKey === 'gsap-kinetic-stagger' ? 'vook-motion-gsap-kinetic-stagger' :
@@ -502,6 +626,14 @@ export const MediaPreviewModal: React.FC<MediaPreviewModalProps> = ({
                     >
                         {lyricLines.map((line, wIdx) => {
                             const delay = wIdx * 0.12;
+                            const motionClass = getLineMotion(wIdx, lyricLines.length, defaultMotionClass, cut.id || 1);
+                            
+                            // 該当行のネオンテーマ（最初のハイライトから取得）
+                            const firstHighlight = line.segments.find(s => s.isHighlight);
+                            const neonTheme = firstHighlight 
+                                ? getNeonTheme(firstHighlight.text, wIdx, cut.id || 1, firstHighlight.color)
+                                : NEON_PALETTE[0];
+
                             return (
                                 <div
                                     key={wIdx}
@@ -513,27 +645,31 @@ export const MediaPreviewModal: React.FC<MediaPreviewModalProps> = ({
                                 >
                                     <div className={`inline-block whitespace-nowrap backdrop-blur-md rounded-2xl transition-all shadow-2xl px-2 py-4 ${
                                         line.hasHighlight 
-                                          ? 'bg-black/75 border border-amber-400/40 shadow-amber-500/20' 
+                                          ? `bg-black/80 border ${neonTheme.border} ${neonTheme.shadow}` 
                                           : 'bg-black/55 border border-white/10'
                                     }`}>
-                                        {line.segments.map((seg, sIdx) => (
-                                            <span
-                                                key={sIdx}
-                                                className="font-[900] select-none inline"
-                                                style={{
-                                                    color: seg.isHighlight ? (seg.color || '#FFE600') : '#FFFFFF',
-                                                    fontSize: seg.isHighlight ? '1.45rem' : '1.2rem',
-                                                    textShadow: seg.isHighlight 
-                                                      ? '0 0 16px rgba(255, 230, 0, 0.95), 0 0 28px rgba(255, 200, 0, 0.5), 0 2px 6px rgba(0,0,0,0.95)' 
-                                                      : '0 2px 5px rgba(0,0,0,0.95), 0 0 3px rgba(0,0,0,0.85)',
-                                                    fontFamily: '"Zen Kaku Gothic New", "Montserrat", "Outfit", "Noto Sans JP", sans-serif',
-                                                    letterSpacing: '0.14em',
-                                                    lineHeight: 1.2
-                                                }}
-                                            >
-                                                {seg.text}
-                                            </span>
-                                        ))}
+                                        {line.segments.map((seg, sIdx) => {
+                                            const segNeon = seg.isHighlight 
+                                                ? getNeonTheme(seg.text, wIdx + sIdx, cut.id || 1, seg.color)
+                                                : null;
+
+                                            return (
+                                                <span
+                                                    key={sIdx}
+                                                    className="font-[900] select-none inline"
+                                                    style={{
+                                                        color: seg.isHighlight ? (segNeon?.color || '#FFE600') : '#FFFFFF',
+                                                        fontSize: seg.isHighlight ? '1.45rem' : '1.2rem',
+                                                        textShadow: seg.isHighlight ? segNeon?.glow : '0 2px 5px rgba(0,0,0,0.95), 0 0 3px rgba(0,0,0,0.85)',
+                                                        fontFamily: '"Zen Kaku Gothic New", "Montserrat", "Outfit", "Noto Sans JP", sans-serif',
+                                                        letterSpacing: '0.14em',
+                                                        lineHeight: 1.2
+                                                    }}
+                                                >
+                                                    {seg.text}
+                                                </span>
+                                            );
+                                        })}
                                     </div>
                                 </div>
                             );
@@ -577,6 +713,15 @@ export const MediaPreviewModal: React.FC<MediaPreviewModalProps> = ({
                             const xOff = xOffsets[wIdx] || '0%';
                             const delay = wIdx * 0.12;
 
+                            // 1シーン内の各枠ごとに異なる入出方向を割り当て！
+                            const motionClass = getLineMotion(wIdx, lyricLines.length, defaultMotionClass, cut.id || 1);
+
+                            // 行ごとのメインネオンテーマ
+                            const firstHighlight = line.segments.find(s => s.isHighlight);
+                            const neonTheme = firstHighlight 
+                                ? getNeonTheme(firstHighlight.text, wIdx, cut.id || 1, firstHighlight.color)
+                                : NEON_PALETTE[0];
+
                             return (
                                 <div
                                     key={wIdx}
@@ -589,29 +734,33 @@ export const MediaPreviewModal: React.FC<MediaPreviewModalProps> = ({
                                 >
                                     <div className={`inline-flex items-baseline whitespace-nowrap backdrop-blur-md rounded-xl transition-all shadow-2xl px-3.5 py-1 ${
                                         line.hasHighlight 
-                                          ? 'bg-black/70 border border-amber-400/40 shadow-amber-500/20' 
+                                          ? `bg-black/75 border ${neonTheme.border} ${neonTheme.shadow}` 
                                           : 'bg-black/50 border border-white/10'
                                     }`}>
-                                        {line.segments.map((seg, sIdx) => (
-                                            <span
-                                                key={sIdx}
-                                                className="font-[900] select-none inline-block align-baseline whitespace-nowrap"
-                                                style={{
-                                                    color: seg.isHighlight ? (seg.color || '#FFE600') : '#FFFFFF',
-                                                    fontSize: isClimax 
-                                                      ? (seg.isHighlight ? '1.85rem' : '1.4rem')
-                                                      : (seg.isHighlight ? '1.55rem' : '1.25rem'),
-                                                    textShadow: seg.isHighlight 
-                                                      ? '0 0 16px rgba(255, 230, 0, 0.95), 0 0 28px rgba(255, 200, 0, 0.5), 0 2px 6px rgba(0,0,0,0.95)' 
-                                                      : '0 2px 5px rgba(0,0,0,0.95), 0 0 3px rgba(0,0,0,0.85)',
-                                                    fontFamily: '"Zen Kaku Gothic New", "Montserrat", "Outfit", "Noto Sans JP", sans-serif',
-                                                    letterSpacing: seg.isHighlight ? '0.03em' : '0.01em',
-                                                    lineHeight: 1.15
-                                                }}
-                                            >
-                                                {seg.text}
-                                            </span>
-                                        ))}
+                                        {line.segments.map((seg, sIdx) => {
+                                            const segNeon = seg.isHighlight 
+                                                ? getNeonTheme(seg.text, wIdx + sIdx, cut.id || 1, seg.color)
+                                                : null;
+
+                                            return (
+                                                <span
+                                                    key={sIdx}
+                                                    className="font-[900] select-none inline-block align-baseline whitespace-nowrap"
+                                                    style={{
+                                                        color: seg.isHighlight ? (segNeon?.color || '#FFE600') : '#FFFFFF',
+                                                        fontSize: isClimax 
+                                                          ? (seg.isHighlight ? '1.85rem' : '1.4rem')
+                                                          : (seg.isHighlight ? '1.55rem' : '1.25rem'),
+                                                        textShadow: seg.isHighlight ? segNeon?.glow : '0 2px 5px rgba(0,0,0,0.95), 0 0 3px rgba(0,0,0,0.85)',
+                                                        fontFamily: '"Zen Kaku Gothic New", "Montserrat", "Outfit", "Noto Sans JP", sans-serif',
+                                                        letterSpacing: seg.isHighlight ? '0.03em' : '0.01em',
+                                                        lineHeight: 1.15
+                                                    }}
+                                                >
+                                                    {seg.text}
+                                                </span>
+                                            );
+                                        })}
                                     </div>
                                 </div>
                             );
@@ -729,7 +878,7 @@ export const MediaPreviewModal: React.FC<MediaPreviewModalProps> = ({
                             {videoSrc ? (
                                 <video ref={videoRef} src={videoSrc} className="w-full h-full object-contain block" autoPlay loop playsInline />
                             ) : imageSrc ? (
-                                <div className="w-full h-full overflow-hidden">
+                                <div className="w-full h-full overflow-hidden flex items-center justify-center">
                                     <img src={imageSrc} className={`w-full h-full object-contain block ${getKenBurnsClass()}`} alt="Preview" />
                                 </div>
                             ) : (

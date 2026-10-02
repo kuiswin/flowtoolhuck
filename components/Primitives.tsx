@@ -69,11 +69,12 @@ export const StepperField: React.FC<{
 export const FieldDropdown: React.FC<{
   label: string; 
   value: string; 
-  options: string[];
+  options?: (string | { label: string; value: string })[];
+  groups?: { label: string; items: string[] }[];
   onChange: (val: string) => void; 
   className?: string;
   disabled?: boolean;
-}> = ({ label, value, options, onChange, className = '', disabled }) => {
+}> = ({ label, value, options = [], groups, onChange, className = '', disabled }) => {
   const [isOpen, setIsOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
@@ -103,14 +104,41 @@ export const FieldDropdown: React.FC<{
         </div>
       </button>
       {isOpen && !disabled && (
-        <div className="absolute z-50 top-[calc(100%+4px)] left-0 w-full bg-[#0e0e0e] border border-[#595959] rounded-xl overflow-hidden shadow-xl backdrop-blur-md animate-dropdown origin-top max-h-80 overflow-y-auto dark-scrollbar">
-          {options.map((opt) => (
-            <button key={opt} type="button"
-              className={`w-full text-left px-2.5 py-2 text-[11px] font-medium tracking-[0.1px] hover:bg-[#1a1a1a] transition-colors ${value === opt ? 'bg-[#1a1a1a] text-white' : 'text-[rgba(218,220,224,0.9)]'}`}
-              onClick={() => { onChange(opt); setIsOpen(false); }}>
-              {opt}
-            </button>
-          ))}
+        <div className="absolute z-50 top-[calc(100%+4px)] left-0 w-full bg-[#0c0c0c] border border-white/15 rounded-xl overflow-hidden shadow-2xl backdrop-blur-md animate-dropdown origin-top max-h-80 overflow-y-auto dark-scrollbar">
+          {groups ? (
+            groups.map((grp) => (
+              <div key={grp.label} className="border-b border-white/10 last:border-b-0 pb-1">
+                <div className="px-2.5 py-1.5 text-[10px] font-bold text-amber-400 tracking-wider bg-[#181818] sticky top-0 backdrop-blur-md z-10 flex items-center gap-1.5 border-b border-white/10">
+                  <span className="w-1.5 h-1.5 rounded-full bg-amber-400 shrink-0"></span>
+                  <span className="truncate">{grp.label}</span>
+                </div>
+                {grp.items.map((opt) => (
+                  <button 
+                    key={opt} 
+                    type="button"
+                    className={`w-full text-left px-3 py-1.5 text-[11px] font-medium tracking-[0.1px] hover:bg-white/10 transition-colors flex items-center justify-between ${value === opt ? 'bg-amber-500/20 text-amber-200 font-bold' : 'text-[rgba(218,220,224,0.85)]'}`}
+                    onClick={() => { onChange(opt); setIsOpen(false); }}
+                  >
+                    <span className="truncate">{opt}</span>
+                    {value === opt && <span className="material-symbols-outlined text-[14px] text-amber-400 shrink-0 ml-1">check</span>}
+                  </button>
+                ))}
+              </div>
+            ))
+          ) : (
+            options.map((opt) => {
+              const optVal = typeof opt === 'string' ? opt : opt.value;
+              const optLabel = typeof opt === 'string' ? opt : opt.label;
+              return (
+                <button key={optVal} type="button"
+                  className={`w-full text-left px-2.5 py-2 text-[11px] font-medium tracking-[0.1px] hover:bg-[#1a1a1a] transition-colors flex items-center justify-between ${value === optVal ? 'bg-amber-500/20 text-amber-200 font-bold' : 'text-[rgba(218,220,224,0.9)]'}`}
+                  onClick={() => { onChange(optVal); setIsOpen(false); }}>
+                  <span className="truncate">{optLabel}</span>
+                  {value === optVal && <span className="material-symbols-outlined text-[14px] text-amber-400 shrink-0 ml-1">check</span>}
+                </button>
+              );
+            })
+          )}
         </div>
       )}
     </div>

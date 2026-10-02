@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { SectionLabel, PillButton, FieldDropdown, SegmentedToggle, ToggleSwitch, NumberChoice } from './Primitives';
 import { GeneratorSettings, ReferenceAsset } from '../types';
-import { THEMES, MV_THEMES, TASTES, IMAGE_MODELS, VIDEO_RATIO_OPTIONS } from '../constants';
+import { THEMES, THEME_CATEGORIES, MV_THEMES, TASTES, IMAGE_MODELS, VIDEO_RATIO_OPTIONS } from '../constants';
 import { StudioLogs, LogEntry } from './StudioLogs';
 import { ReferenceVault } from './ReferenceVault';
 import { getAllReferenceAssets } from '../services/db';
@@ -161,7 +161,8 @@ export const StudioSidebar: React.FC<StudioSidebarProps> = ({
         <FieldDropdown 
           label={settings.productionMode === 'mv' ? 'MVシチュエーション (10選)' : '世界観・テーマ'} 
           value={settings.theme} 
-          options={settings.productionMode === 'mv' ? MV_THEMES : THEMES} 
+          options={settings.productionMode === 'mv' ? MV_THEMES : undefined}
+          groups={settings.productionMode === 'mv' ? undefined : THEME_CATEGORIES.map(c => ({ label: c.category, items: c.items }))}
           onChange={v => setSettings(s => ({ ...s, theme: v, era: v }))} 
           disabled={isProducing} 
         />

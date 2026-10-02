@@ -15,7 +15,8 @@ export const PillButton: React.FC<{
   onClick?: () => void;
   disabled?: boolean;
   className?: string;
-}> = ({ icon, children, variant = 'filled', onClick, disabled, className = '' }) => {
+  title?: string;
+}> = ({ icon, children, variant = 'filled', onClick, disabled, className = '', title }) => {
   const base = 'flex items-center gap-[2px] justify-center h-[34px] rounded-xl font-medium tracking-[0.1px] transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed';
   const variants: Record<string, string> = {
     filled: 'bg-[#969696] hover:bg-[#a6a6a6] active:bg-[#868686] text-black text-[11px] pl-[8px] pr-[24px] py-1 select-none',
@@ -23,7 +24,7 @@ export const PillButton: React.FC<{
     solid: 'bg-white hover:bg-gray-200 active:bg-gray-300 text-black text-[12px] pl-[8px] pr-[16px] py-2 select-none',
   };
   return (
-    <button className={`${base} ${variants[variant]} ${className}`} onClick={onClick} disabled={disabled}>
+    <button className={`${base} ${variants[variant]} ${className}`} onClick={onClick} disabled={disabled} title={title}>
       {icon && <span className="flex items-center justify-center w-6 h-6">{icon}</span>}
       <span>{children}</span>
     </button>

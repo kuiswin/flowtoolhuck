@@ -771,7 +771,7 @@ export const MediaPreviewModal: React.FC<MediaPreviewModalProps> = ({
         }
 
         // プレートスタイル（cinema-subtle / traditional-sumi）
-        const highlightIndices = new Map<number, { color: string; sizeScale: number }>();
+        const highlightIndices = new Map<number, { color: string; sizeScale: number; word?: string }>();
         highlights.forEach(h => {
             if (!h.word) return;
             let pos = 0;

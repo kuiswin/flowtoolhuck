@@ -156,6 +156,19 @@ function renderKineticAdoLyrics(
       // 光彩が拡散して消灯
       globalExitScale = 1.0 + (easeIn * 0.04);
       globalExitBlur = easeIn * 26;
+    } else if (transitionKey === 'animista-slide-bck') {
+      // 奥へ吸い込まれるように退場
+      globalExitScale = Math.max(0.5, 1.0 - (easeIn * 0.45));
+      globalExitBlur = easeIn * 22;
+    } else if (transitionKey === 'aos-fade-soft') {
+      // エレガントに上へフェードアウト
+      globalExitAlpha = Math.max(0, 1 - easeIn * 1.3);
+      globalExitOffsetY = -easeIn * (height * 0.04);
+    } else if (transitionKey === 'gsap-kinetic-stagger') {
+      // ダイナミックスライド＆拡大抜け
+      globalExitOffsetX = easeIn * (width * 0.16);
+      globalExitScale = 1.0 + (easeIn * 0.25);
+      globalExitBlur = easeIn * 24;
     } else {
       globalExitOffsetX = (exitT > 0.5 ? 6 : -6);
     }
@@ -186,6 +199,16 @@ function renderKineticAdoLyrics(
   ctx.textBaseline = 'middle';
   ctx.lineJoin = 'round';
   ctx.lineCap = 'round';
+
+  // 多彩ネオンカラーパレット（ゴールド、シアン、マゼンタ、ライム、オレンジ、パープル）
+  const NEON_COLORS = [
+    { color: '#FFE600', glow: 'rgba(255, 230, 0, 0.85)' },
+    { color: '#00F0FF', glow: 'rgba(0, 240, 255, 0.85)' },
+    { color: '#FF2A85', glow: 'rgba(255, 42, 133, 0.85)' },
+    { color: '#39FF14', glow: 'rgba(57, 255, 20, 0.85)' },
+    { color: '#FF7A00', glow: 'rgba(255, 122, 0, 0.85)' },
+    { color: '#BD00FF', glow: 'rgba(189, 0, 255, 0.85)' },
+  ];
 
   words.forEach((wordText, idx) => {
     // 単語ごとのスタッガー登場 (0.04s, 0.18s, 0.32s...)
@@ -237,6 +260,26 @@ function renderKineticAdoLyrics(
         wordScale = 0.94 + t * 0.06;
         wordAlpha = Math.min(1, t * 1.8);
         motionBlurAmount = (1 - t) * 35;
+      } else if (transitionKey === 'animista-slide-bck') {
+        // 手前から奥へ吸い込まれるように着地
+        const easeOut = 1 - Math.pow(1 - t, 3);
+        wordScale = 1.45 - (easeOut * 0.45);
+        wordAlpha = Math.min(1, t * 2.2);
+        motionBlurAmount = (1 - t) * 24;
+      } else if (transitionKey === 'aos-fade-soft') {
+        // ふんわりエレガントにフェードイン
+        wordScale = 0.95 + t * 0.05;
+        wordOffsetY = (1 - t) * (height * 0.025);
+        wordAlpha = Math.min(1, t * 1.6);
+      } else if (transitionKey === 'gsap-kinetic-stagger') {
+        // GSAP風ダイナミック・キネティックポップ
+        const c1 = 2.2;
+        const c3 = c1 + 1;
+        const easeBack = 1 + c3 * Math.pow(t - 1, 3) + c1 * Math.pow(t - 1, 2);
+        wordScale = 0.2 + (easeBack * 0.8);
+        wordOffsetY = (1 - easeBack) * (height * 0.06);
+        wordAlpha = Math.min(1, t * 2.8);
+        motionBlurAmount = (1 - t) * 32;
       } else {
         // glitch-pop
         wordOffsetX = (1 - t) * (idx % 2 === 0 ? -12 : 12);
@@ -253,9 +296,21 @@ function renderKineticAdoLyrics(
     const currentY = startY + idx * lineHeight + wordOffsetY + globalExitOffsetY;
     const angle = angles[idx % angles.length];
 
-    // ハイライト判定
-    const isHighlighted = highlights.some(h => h.word && (wordText.includes(h.word) || h.word.includes(wordText)));
-    const textColor = isHighlighted ? '#FFE600' : '#FFFFFF';
+    // ハイライト判定＆極彩色ネオンテーマ選定
+    const matchedHighlight = highlights.find(h => h.word && (wordText.includes(h.word) || h.word.includes(wordText)));
+    const isHighlighted = !!matchedHighlight;
+    
+    let hash = 0;
+    for (let c = 0; c < wordText.length; c++) hash = (hash << 5) - hash + wordText.charCodeAt(c);
+    const themeIdx = Math.abs(hash + idx * 3 + (cut.id || 1) * 5) % NEON_COLORS.length;
+    const defaultNeon = NEON_COLORS[themeIdx];
+
+    const textColor = isHighlighted 
+      ? (matchedHighlight?.color && matchedHighlight.color !== '#FFE600' ? matchedHighlight.color : defaultNeon.color)
+      : '#FFFFFF';
+    const textGlow = isHighlighted
+      ? (matchedHighlight?.color && matchedHighlight.color !== '#FFE600' ? `${matchedHighlight.color}D9` : defaultNeon.glow)
+      : 'rgba(255, 255, 255, 0.7)';
     const highlightSizeBoost = isHighlighted ? 1.35 : 1.0;
 
     ctx.save();
@@ -271,7 +326,7 @@ function renderKineticAdoLyrics(
     // 1. Vook風 モーションブラー（残像シャドウ：入り時＆出の抜け時）
     if (totalBlur > 2) {
       ctx.save();
-      ctx.shadowColor = isHighlighted ? 'rgba(255, 230, 0, 0.85)' : 'rgba(255, 255, 255, 0.7)';
+      ctx.shadowColor = textGlow;
       ctx.shadowBlur = totalBlur;
       const blurDirX = globalExitBlur > 0 ? (transitionKey === 'blur-slide-left' ? 1 : transitionKey === 'blur-slide-right' ? -1 : 0) :
                                             (transitionKey === 'blur-slide-left' ? -1 : transitionKey === 'blur-slide-right' ? 1 : 0);
@@ -290,9 +345,9 @@ function renderKineticAdoLyrics(
     ctx.shadowOffsetX = 0;
     ctx.shadowOffsetY = 4;
 
-    // 3. ハイライト時は金色のネオングロー追加
+    // 3. ハイライト時はネオングロー追加
     if (isHighlighted) {
-      ctx.shadowColor = 'rgba(255, 230, 0, 0.8)';
+      ctx.shadowColor = textGlow;
       ctx.shadowBlur = 24;
     }
 

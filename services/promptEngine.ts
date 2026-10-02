@@ -159,8 +159,11 @@ export function buildFinalCinematicPromptAndNegative(
     }
   }
   
-  // Layer 4: Period Attire
-  const dynamicAttire = authenticAttireEn ? `[PERIOD ATTIRE: ${authenticAttireEn}]` : '';
+  // Layer 4: Wardrobe & Attire (時代劇なら HISTORICAL PERIOD ATTIRE、現代劇やMVなら WARDROBE & ATTIRE)
+  const isHistorical = !isMv && ((task.eraAnalysis && (task.eraAnalysis.includes('江戸') || task.eraAnalysis.includes('幕末') || task.eraAnalysis.includes('明治') || task.eraAnalysis.includes('大正') || task.eraAnalysis.includes('戦後') || task.eraAnalysis.includes('昭和') || task.eraAnalysis.includes('武士') || task.eraAnalysis.includes('侍'))) || (settings.era && (settings.era.includes('江戸') || settings.era.includes('幕末') || settings.era.includes('明治') || settings.era.includes('大正') || settings.era.includes('戦後') || settings.era.includes('昭和'))));
+  const dynamicAttire = authenticAttireEn 
+    ? (isHistorical ? `[HISTORICAL PERIOD ATTIRE: ${authenticAttireEn}]` : `[WARDROBE & ATTIRE: ${authenticAttireEn}]`)
+    : '';
 
   // Layer 5: Mode Suffix (MVアンニュイ情景 または 漫画演出)
   let modePromptSuffix = '';
@@ -171,7 +174,11 @@ export function buildFinalCinematicPromptAndNegative(
   }
 
   // Layer 6: Negative Rules (厳密な優先度で結合)
-  const illustrationNegative = isNonPhoto ? 'photorealistic, realistic photo, hyperrealistic photograph, real life, live-action, 35mm photograph, DSLR, camera photo, 3d render, cgi' : '';
+  const allows3d = (styleKey + ' ' + rawStyle).toLowerCase().includes('3d') || (styleKey + ' ' + rawStyle).toLowerCase().includes('cg');
+  const baseIllustrationNeg = allows3d
+    ? 'photorealistic, realistic photo, hyperrealistic photograph, real life, live-action, 35mm photograph, DSLR, camera photo'
+    : 'photorealistic, realistic photo, hyperrealistic photograph, real life, live-action, 35mm photograph, DSLR, camera photo, 3d render, cgi';
+  const illustrationNegative = isNonPhoto ? baseIllustrationNeg : '';
 
   const dynamicForbidden = forbiddenKeywordsEn || (forbiddenAnachronisms || []).join(', ');
 

@@ -23,6 +23,7 @@ import {
   buildNextEpisodePlanPrompt,
   buildScriptPrompt,
   extractHighlights,
+  checkIsHistorical,
   PreviousShotInfo
 } from './directorService';
 import { getStoryboardPreset } from './promptEngine';
@@ -401,7 +402,7 @@ export function useStudioProduction({ settings, logs, addLog, refreshStories }: 
           currentAssetRef.current = { name: asset.name, base64: asset.base64, mimeType: asset.mimeType };
           addLog('🔍 キャラクターDNA抽出中...', 'process');
           const uploadRes = await Flow.upload({ base64: asset.base64, mimeType: asset.mimeType as any, name: `Ref: ${asset.name}` });
-          const screeningPrompt = buildCharacterScreeningPrompt(settings.era, settings.country, settings.isMvMode);
+          const screeningPrompt = buildCharacterScreeningPrompt(settings.era, settings.country, settings.isMvMode, settings.theme);
           const screenRes = await callWithRetry<any>(
             () => Flow.generate.text(screeningPrompt, { images: [{ base64: asset.base64, mimeType: asset.mimeType }] }),
             (attempt, max, delay) => addLog(`Retrying DNA Analysis (attempt ${attempt}/${max}) after ${delay} ms...`, 'warning'),
@@ -742,7 +743,9 @@ Output JSON ONLY:
       }
 
       if (!seriesManifestRef.current) {
-        addLog(`📜 全${settings.episodeCount}話の大河ドラマグランドデザインをAIに策定依頼中... [世界観・テーマ: ${settings.theme}]`, 'process');
+        const isHist = checkIsHistorical(settings.era, settings.theme);
+        const genreLabel = settings.isMvMode ? '音楽MVシリーズ' : settings.isMangaMode ? '漫画シリーズ' : isHist ? '大河ドラマ' : '連続ドラマ';
+        addLog(`📜 全${settings.episodeCount}話の${genreLabel}グランドデザインをAIに策定依頼中... [世界観・テーマ: ${settings.theme}]`, 'process');
         const designPrompt = buildGrandDesignPrompt(settings.episodeCount, settings.country, settings.theme, settings.era, settings.isMangaMode, settings.isMvMode);
         const designRes = await callWithRetry<any>(
           () => Flow.generate.text(designPrompt),
@@ -930,7 +933,18 @@ Output JSON ONLY:
 
           addLog(`🎨 【第${epId}話】先行プレビュー ${settings.previewCutCount} カットの描画タスクを開始...（並列度: ${settings.parallelCount}）`, 'process');
           const tasks: GenerationTask[] = episodeCuts.slice(0, settings.previewCutCount).map(c => ({
-            epId, cutId: c.id, prompt: c.promptEn, styleKey: settings.taste, imageModel: settings.imageModel, storyContext: sharedScript.summary || '', eraAnalysis: sharedScript.eraAnalysisJp, forbiddenAnachronisms: sharedScript.forbiddenAnachronisms, authenticAttireEn: sharedScript.authenticAttireEn, forbiddenKeywordsEn: sharedScript.forbiddenKeywordsEn
+            epId, 
+            cutId: c.id, 
+            prompt: c.promptEn, 
+            styleKey: settings.taste, 
+            imageModel: settings.imageModel, 
+            isMvMode: settings.isMvMode,
+            storyContext: sharedScript.summary || '', 
+            eraAnalysis: sharedScript.eraAnalysisJp, 
+            forbiddenAnachronisms: sharedScript.forbiddenAnachronisms, 
+            authenticAttireEn: sharedScript.authenticAttireEn, 
+            forbiddenKeywordsEn: sharedScript.forbiddenKeywordsEn,
+            referenceImageMediaId: activeReferenceRef.current?.mediaId
           }));
 
           await runTasks(tasks);

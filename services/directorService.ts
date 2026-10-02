@@ -4,10 +4,45 @@ import { IMAGE_MODELS, DEFAULT_ASPECT_RATIO, STRICT_STYLE_SUFFIX, TASTES } from 
 import { safeJsonParse, callWithRetry } from './utils';
 
 /**
+ * 舞台設定が歴史・時代劇かどうかを判定（時代・テーマ双方から判定）
+ */
+export function checkIsHistorical(era: string = '', theme: string = ''): boolean {
+  const combined = `${era} ${theme}`;
+  // 現代・近過去・SNS・現代ビジネス系は非歴史
+  if (
+    combined.includes('現代') || 
+    combined.includes('令和') || 
+    combined.includes('平成') || 
+    combined.includes('バブル') || 
+    combined.includes('SNS') || 
+    combined.includes('ブラック企業') || 
+    combined.includes('社内不倫') || 
+    combined.includes('タワマン') || 
+    combined.includes('推し活') || 
+    combined.includes('マッチングアプリ')
+  ) {
+    return false;
+  }
+  // 歴史・時代劇キーワード
+  return (
+    combined.includes('江戸') || combined.includes('幕末') || combined.includes('明治') || 
+    combined.includes('大正') || combined.includes('戦後') || combined.includes('昭和') || 
+    combined.includes('戦国') || combined.includes('平安') || combined.includes('鎌倉') || 
+    combined.includes('室町') || combined.includes('安土桃山') || combined.includes('古代') || 
+    combined.includes('中世') || combined.includes('大河') || combined.includes('吉原') || 
+    combined.includes('新選組') || combined.includes('浪人') || combined.includes('大名') || 
+    combined.includes('武士') || combined.includes('侍') || combined.includes('寺子屋') || 
+    combined.includes('飛脚') || combined.includes('岡っ引き') || combined.includes('火消し') ||
+    combined.includes('屋台めし') || combined.includes('薬売り') || combined.includes('鉄火場') ||
+    combined.includes('鼠小僧')
+  );
+}
+
+/**
  * キャラクター画像からDNA（特徴）を抽出するためのプロンプトを構築
  */
-export function buildCharacterScreeningPrompt(era: string = '', country: string = '', isMvMode?: boolean): string {
-  const isHistorical = era && (era.includes('江戸') || era.includes('幕末') || era.includes('明治') || era.includes('大正') || era.includes('戦後') || era.includes('昭和'));
+export function buildCharacterScreeningPrompt(era: string = '', country: string = '', isMvMode?: boolean, theme: string = ''): string {
+  const isHistorical = checkIsHistorical(era, theme);
   
   if (isMvMode) {
     return `Analyze the character image for an indie aesthetic music video visual set in "${era || 'Modern'}", "${country || 'Japan'}".
@@ -21,9 +56,9 @@ Output JSON: {
   }
 
   if (isHistorical) {
-    return `Analyze the character image for a historical drama set in "${era}", "${country}".
+    return `Analyze the character image for a historical drama set in "${era || 'Historical Japan'}", "${country || 'Japan'}".
 Identify facial features, hairstyles, and iconic characteristics.
-Strictly ensure modern attire (school uniform, blazer, necktie, casual wear, sneakers, glasses, headphones) is converted to authentic period clothing for "${era}".
+Strictly ensure modern attire (school uniform, blazer, necktie, casual wear, sneakers, glasses, headphones) is converted to authentic period clothing for "${era || 'the era'}".
 Output JSON: {
   "characterDna": "Description of facial features and body traits",
   "styleDna": "Consistent artistic rendering medium",
@@ -178,7 +213,7 @@ export function buildScriptPrompt(
 ): string {
   const worldSetting = era && era !== theme ? `${theme} (時代: ${era}, 地域: ${country})` : `${theme} (${country})`;
   
-  const isHistorical = era && (era.includes('江戸') || era.includes('幕末') || era.includes('明治') || era.includes('大正') || era.includes('戦後') || era.includes('昭和'));
+  const isHistorical = checkIsHistorical(era, theme);
   
   const directorRole = isMvMode
     ? "world-class music video (MV) director and visual poet"
@@ -299,7 +334,7 @@ export async function directShot(
   const { cutId, prompt, styleKey } = task;
   const rawStyle = TASTES[styleKey] || '';
   const characterGuidance = activeReference 
-    ? `Protagonist: ${activeReference.characterDna}. She is the central heroine. NOTE: Adopt only her appearance (face, hair, eyes); DO NOT copy her reference pose.` 
+    ? `Protagonist: ${activeReference.characterDna}. NOTE: Adopt only the character's appearance and distinctive features (face, hair, eyes); DO NOT copy reference pose.` 
     : 'No specific reference asset.';
 
   // 定義テーブルから本カットの演出プリセットを取得
@@ -324,7 +359,7 @@ MANDATORY RULE: This Cut ${cutId} MUST BE RADICALLY DIFFERENT from the previous 
 - Requested Framing for THIS cut is: ${preset.scale} (${preset.angle}).`
     : `Requested Framing: ${preset.scale} (${preset.angle}).`;
 
-  const isHistorical = settings.era && (settings.era.includes('江戸') || settings.era.includes('幕末') || settings.era.includes('明治') || settings.era.includes('大正') || settings.era.includes('戦後') || settings.era.includes('昭和'));
+  const isHistorical = checkIsHistorical(settings.era, settings.theme);
   const genreDesc = settings.isMvMode 
     ? "an aesthetic music video" 
     : settings.isMangaMode 

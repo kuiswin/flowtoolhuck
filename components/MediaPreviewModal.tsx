@@ -35,21 +35,32 @@ const VOOK_TELOP_STYLES = `
     .animate-ken-burns-tilt-up { animation: kb-tilt-up 8s ease-in-out infinite alternate; scale: 1.1; }
     .animate-ken-burns-tilt-down { animation: kb-tilt-down 8s ease-in-out infinite alternate; scale: 1.1; }
 
-    /* ── Vook風 テロップトランジション（ブラースライド・キネティック） ── */
+    /* ── Vook風 テロップトランジション（入り → ホールド → 出/抜けの完全サイクル） ── */
     @keyframes vook-blur-slide-left {
         0% {
             opacity: 0;
             transform: translateX(-70px) skewX(-8deg);
             filter: blur(14px) brightness(1.3);
         }
-        55% {
-            opacity: 1;
-            filter: blur(2px) brightness(1.1);
-        }
-        100% {
+        12% {
             opacity: 1;
             transform: translateX(0) skewX(0deg);
             filter: blur(0px) brightness(1);
+        }
+        74% {
+            opacity: 1;
+            transform: translateX(0) skewX(0deg);
+            filter: blur(0px) brightness(1);
+        }
+        86% {
+            opacity: 0;
+            transform: translateX(70px) skewX(8deg);
+            filter: blur(14px) brightness(1.25);
+        }
+        100% {
+            opacity: 0;
+            transform: translateX(-70px) skewX(-8deg);
+            filter: blur(14px);
         }
     }
 
@@ -59,14 +70,25 @@ const VOOK_TELOP_STYLES = `
             transform: translateY(45px) scale(0.94);
             filter: blur(12px) brightness(1.25);
         }
-        55% {
-            opacity: 1;
-            filter: blur(2px) brightness(1.1);
-        }
-        100% {
+        12% {
             opacity: 1;
             transform: translateY(0) scale(1);
             filter: blur(0px) brightness(1);
+        }
+        74% {
+            opacity: 1;
+            transform: translateY(0) scale(1);
+            filter: blur(0px) brightness(1);
+        }
+        86% {
+            opacity: 0;
+            transform: translateY(-45px) scale(0.96);
+            filter: blur(12px) brightness(1.2);
+        }
+        100% {
+            opacity: 0;
+            transform: translateY(45px) scale(0.94);
+            filter: blur(12px);
         }
     }
 
@@ -76,14 +98,25 @@ const VOOK_TELOP_STYLES = `
             transform: translateX(70px) skewX(8deg);
             filter: blur(14px) brightness(1.3);
         }
-        55% {
-            opacity: 1;
-            filter: blur(2px) brightness(1.1);
-        }
-        100% {
+        12% {
             opacity: 1;
             transform: translateX(0) skewX(0deg);
             filter: blur(0px) brightness(1);
+        }
+        74% {
+            opacity: 1;
+            transform: translateX(0) skewX(0deg);
+            filter: blur(0px) brightness(1);
+        }
+        86% {
+            opacity: 0;
+            transform: translateX(-70px) skewX(-8deg);
+            filter: blur(14px) brightness(1.25);
+        }
+        100% {
+            opacity: 0;
+            transform: translateX(70px) skewX(8deg);
+            filter: blur(14px);
         }
     }
 
@@ -93,15 +126,25 @@ const VOOK_TELOP_STYLES = `
             transform: scale(0.4) translateY(20px);
             filter: blur(8px);
         }
-        65% {
-            opacity: 1;
-            transform: scale(1.06) translateY(-3px);
-            filter: blur(0.5px);
-        }
-        100% {
+        12% {
             opacity: 1;
             transform: scale(1) translateY(0);
             filter: blur(0px);
+        }
+        74% {
+            opacity: 1;
+            transform: scale(1) translateY(0);
+            filter: blur(0px);
+        }
+        86% {
+            opacity: 0;
+            transform: scale(1.18) translateY(-10px);
+            filter: blur(12px) brightness(1.3);
+        }
+        100% {
+            opacity: 0;
+            transform: scale(0.4) translateY(20px);
+            filter: blur(8px);
         }
     }
 
@@ -111,37 +154,53 @@ const VOOK_TELOP_STYLES = `
             transform: scale(0.96);
             filter: blur(16px) brightness(1.4);
         }
-        100% {
+        14% {
             opacity: 1;
             transform: scale(1);
             filter: blur(0px) brightness(1);
+        }
+        74% {
+            opacity: 1;
+            transform: scale(1);
+            filter: blur(0px) brightness(1);
+        }
+        86% {
+            opacity: 0;
+            transform: scale(1.02);
+            filter: blur(18px) brightness(1.5);
+        }
+        100% {
+            opacity: 0;
+            transform: scale(0.96);
+            filter: blur(16px);
         }
     }
 
     @keyframes vook-glitch-pop {
         0% { opacity: 0; transform: translate(-5px, 2px); filter: contrast(1.6); }
-        35% { opacity: 1; transform: translate(3px, -2px); filter: contrast(1.3); }
-        70% { transform: translate(-1px, 1px); filter: contrast(1.1); }
-        100% { opacity: 1; transform: translate(0, 0); filter: contrast(1); }
+        8% { opacity: 1; transform: translate(0, 0); filter: contrast(1); }
+        76% { opacity: 1; transform: translate(0, 0); filter: contrast(1); }
+        86% { opacity: 0; transform: translate(5px, -2px); filter: contrast(1.6); }
+        100% { opacity: 0; transform: translate(-5px, 2px); }
     }
 
     .vook-motion-blur-slide-left {
-        animation: vook-blur-slide-left 0.65s cubic-bezier(0.16, 1, 0.3, 1) both;
+        animation: vook-blur-slide-left 4.4s cubic-bezier(0.16, 1, 0.3, 1) infinite;
     }
     .vook-motion-blur-slide-up {
-        animation: vook-blur-slide-up 0.6s cubic-bezier(0.16, 1, 0.3, 1) both;
+        animation: vook-blur-slide-up 4.4s cubic-bezier(0.16, 1, 0.3, 1) infinite;
     }
     .vook-motion-blur-slide-right {
-        animation: vook-blur-slide-right 0.65s cubic-bezier(0.16, 1, 0.3, 1) both;
+        animation: vook-blur-slide-right 4.4s cubic-bezier(0.16, 1, 0.3, 1) infinite;
     }
     .vook-motion-zoom-bounce {
-        animation: vook-zoom-bounce 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+        animation: vook-zoom-bounce 4.4s cubic-bezier(0.34, 1.56, 0.64, 1) infinite;
     }
     .vook-motion-glow-fade {
-        animation: vook-glow-fade 0.8s cubic-bezier(0.16, 1, 0.3, 1) both;
+        animation: vook-glow-fade 4.4s cubic-bezier(0.16, 1, 0.3, 1) infinite;
     }
     .vook-motion-glitch-pop {
-        animation: vook-glitch-pop 0.4s ease-out both;
+        animation: vook-glitch-pop 4.4s ease-out infinite;
     }
 
     /* ド迫力テロップ用CSS（text-shadowによる疑似フチ取り） */

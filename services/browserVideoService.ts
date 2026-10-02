@@ -119,13 +119,46 @@ function renderKineticAdoLyrics(
   // タイムライン進行度 (0.0 〜 1.0)
   const progress = Math.max(0, Math.min(1, currentTime / Math.max(duration, 0.1)));
 
-  // 全体の退場アニメーション（0.84 〜 1.0: zoomOut & fadeOut）
+  const transitionKey = cut.telop?.transition || 'blur-slide-left';
+  const positionKey = cut.telop?.position || 'bottom-left';
+  const isLeftAligned = positionKey === 'bottom-left';
+
+  // 全体の退場アニメーション（0.80 〜 1.0: 出・抜けトランジション）
   let globalExitAlpha = 1;
   let globalExitScale = 1;
-  if (progress > 0.84) {
-    const exitT = (progress - 0.84) / 0.16;
-    globalExitAlpha = Math.max(0, 1 - exitT);
-    globalExitScale = 1.0 + (exitT * 0.08);
+  let globalExitOffsetX = 0;
+  let globalExitOffsetY = 0;
+  let globalExitBlur = 0;
+
+  if (progress > 0.80) {
+    const exitT = Math.min(1, (progress - 0.80) / 0.20); // 0.0 〜 1.0
+    const easeIn = Math.pow(exitT, 2.2); // 加速して抜ける
+
+    globalExitAlpha = Math.max(0, 1 - exitT * 1.25);
+
+    if (transitionKey === 'blur-slide-left') {
+      // 右へ流れるように加速スライドアウト
+      globalExitOffsetX = easeIn * (width * 0.14);
+      globalExitBlur = easeIn * 24;
+    } else if (transitionKey === 'blur-slide-up') {
+      // 上へスッと昇るスライドアウト
+      globalExitOffsetY = -easeIn * (height * 0.07);
+      globalExitBlur = easeIn * 20;
+    } else if (transitionKey === 'blur-slide-right') {
+      // 左へ抜ける
+      globalExitOffsetX = -easeIn * (width * 0.14);
+      globalExitBlur = easeIn * 24;
+    } else if (transitionKey === 'zoom-in-bounce') {
+      // ズームイン拡大して抜ける
+      globalExitScale = 1.0 + (easeIn * 0.20);
+      globalExitBlur = easeIn * 18;
+    } else if (transitionKey === 'glow-fade') {
+      // 光彩が拡散して消灯
+      globalExitScale = 1.0 + (easeIn * 0.04);
+      globalExitBlur = easeIn * 26;
+    } else {
+      globalExitOffsetX = (exitT > 0.5 ? 6 : -6);
+    }
   }
 
   if (globalExitAlpha <= 0.01) return;
@@ -133,10 +166,6 @@ function renderKineticAdoLyrics(
   const baseFontSize = Math.min(width * 0.068, 54);
   const strokeWidth = Math.max(7, baseFontSize * 0.2);
   const lineHeight = baseFontSize * 1.38;
-
-  const transitionKey = cut.telop?.transition || 'blur-slide-left';
-  const positionKey = cut.telop?.position || 'bottom-left';
-  const isLeftAligned = positionKey === 'bottom-left';
 
   // 単語数に応じた基準垂直位置（画面下部 72%〜82% に収める）
   const totalHeight = words.length * lineHeight;
@@ -220,8 +249,8 @@ function renderKineticAdoLyrics(
       wordAlpha = 1;
     }
 
-    const currentX = baseX + (xOffsets[idx] || 0) + wordOffsetX;
-    const currentY = startY + idx * lineHeight + wordOffsetY;
+    const currentX = baseX + (xOffsets[idx] || 0) + wordOffsetX + globalExitOffsetX;
+    const currentY = startY + idx * lineHeight + wordOffsetY + globalExitOffsetY;
     const angle = angles[idx % angles.length];
 
     // ハイライト判定
@@ -237,14 +266,19 @@ function renderKineticAdoLyrics(
 
     ctx.font = `900 ${baseFontSize}px "Zen Kaku Gothic New", "Impact", "Montserrat Black", "Hiragino Kaku Gothic ProN", "Noto Sans JP", sans-serif`;
 
-    // 1. Vook風 モーションブラー（残像シャドウ）
-    if (motionBlurAmount > 2) {
+    const totalBlur = Math.max(motionBlurAmount, globalExitBlur);
+
+    // 1. Vook風 モーションブラー（残像シャドウ：入り時＆出の抜け時）
+    if (totalBlur > 2) {
       ctx.save();
       ctx.shadowColor = isHighlighted ? 'rgba(255, 230, 0, 0.85)' : 'rgba(255, 255, 255, 0.7)';
-      ctx.shadowBlur = motionBlurAmount;
-      ctx.shadowOffsetX = transitionKey === 'blur-slide-left' ? -motionBlurAmount * 0.6 :
-                          transitionKey === 'blur-slide-right' ? motionBlurAmount * 0.6 : 0;
-      ctx.shadowOffsetY = transitionKey === 'blur-slide-up' ? motionBlurAmount * 0.6 : 0;
+      ctx.shadowBlur = totalBlur;
+      const blurDirX = globalExitBlur > 0 ? (transitionKey === 'blur-slide-left' ? 1 : transitionKey === 'blur-slide-right' ? -1 : 0) :
+                                            (transitionKey === 'blur-slide-left' ? -1 : transitionKey === 'blur-slide-right' ? 1 : 0);
+      const blurDirY = globalExitBlur > 0 ? (transitionKey === 'blur-slide-up' ? -1 : 0) :
+                                            (transitionKey === 'blur-slide-up' ? 1 : 0);
+      ctx.shadowOffsetX = blurDirX * totalBlur * 0.6;
+      ctx.shadowOffsetY = blurDirY * totalBlur * 0.6;
       ctx.fillStyle = textColor;
       ctx.fillText(wordText, 0, 0);
       ctx.restore();

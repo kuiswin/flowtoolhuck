@@ -178,11 +178,15 @@ export function buildScriptPrompt(
 ): string {
   const worldSetting = era && era !== theme ? `${theme} (時代: ${era}, 地域: ${country})` : `${theme} (${country})`;
   
+  const isHistorical = era && (era.includes('江戸') || era.includes('幕末') || era.includes('明治') || era.includes('大正') || era.includes('戦後') || era.includes('昭和'));
+  
   const directorRole = isMvMode
     ? "world-class music video (MV) director and visual poet"
     : isMangaMode 
       ? "world-class comic/manga author and storyboard artist" 
-      : "world-class historical drama director";
+      : isHistorical
+        ? "world-class historical drama director"
+        : "world-class cinematic drama director";
     
   const mangaInstructions = isMangaMode 
     ? `MANGA/COMIC DIRECTING:
@@ -213,7 +217,7 @@ Each cut's narrationJp must be 15-28 characters, punchy, lyrical, and catchy.
 For EACH cut, select 1 to 2 key emotional words (which MUST be EXACTLY present in narrationJp, e.g. "夜", "境界線", "息", "朝焼け", "名前") for the highlights array.`
     : "";
 
-  const contextTitle = isMvMode ? "Music Video Sequence" : "Drama Episode";
+  const contextTitle = isMvMode ? "Music Video Sequence" : isMangaMode ? "Comic Episode" : isHistorical ? "Historical Drama Episode" : "Drama Episode";
 
   return `You are a ${directorRole} and visual researcher.
 Create a 12-cut ${contextTitle} for Episode ${epId} ("${currentPlan.titleJp}").
@@ -221,7 +225,7 @@ World Theme & Setting: "${worldSetting}".
 
 ${isMvMode ? mvInstructions : mangaInstructions}
 
-${isMvMode ? 'ATMOSPHERIC & VISUAL HARMONY:' : 'STRICT HISTORICAL ACCURACY:'}
+${isMvMode ? 'ATMOSPHERIC & VISUAL HARMONY:' : (isHistorical ? 'STRICT HISTORICAL ACCURACY:' : 'AUTHENTIC SETTING & CULTURAL ACCURACY:')}
 Dynamically analyze the period, setting, and atmosphere implied by "${worldSetting}". Determine authentic aesthetic attire and identify elements that would break the mood and must NEVER appear.
 
 CRITICAL SUBTITLE HIGHLIGHTS:

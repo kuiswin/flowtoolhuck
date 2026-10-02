@@ -5,9 +5,14 @@ import {
   IMAGE_MODELS, 
   VIDEO_MODELS_REGISTRY,
   KEN_BURNS_PRESETS, 
+  TELOP_STYLE_REGISTRY,
+  TELOP_TRANSITION_REGISTRY,
   sanitizeFilename,
   resolveImageModel,
-  resolveVideoModel
+  resolveVideoModel,
+  resolveTelopStyle,
+  resolveTelopTransition,
+  resolveRecommendedTelopStaging
 } from '../constants';
 import { Flow } from 'flow-sdk';
 import { callWithRetry } from '../services/utils';
@@ -83,6 +88,115 @@ export const MediaPreviewModal: React.FC<MediaPreviewModalProps> = ({
                 .animate-ken-burns-pan-right { animation: kb-pan-right 8s ease-in-out infinite alternate; scale: 1.1; }
                 .animate-ken-burns-tilt-up { animation: kb-tilt-up 8s ease-in-out infinite alternate; scale: 1.1; }
                 .animate-ken-burns-tilt-down { animation: kb-tilt-down 8s ease-in-out infinite alternate; scale: 1.1; }
+
+                /* ── Vook風 テロップトランジション（ブラースライド・キネティック） ── */
+                @keyframes vook-blur-slide-left {
+                    0% {
+                        opacity: 0;
+                        transform: translateX(-80px) skewX(-10deg);
+                        filter: blur(16px) brightness(1.35);
+                    }
+                    60% {
+                        opacity: 1;
+                        filter: blur(3px) brightness(1.15);
+                    }
+                    100% {
+                        opacity: 1;
+                        transform: translateX(0) skewX(0deg);
+                        filter: blur(0px) brightness(1);
+                    }
+                }
+
+                @keyframes vook-blur-slide-up {
+                    0% {
+                        opacity: 0;
+                        transform: translateY(50px) scale(0.92);
+                        filter: blur(14px) brightness(1.3);
+                    }
+                    60% {
+                        opacity: 1;
+                        filter: blur(2px) brightness(1.1);
+                    }
+                    100% {
+                        opacity: 1;
+                        transform: translateY(0) scale(1);
+                        filter: blur(0px) brightness(1);
+                    }
+                }
+
+                @keyframes vook-blur-slide-right {
+                    0% {
+                        opacity: 0;
+                        transform: translateX(80px) skewX(10deg);
+                        filter: blur(16px) brightness(1.35);
+                    }
+                    60% {
+                        opacity: 1;
+                        filter: blur(3px) brightness(1.15);
+                    }
+                    100% {
+                        opacity: 1;
+                        transform: translateX(0) skewX(0deg);
+                        filter: blur(0px) brightness(1);
+                    }
+                }
+
+                @keyframes vook-zoom-bounce {
+                    0% {
+                        opacity: 0;
+                        transform: scale(0.4) translateY(25px);
+                        filter: blur(10px);
+                    }
+                    70% {
+                        opacity: 1;
+                        transform: scale(1.08) translateY(-4px);
+                        filter: blur(1px);
+                    }
+                    100% {
+                        opacity: 1;
+                        transform: scale(1) translateY(0);
+                        filter: blur(0px);
+                    }
+                }
+
+                @keyframes vook-glow-fade {
+                    0% {
+                        opacity: 0;
+                        transform: scale(0.96);
+                        filter: blur(18px) brightness(1.4);
+                    }
+                    100% {
+                        opacity: 1;
+                        transform: scale(1);
+                        filter: blur(0px) brightness(1);
+                    }
+                }
+
+                @keyframes vook-glitch-pop {
+                    0% { opacity: 0; transform: translate(-6px, 2px); filter: contrast(1.8) hue-rotate(90deg); }
+                    35% { opacity: 1; transform: translate(4px, -2px); filter: contrast(1.4) hue-rotate(-45deg); }
+                    70% { transform: translate(-2px, 1px); filter: contrast(1.1); }
+                    100% { opacity: 1; transform: translate(0, 0); filter: contrast(1) hue-rotate(0deg); }
+                }
+
+                .vook-motion-blur-slide-left {
+                    animation: vook-blur-slide-left 0.65s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+                }
+                .vook-motion-blur-slide-up {
+                    animation: vook-blur-slide-up 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+                }
+                .vook-motion-blur-slide-right {
+                    animation: vook-blur-slide-right 0.65s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+                }
+                .vook-motion-zoom-bounce {
+                    animation: vook-zoom-bounce 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+                }
+                .vook-motion-glow-fade {
+                    animation: vook-glow-fade 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+                }
+                .vook-motion-glitch-pop {
+                    animation: vook-glitch-pop 0.4s ease-out forwards;
+                }
 
                 /* ド迫力テロップ用CSS（text-shadowによる疑似フチ取り） */
                 .impact-telop {
@@ -182,8 +296,19 @@ export const MediaPreviewModal: React.FC<MediaPreviewModalProps> = ({
             }
         });
 
-        if (isMvMode) {
-            // Ado風 単語・意味ブロックに分割
+        const transKey = cut.telop?.transition || (isMvMode ? 'blur-slide-left' : 'blur-slide-up');
+        const motionClass = 
+          transKey === 'blur-slide-up' ? 'vook-motion-blur-slide-up' :
+          transKey === 'blur-slide-right' ? 'vook-motion-blur-slide-right' :
+          transKey === 'zoom-in-bounce' ? 'vook-motion-zoom-bounce' :
+          transKey === 'glow-fade' ? 'vook-motion-glow-fade' :
+          transKey === 'glitch-pop' ? 'vook-motion-glitch-pop' :
+          'vook-motion-blur-slide-left';
+
+        const posKey = cut.telop?.position || (isMvMode ? 'bottom-left' : 'bottom-center');
+
+        if (isMvMode || cut.telop?.style === 'mv-blur-slide' || cut.telop?.style === 'mv-kinetic-pop') {
+            // Vook風 単語・意味ブロックに分割
             const cleanText = text.replace(/^[「『\s]+|[」』\s:：]+$/g, '').trim();
             const words = (() => {
                 if (cleanText.includes(' ') || cleanText.includes('　') || cleanText.includes('、')) {
@@ -207,44 +332,61 @@ export const MediaPreviewModal: React.FC<MediaPreviewModalProps> = ({
                 return parts.length > 0 ? parts : [cleanText];
             })();
 
-            // 単語ごとの水平オフセット（Ado風ステアステップ / 段違いレイアウト）
-            const xOffsets = words.length === 1 ? ['0%'] :
-                             words.length === 2 ? ['-12%', '12%'] :
-                             ['-16%', '0%', '16%'];
-            const angles = [-3.5, 2.0, -2.5, 3.0];
+            // レイアウトに応じた配置スタイリング
+            const isLeft = posKey === 'bottom-left';
+            const isCenter = posKey === 'center-stagger' || posKey === 'bottom-center';
+
+            // 単語ごとの水平オフセット（Vookステアステップ）
+            const xOffsets = isLeft 
+                ? ['0%', '4%', '8%', '12%']
+                : words.length === 1 ? ['0%'] :
+                  words.length === 2 ? ['-8%', '8%'] :
+                  ['-12%', '0%', '12%'];
+
+            const angles = isLeft ? [-1.5, 0.5, -1.0, 1.0] : [-3.0, 1.5, -2.0, 2.5];
 
             return (
-                <div className="absolute bottom-[10%] left-0 w-full px-6 flex flex-col items-center justify-center pointer-events-none z-40">
-                    <div className="flex flex-col items-center gap-1.5 w-full max-w-[94%]">
+                <div 
+                    key={`${transKey}-${cut.telop?.style}-${posKey}-${text}`}
+                    className={`absolute ${isLeft ? 'bottom-[6%] left-0 px-5 items-start' : 'bottom-[8%] left-0 px-4 items-center'} w-full flex flex-col justify-end pointer-events-none z-40`}
+                >
+                    <div className={`flex flex-col ${isLeft ? 'items-start' : 'items-center'} gap-2 w-full max-w-[96%]`}>
                         {words.map((word, wIdx) => {
                             const isHigh = highlights.some(h => h.word && (word.includes(h.word) || h.word.includes(word)));
                             const angle = angles[wIdx % angles.length];
                             const xOff = xOffsets[wIdx] || '0%';
-                            const delay = wIdx * 0.22;
+                            const delay = wIdx * 0.14; // Vook風スタッガー
 
                             return (
                                 <div
                                     key={wIdx}
-                                    className="animate-ado-word opacity-0"
+                                    className={`${motionClass} opacity-0`}
                                     style={{
                                         transform: `translateX(${xOff}) rotate(${angle}deg)`,
                                         animationDelay: `${delay}s`,
                                         animationFillMode: 'forwards'
                                     }}
                                 >
-                                    <span
-                                        className="font-[900] tracking-wider select-none inline-block px-3 py-0.5"
-                                        style={{
-                                            color: isHigh ? '#FFE600' : '#FFFFFF',
-                                            fontSize: isHigh ? '2.3rem' : '1.9rem',
-                                            WebkitTextStroke: isHigh ? '7px black' : '6px black',
-                                            paintOrder: 'stroke fill',
-                                            textShadow: '0 4px 20px rgba(0,0,0,0.95), 0 0 12px rgba(0,0,0,0.85)',
-                                            fontFamily: '"Impact", "Montserrat Black", "Hiragino Kaku Gothic ProN", "Noto Sans JP", sans-serif'
-                                        }}
-                                    >
-                                        {word}
-                                    </span>
+                                    <div className={`inline-flex items-center backdrop-blur-md rounded-xl transition-all shadow-2xl ${
+                                        isHigh 
+                                          ? 'bg-black/60 border border-amber-400/50 px-3.5 py-0.5 shadow-amber-500/20' 
+                                          : 'bg-black/40 border border-white/10 px-2.5 py-0.5'
+                                    }`}>
+                                        <span
+                                            className="font-[900] tracking-wide select-none inline-block"
+                                            style={{
+                                                color: isHigh ? '#FFE600' : '#FFFFFF',
+                                                fontSize: isHigh ? '2.35rem' : '1.45rem',
+                                                textShadow: isHigh 
+                                                  ? '0 0 20px rgba(255, 230, 0, 0.9), 0 0 35px rgba(255, 200, 0, 0.5), 0 3px 8px rgba(0,0,0,0.95)' 
+                                                  : '0 2px 6px rgba(0,0,0,0.95), 0 0 4px rgba(0,0,0,0.85)',
+                                                fontFamily: '"Zen Kaku Gothic New", "Montserrat", "Outfit", "Noto Sans JP", sans-serif',
+                                                letterSpacing: isHigh ? '0.04em' : '0.02em'
+                                            }}
+                                        >
+                                            {word}
+                                        </span>
+                                    </div>
                                 </div>
                             );
                         })}
@@ -254,7 +396,10 @@ export const MediaPreviewModal: React.FC<MediaPreviewModalProps> = ({
         }
 
         return (
-            <div className="absolute bottom-[4%] left-0 w-full px-3 flex flex-col items-center pointer-events-none z-40 animate-in fade-in slide-in-from-bottom-2 duration-300">
+            <div 
+                key={`${transKey}-${cut.telop?.style}-${posKey}-${text}`}
+                className={`absolute bottom-[5%] left-0 w-full px-4 flex flex-col items-center pointer-events-none z-40 ${motionClass}`}
+            >
                 {/* テロップ背景プレート（約20%〜35%背景が透けて見えるシネマ風グラスモーフィズム） */}
                 <div className="bg-black/65 backdrop-blur-md rounded-2xl px-5 py-3 flex flex-wrap justify-center items-baseline max-w-[92%] shadow-xl shadow-black/40 border border-white/15 leading-snug">
                     {text.split('').map((char, i) => {
@@ -276,7 +421,8 @@ export const MediaPreviewModal: React.FC<MediaPreviewModalProps> = ({
                                     margin: isPunctuation ? '0 1px 0 -1px' : '0 0.5px',
                                     textShadow: highlight 
                                       ? '0 0 12px rgba(255, 230, 0, 0.85), 0 2px 5px rgba(0,0,0,0.95)' 
-                                      : '0 2px 5px rgba(0,0,0,0.95), 0 0 3px rgba(0,0,0,0.9)'
+                                      : '0 2px 5px rgba(0,0,0,0.95), 0 0 3px rgba(0,0,0,0.9)',
+                                    fontFamily: '"Zen Kaku Gothic New", "Montserrat", "Noto Sans JP", sans-serif'
                                 }}
                             >
                                 {char}
@@ -360,6 +506,69 @@ export const MediaPreviewModal: React.FC<MediaPreviewModalProps> = ({
                                     onUpdateCut({ telop: { ...cut.telop!, fullText: v, highlights: nextHighlights } });
                                   }} 
                                 />
+
+                                {/* ── 🎬 Vook風テロップ演出セレクター ── */}
+                                <div className="grid grid-cols-2 gap-2 pt-1 border-t border-white/5">
+                                    <FieldDropdown 
+                                        label="演出スタイル" 
+                                        value={TELOP_STYLE_REGISTRY.find(s => s.id === cut.telop?.style)?.name || TELOP_STYLE_REGISTRY[0].name} 
+                                        options={TELOP_STYLE_REGISTRY.map(s => s.name)} 
+                                        onChange={name => {
+                                            const found = TELOP_STYLE_REGISTRY.find(s => s.name === name);
+                                            if (found) {
+                                                onUpdateCut({ 
+                                                    telop: { 
+                                                        ...cut.telop!, 
+                                                        style: found.id,
+                                                        transition: cut.telop?.transition || found.defaultTransition,
+                                                        position: cut.telop?.position || found.defaultPosition
+                                                    } 
+                                                });
+                                            }
+                                        }} 
+                                    />
+                                    <FieldDropdown 
+                                        label="トランジション" 
+                                        value={TELOP_TRANSITION_REGISTRY.find(t => t.id === cut.telop?.transition)?.name || TELOP_TRANSITION_REGISTRY[0].name} 
+                                        options={TELOP_TRANSITION_REGISTRY.map(t => t.name)} 
+                                        onChange={name => {
+                                            const found = TELOP_TRANSITION_REGISTRY.find(t => t.name === name);
+                                            if (found) {
+                                                onUpdateCut({ 
+                                                    telop: { 
+                                                        ...cut.telop!, 
+                                                        transition: found.id 
+                                                    } 
+                                                });
+                                            }
+                                        }} 
+                                    />
+                                </div>
+                                <div className="grid grid-cols-1 gap-2">
+                                    <FieldDropdown 
+                                        label="テロップ配置構図" 
+                                        value={
+                                            cut.telop?.position === 'center-stagger' ? '画面中央 (サビ・躍動スタッガー)' :
+                                            cut.telop?.position === 'bottom-center' ? '下部中央 (安定・映画字幕)' :
+                                            '下部左寄せ (MVシネマ・ステアステップ)'
+                                        } 
+                                        options={[
+                                            '下部左寄せ (MVシネマ・ステアステップ)',
+                                            '画面中央 (サビ・躍動スタッガー)',
+                                            '下部中央 (安定・映画字幕)'
+                                        ]} 
+                                        onChange={label => {
+                                            const pos = label.includes('画面中央') ? 'center-stagger' :
+                                                        label.includes('下部中央') ? 'bottom-center' : 'bottom-left';
+                                            onUpdateCut({ 
+                                                telop: { 
+                                                    ...cut.telop!, 
+                                                    position: pos 
+                                                } 
+                                            });
+                                        }} 
+                                    />
+                                </div>
 
                                 {/* キーワード管理エリア */}
                                 <div className="flex flex-col gap-2 pt-1 border-t border-white/5">
@@ -512,6 +721,105 @@ export const MediaPreviewModal: React.FC<MediaPreviewModalProps> = ({
                                     </p>
                                 </div>
                             </div>
+
+                            {/* ── 🎬 ディレクター演出・テロップ解析インスペクター ── */}
+                            {(() => {
+                                const staging = resolveRecommendedTelopStaging(cut.id, isMvMode, false);
+                                const currentStyle = resolveTelopStyle(cut.telop?.style || staging.style);
+                                const currentTrans = resolveTelopTransition(cut.telop?.transition || staging.transition);
+                                const currentPos = cut.telop?.position || staging.position;
+                                const posLabel = 
+                                    currentPos === 'center-stagger' ? '画面中央 (サビ・躍動スタッガー)' :
+                                    currentPos === 'bottom-center' ? '下部中央 (映画字幕・安定)' :
+                                    '下部左寄せ (MVシネマ・ステアステップ)';
+                                const directorNote = cut.telop?.directorNote || staging.directorNote;
+
+                                return (
+                                    <div className="flex flex-col gap-2 p-3 rounded-xl bg-amber-950/20 border border-amber-500/30 mt-1">
+                                        <div className="flex items-center justify-between">
+                                            <span className="text-[11px] font-black text-amber-300 flex items-center gap-1.5">
+                                                <span className="material-symbols-outlined text-[15px] text-amber-400">movie_edit</span>
+                                                ディレクター演出解析 (Director Staging & Telop)
+                                            </span>
+                                            <span className="text-[9px] px-2 py-0.5 rounded bg-amber-500/20 text-amber-300 font-bold border border-amber-500/30 flex items-center gap-1">
+                                                <span className="material-symbols-outlined text-[11px]">auto_awesome</span>
+                                                AI Director 指示
+                                            </span>
+                                        </div>
+
+                                        {/* ディレクターの演出意図 (Director's Intent) */}
+                                        <div className="flex flex-col gap-1 bg-black/60 p-2.5 rounded-lg border border-amber-500/20">
+                                            <span className="text-[9.5px] font-bold text-amber-400/90 flex items-center gap-1">
+                                                <span>💡 カット演出意図 (Director's Intent)</span>
+                                            </span>
+                                            <p className="text-[10.5px] text-white/90 font-medium leading-relaxed select-text">
+                                                {directorNote}
+                                            </p>
+                                        </div>
+
+                                        {/* スタイル & モーショントランジション */}
+                                        <div className="grid grid-cols-2 gap-2 text-[10px]">
+                                            <div className="bg-black/50 p-2 rounded-lg border border-white/5 flex flex-col gap-0.5">
+                                                <span className="text-white/40 font-bold text-[9px]">演出スタイル (Style)</span>
+                                                <span className="text-amber-300 font-bold truncate flex items-center gap-1">
+                                                    <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ backgroundColor: currentStyle.badgeColor || '#FFE600' }} />
+                                                    {currentStyle.name.split(' (')[0]}
+                                                </span>
+                                                <span className="text-white/40 text-[8.5px] truncate" title={currentStyle.description}>
+                                                    {currentStyle.description}
+                                                </span>
+                                            </div>
+                                            <div className="bg-black/50 p-2 rounded-lg border border-white/5 flex flex-col gap-0.5">
+                                                <span className="text-white/40 font-bold text-[9px]">トランジション (Motion)</span>
+                                                <span className="text-cyan-300 font-bold truncate flex items-center gap-1">
+                                                    <span className="material-symbols-outlined text-[12px]">{currentTrans.icon}</span>
+                                                    {currentTrans.name}
+                                                </span>
+                                                <span className="text-white/40 text-[8.5px] truncate" title={currentTrans.description}>
+                                                    {currentTrans.description}
+                                                </span>
+                                            </div>
+                                        </div>
+
+                                        {/* テロップ配置 ＆ タイポグラフィ特効 */}
+                                        <div className="grid grid-cols-2 gap-2 text-[10px]">
+                                            <div className="bg-black/50 p-2 rounded-lg border border-white/5 flex flex-col">
+                                                <span className="text-white/40 font-bold text-[9px]">配置構図 (Placement)</span>
+                                                <span className="text-white/90 font-bold truncate" title={posLabel}>
+                                                    {posLabel.split(' (')[0]}
+                                                </span>
+                                            </div>
+                                            <div className="bg-black/50 p-2 rounded-lg border border-white/5 flex flex-col">
+                                                <span className="text-white/40 font-bold text-[9px]">タイポグラフィ特効</span>
+                                                <span className="text-white/90 font-bold truncate" title="Zen Kaku Gothic New (900) + Vook Directional Blur Ease-Out">
+                                                    Zen Kaku Gothic (900)
+                                                </span>
+                                            </div>
+                                        </div>
+
+                                        {/* 強調キーワード点灯状況 */}
+                                        <div className="flex flex-col gap-1 bg-black/40 p-2 rounded-lg border border-white/5">
+                                            <span className="text-[9px] font-bold text-white/50">✨ 強調キーワード点灯状況:</span>
+                                            <div className="flex flex-wrap gap-1">
+                                                {cut.telop?.highlights && cut.telop.highlights.length > 0 ? (
+                                                    cut.telop.highlights.map((h, i) => {
+                                                        const isLit = cut.telop?.fullText?.includes(h.word);
+                                                        return (
+                                                            <span key={i} className={`px-1.5 py-0.5 rounded text-[9px] font-bold border flex items-center gap-1 ${isLit ? 'bg-amber-500/20 border-amber-400/50 text-amber-300 shadow-[0_0_8px_rgba(255,230,0,0.15)]' : 'bg-white/5 border-white/10 text-white/30'}`}>
+                                                                <span>{isLit ? '✨' : '⚪'}</span>
+                                                                <span>{h.word}</span>
+                                                                <span className="text-[8px] opacity-75">{isLit ? '(特大・ゴールド)' : '(未検出)'}</span>
+                                                            </span>
+                                                        );
+                                                    })
+                                                ) : (
+                                                    <span className="text-[9px] text-white/30 italic">なし（全体均一表示）</span>
+                                                )}
+                                            </div>
+                                        </div>
+                                    </div>
+                                );
+                            })()}
                         </div>
 
                         <div className="pt-6 border-t border-white/5 flex flex-col gap-4">

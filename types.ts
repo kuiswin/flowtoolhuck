@@ -5,6 +5,19 @@ export type VideoRatio = 'none' | '30%' | '50%' | '100%';
 
 export type KenBurnsPreset = 'none' | 'zoom-in' | 'zoom-out' | 'pan-left' | 'pan-right' | 'tilt-up' | 'tilt-down';
 
+export type TelopStyle = 'mv-blur-slide' | 'mv-kinetic-pop' | 'mv-neon-glow' | 'cinema-subtle' | 'brush-impact';
+export type TelopTransition = 'blur-slide-left' | 'blur-slide-up' | 'blur-slide-right' | 'zoom-in-bounce' | 'glow-fade' | 'glitch-pop';
+export type TelopPosition = 'bottom-left' | 'bottom-center' | 'center-stagger' | 'bottom-right';
+
+export interface TelopConfig {
+  fullText: string;
+  highlights?: Array<{ word: string; color: string; sizeScale: number }>;
+  style?: TelopStyle;
+  transition?: TelopTransition;
+  position?: TelopPosition;
+  directorNote?: string;
+}
+
 export interface ReferenceAsset {
   id?: number;
   name: string;
@@ -51,10 +64,7 @@ export interface Cut {
   videoModelUsed?: string;
   videoDuration?: number;
 
-  telop?: {
-    fullText: string;
-    highlights?: Array<{ word: string; color: string; sizeScale: number }>;
-  };
+  telop?: TelopConfig;
 
   isDirecting: boolean; 
   isGeneratingImage: boolean;

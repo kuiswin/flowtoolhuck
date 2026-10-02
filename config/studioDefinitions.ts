@@ -360,3 +360,146 @@ export const BASELINE_NEGATIVE_TOKENS = {
   antiFrameAndBorder: 'frame, border, picture frame, ornate frame, arch frame, decorative border, white border, white margin, white gutter, paper margin, comic panel outline, panel border, outer frame, blank edge, cropped border, boxed layout, empty spacing',
   renderingQuality: 'lowres, worst quality, text, watermark, signature, blurry, artifact, jpeg artifacts, poorly rendered'
 };
+
+// ── 8. Vook風テロップ演出スタイル＆トランジション定義 ──────────────────────
+import { TelopStyle, TelopTransition, TelopPosition } from '../types';
+
+export interface TelopStyleDefinition {
+  id: TelopStyle;
+  name: string;
+  description: string;
+  badgeColor: string;
+  defaultTransition: TelopTransition;
+  defaultPosition: TelopPosition;
+}
+
+export const TELOP_STYLE_REGISTRY: TelopStyleDefinition[] = [
+  {
+    id: 'mv-blur-slide',
+    name: 'ブラースライド (Vook高速演出)',
+    description: '方向性ブラーと急減速イージングで滑らかに流し込むプロ仕様MV演出',
+    badgeColor: '#00E5FF',
+    defaultTransition: 'blur-slide-left',
+    defaultPosition: 'bottom-left'
+  },
+  {
+    id: 'mv-kinetic-pop',
+    name: 'キネティック・タイポ (Ado / リリック躍動)',
+    description: '単語ごとにスタッガーで跳ね上がり、強調語を巨大化させる段違いダイナミック演出',
+    badgeColor: '#FFE600',
+    defaultTransition: 'zoom-in-bounce',
+    defaultPosition: 'center-stagger'
+  },
+  {
+    id: 'mv-neon-glow',
+    name: 'ネオングロー (夜景・サイバー)',
+    description: '光彩拡散ブラーと多重グローで、暗がりや夜景にエモーショナルに溶け込む演出',
+    badgeColor: '#FF2E93',
+    defaultTransition: 'glow-fade',
+    defaultPosition: 'bottom-center'
+  },
+  {
+    id: 'cinema-subtle',
+    name: 'シネマティック・ミニマル (静寂・映画風)',
+    description: '半透明グラスモーフィズムプレートと繊細な字間による上品な映画字幕演出',
+    badgeColor: '#A78BFA',
+    defaultTransition: 'blur-slide-up',
+    defaultPosition: 'bottom-center'
+  },
+  {
+    id: 'brush-impact',
+    name: '墨文字・ド迫力インパクト (時代劇・覚醒)',
+    description: '極太フォントと力強い縁取りで、一撃の重みと気迫を伝える大河ドラマ演出',
+    badgeColor: '#F59E0B',
+    defaultTransition: 'blur-slide-right',
+    defaultPosition: 'bottom-center'
+  }
+];
+
+export interface TelopTransitionDefinition {
+  id: TelopTransition;
+  name: string;
+  description: string;
+  icon: string;
+}
+
+export const TELOP_TRANSITION_REGISTRY: TelopTransitionDefinition[] = [
+  { id: 'blur-slide-left', name: '左からブラースライド', description: '左から横ブラーを伴い高速スライドイン', icon: 'arrow_forward' },
+  { id: 'blur-slide-up', name: '下からブラースライド', description: '下から縦ブラーを伴いフワッと飛び込み', icon: 'arrow_upward' },
+  { id: 'blur-slide-right', name: '右からブラースライド', description: '右から駆け抜けるようにスライドイン', icon: 'arrow_back' },
+  { id: 'zoom-in-bounce', name: 'ズームイン・バウンス', description: '飛び込んで軽く弾むリズミカルな登場', icon: 'fit_screen' },
+  { id: 'glow-fade', name: 'ネオン・グローフェード', description: '光の粒子がにじみ出るように静かに発光', icon: 'flare' },
+  { id: 'glitch-pop', name: 'グリッチ・カットイン', description: 'デジタルなカットインで瞬時に切り替え', icon: 'bolt' }
+];
+
+export function resolveTelopStyle(styleId?: string): TelopStyleDefinition {
+  return TELOP_STYLE_REGISTRY.find(s => s.id === styleId) || TELOP_STYLE_REGISTRY[0];
+}
+
+export function resolveTelopTransition(transId?: string): TelopTransitionDefinition {
+  return TELOP_TRANSITION_REGISTRY.find(t => t.id === transId) || TELOP_TRANSITION_REGISTRY[0];
+}
+
+/**
+ * カット番号と世界観に基づいてディレクターの推奨テロップ演出を解決
+ */
+export function resolveRecommendedTelopStaging(cutId: number, isMvMode?: boolean, isHistorical?: boolean): {
+  style: TelopStyle;
+  transition: TelopTransition;
+  position: TelopPosition;
+  directorNote: string;
+} {
+  const normCut = ((cutId - 1) % 12) + 1;
+
+  if (isMvMode) {
+    if (normCut <= 3) {
+      // Aメロ（静かな導入）
+      return {
+        style: 'mv-blur-slide',
+        transition: 'blur-slide-left',
+        position: 'bottom-left',
+        directorNote: `[Verse A] 静かなRestlessnessを表現。左下から滑らかなブラースライドでリリックを送り込み、余白を残して情景美を際立たせる。`
+      };
+    } else if (normCut <= 6) {
+      // Bメロ（テンポアップ・加速）
+      return {
+        style: 'mv-blur-slide',
+        transition: 'blur-slide-up',
+        position: 'bottom-left',
+        directorNote: `[Verse B] ビートの加速に呼応。下から速度感のある縦ブラースライドで流し込み、疾走感を生み出す。`
+      };
+    } else if (normCut <= 9) {
+      // サビ（感情のクライマックス）
+      return {
+        style: 'mv-kinetic-pop',
+        transition: 'zoom-in-bounce',
+        position: 'center-stagger',
+        directorNote: `[Chorus] 感情の最高潮！Ado風キネティック・タイポで重要語を画面中央に大胆配置し、インパクトのあるスタッガー登場で圧倒。`
+      };
+    } else {
+      // アウトロ（余韻）
+      return {
+        style: 'mv-neon-glow',
+        transition: 'glow-fade',
+        position: 'bottom-center',
+        directorNote: `[Outro] 楽曲の余韻とフェード。柔らかなアンビエントネオングローで静寂と情緒を演出。`
+      };
+    }
+  }
+
+  if (isHistorical) {
+    return {
+      style: 'brush-impact',
+      transition: normCut % 2 === 0 ? 'blur-slide-up' : 'blur-slide-left',
+      position: 'bottom-center',
+      directorNote: `重厚な歴史考証に基づき、視認性の高い墨文字インパクトフチ取りテロップで物語の威厳を表現。`
+    };
+  }
+
+  return {
+    style: 'cinema-subtle',
+    transition: 'blur-slide-up',
+    position: 'bottom-center',
+    directorNote: `映像の没入感を阻害しないシネマ風グラスプレートテロップ。`
+  };
+}

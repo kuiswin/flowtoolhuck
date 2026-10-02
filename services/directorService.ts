@@ -294,7 +294,7 @@ import {
   buildFinalCinematicPromptAndNegative, 
   PreviousShotContext 
 } from './promptEngine';
-import { resolveCameraWork } from '../config/studioDefinitions';
+import { resolveCameraWork, resolveRecommendedTelopStaging } from '../config/studioDefinitions';
 
 export type { PreviousShotContext as PreviousShotInfo };
 
@@ -374,7 +374,9 @@ MANDATORY RULE: This Cut ${cutId} MUST BE RADICALLY DIFFERENT from the previous 
       ? "authentic historical period attire"
       : "natural character attire matching the setting";
 
-  const directorPrompt = `You are a ${directorRole} designing a visual shot for ${genreDesc}.
+  const defaultTelop = resolveRecommendedTelopStaging(cutId, settings.isMvMode, isHistorical);
+
+  const directorPrompt = `You are a ${directorRole} designing a visual shot and motion-graphics telop staging for ${genreDesc}.
 Context: "${prompt}".
 Style: "${rawStyle}".
 ${characterGuidance}
@@ -389,7 +391,10 @@ Output ONLY valid JSON:
   "enhancedPrompt": "Extremely detailed scene description in English including lighting, props, ${wardrobeDesc}, atmosphere, shot angle, and distinct character pose/action",
   "cameraWork": "${preset.tag}",
   "cinematicAngle": "${preset.angle}",
-  "shotScale": "${preset.scale}"
+  "shotScale": "${preset.scale}",
+  "telopStyle": "${defaultTelop.style}",
+  "telopTransition": "${defaultTelop.transition}",
+  "directorTelopNote": "${defaultTelop.directorNote}"
 }`;
 
   // 定義テーブルに基づき直前構図を自動除外するネガティブ文字列を生成
@@ -407,6 +412,13 @@ Output ONLY valid JSON:
         cinematicAngle: parsed.cinematicAngle || preset.angle,
         shotScale: parsed.shotScale || preset.scale,
         kenBurnsPreset: kbPreset,
+        telop: {
+          fullText: '',
+          style: parsed.telopStyle || defaultTelop.style,
+          transition: parsed.telopTransition || defaultTelop.transition,
+          position: defaultTelop.position,
+          directorNote: parsed.directorTelopNote || defaultTelop.directorNote
+        }
       };
     }
   } catch (err) {
@@ -420,5 +432,12 @@ Output ONLY valid JSON:
     cinematicAngle: preset.angle,
     shotScale: preset.scale,
     kenBurnsPreset: kbPreset,
+    telop: {
+      fullText: '',
+      style: defaultTelop.style,
+      transition: defaultTelop.transition,
+      position: defaultTelop.position,
+      directorNote: defaultTelop.directorNote
+    }
   };
 }

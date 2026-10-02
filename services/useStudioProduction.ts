@@ -237,7 +237,20 @@ export function useStudioProduction({ settings, logs, addLog, refreshStories }: 
       addLog(`🎬 Ep.${task.epId} C${task.cutId.toString().padStart(2, '0')}: 構図演出・プロンプト最適化中...${previousShotInfo?.scale ? ` (前カット [${previousShotInfo.scale}] の構図をネガティブ除外し対比構図を策定)` : ''}`, 'info');
 
       const directedUpdates = await directShot(task, settings, activeReferenceRef.current, previousShotInfo, addLog);
-      updateCut(task.epId, task.cutId, directedUpdates);
+      
+      const existingCut = episodesRef.current.find(e => e.id === task.epId)?.cuts.find(c => c.id === task.cutId);
+      const mergedUpdates: Partial<Cut> = {
+        ...directedUpdates,
+        telop: {
+          fullText: existingCut?.telop?.fullText || existingCut?.narrationJp || '',
+          highlights: existingCut?.telop?.highlights || [],
+          style: directedUpdates.telop?.style || existingCut?.telop?.style || 'mv-blur-slide',
+          transition: directedUpdates.telop?.transition || existingCut?.telop?.transition || 'blur-slide-left',
+          position: directedUpdates.telop?.position || existingCut?.telop?.position || 'bottom-left',
+          directorNote: directedUpdates.telop?.directorNote || existingCut?.telop?.directorNote || ''
+        }
+      };
+      updateCut(task.epId, task.cutId, mergedUpdates);
 
       previousShotInfo = {
         scale: directedUpdates.shotScale,

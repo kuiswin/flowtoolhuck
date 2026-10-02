@@ -126,9 +126,14 @@ import {
   VIDEO_MODELS_REGISTRY,
   CAMERA_WORK_REGISTRY,
   MV_THEMES,
+  TELOP_STYLE_REGISTRY,
+  TELOP_TRANSITION_REGISTRY,
   resolveImageModel,
   resolveVideoModel,
-  resolveCameraWork
+  resolveCameraWork,
+  resolveTelopStyle,
+  resolveTelopTransition,
+  resolveRecommendedTelopStaging
 } from './config/studioDefinitions';
 
 export {
@@ -136,9 +141,14 @@ export {
   VIDEO_MODELS_REGISTRY,
   CAMERA_WORK_REGISTRY,
   MV_THEMES,
+  TELOP_STYLE_REGISTRY,
+  TELOP_TRANSITION_REGISTRY,
   resolveImageModel,
   resolveVideoModel,
-  resolveCameraWork
+  resolveCameraWork,
+  resolveTelopStyle,
+  resolveTelopTransition,
+  resolveRecommendedTelopStaging
 };
 
 export const IMAGE_MODELS = IMAGE_MODELS_REGISTRY;

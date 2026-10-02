@@ -149,7 +149,11 @@ export function createDefaultCut(id: number, narration = '', prompt = '', isSele
     narrationEn: '',
     telop: {
       fullText: narration,
-      highlights: []
+      highlights: [],
+      style: 'mv-blur-slide',
+      transition: 'blur-slide-left',
+      position: 'bottom-left',
+      directorNote: '静寂から加速するビートに合わせたブラースライド演出'
     },
     isDirecting: false,
     isGeneratingImage: false,

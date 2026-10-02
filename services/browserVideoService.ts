@@ -130,66 +130,104 @@ function renderKineticAdoLyrics(
 
   if (globalExitAlpha <= 0.01) return;
 
-  const baseFontSize = Math.min(width * 0.065, 52);
-  const strokeWidth = Math.max(8, baseFontSize * 0.22);
-  const lineHeight = baseFontSize * 1.35;
+  const baseFontSize = Math.min(width * 0.068, 54);
+  const strokeWidth = Math.max(7, baseFontSize * 0.2);
+  const lineHeight = baseFontSize * 1.38;
 
-  // 単語数に応じた基準垂直位置（画面下部 70%〜80% に収める）
+  const transitionKey = cut.telop?.transition || 'blur-slide-left';
+  const positionKey = cut.telop?.position || 'bottom-left';
+  const isLeftAligned = positionKey === 'bottom-left';
+
+  // 単語数に応じた基準垂直位置（画面下部 72%〜82% に収める）
   const totalHeight = words.length * lineHeight;
-  const startY = height * 0.76 - (totalHeight * 0.4);
+  const startY = height * 0.78 - (totalHeight * 0.5);
 
-  // 単語ごとの水平オフセット（Ado風のステアステップ / 段違いレイアウト）
-  // 単語0: やや左 (-12%〜-8%), 単語1: 中央付近 (0%), 単語2: やや右 (+8%〜+12%)
-  const xOffsets = words.length === 1 ? [0] :
-                   words.length === 2 ? [-width * 0.08, width * 0.08] :
-                   [-width * 0.11, 0, width * 0.11];
+  // 単語ごとの水平オフセット（Vookステアステップ）
+  const xOffsets = isLeftAligned
+    ? [0, width * 0.04, width * 0.08, width * 0.12]
+    : words.length === 1 ? [0] :
+      words.length === 2 ? [-width * 0.08, width * 0.08] :
+      [-width * 0.11, 0, width * 0.11];
 
-  const angles = [-3.5, 2.0, -2.5, 3.0]; // 単語ごとのわずかな傾きで躍動感を演出
+  const baseX = isLeftAligned ? width * 0.10 : width * 0.5;
+  const angles = isLeftAligned ? [-1.5, 0.5, -1.0, 1.0] : [-3.0, 1.8, -2.2, 2.5];
 
   ctx.save();
-  ctx.textAlign = 'center';
+  ctx.textAlign = isLeftAligned ? 'left' : 'center';
   ctx.textBaseline = 'middle';
   ctx.lineJoin = 'round';
   ctx.lineCap = 'round';
 
   words.forEach((wordText, idx) => {
-    // 単語ごとの時間差登場（スタッガーアニメーション）
-    // 例: 単語0は0.04〜, 単語1は0.18〜, 単語2は0.32〜
+    // 単語ごとのスタッガー登場 (0.04s, 0.18s, 0.32s...)
     const wordEntryStart = 0.04 + idx * 0.14;
-    const wordEntryDuration = 0.15; // 登場にかかる時間
+    const wordEntryDuration = 0.16;
 
-    if (progress < wordEntryStart) return; // まだ登場していない
+    if (progress < wordEntryStart) return;
 
     let wordAlpha = 1;
     let wordScale = 1;
+    let wordOffsetX = 0;
     let wordOffsetY = 0;
+    let motionBlurAmount = 0;
 
     const timeSinceEntry = progress - wordEntryStart;
     if (timeSinceEntry < wordEntryDuration) {
-      // Animate.css "backInUp" バウンス登場
-      const t = timeSinceEntry / wordEntryDuration;
-      const c1 = 1.70158;
-      const c3 = c1 + 1;
-      const easeBack = 1 + c3 * Math.pow(t - 1, 3) + c1 * Math.pow(t - 1, 2);
-      wordAlpha = Math.min(1, t * 1.6);
-      wordOffsetY = (1 - easeBack) * (height * 0.06); // 下から飛び込み
-      wordScale = 0.35 + (easeBack * 0.65);
+      const t = Math.min(1, timeSinceEntry / wordEntryDuration);
+
+      if (transitionKey === 'blur-slide-left') {
+        // Vook 左からブラースライド（急減速 easeOutQuart + 水平ブラー）
+        const easeOut = 1 - Math.pow(1 - t, 4);
+        wordOffsetX = (1 - easeOut) * (-width * 0.18);
+        wordAlpha = Math.min(1, t * 2.2);
+        motionBlurAmount = (1 - easeOut) * 28;
+      } else if (transitionKey === 'blur-slide-up') {
+        // 下からブラースライド（急減速 easeOutBack + 垂直ブラー）
+        const c1 = 1.70158;
+        const c3 = c1 + 1;
+        const easeBack = 1 + c3 * Math.pow(t - 1, 3) + c1 * Math.pow(t - 1, 2);
+        wordOffsetY = (1 - easeBack) * (height * 0.07);
+        wordAlpha = Math.min(1, t * 2.0);
+        motionBlurAmount = (1 - t) * 24;
+      } else if (transitionKey === 'blur-slide-right') {
+        // 右からブラースライド
+        const easeOut = 1 - Math.pow(1 - t, 4);
+        wordOffsetX = (1 - easeOut) * (width * 0.18);
+        wordAlpha = Math.min(1, t * 2.2);
+        motionBlurAmount = (1 - easeOut) * 28;
+      } else if (transitionKey === 'zoom-in-bounce') {
+        // ズームイン・バウンス
+        const c1 = 1.70158;
+        const c3 = c1 + 1;
+        const easeBack = 1 + c3 * Math.pow(t - 1, 3) + c1 * Math.pow(t - 1, 2);
+        wordScale = 0.35 + (easeBack * 0.65);
+        wordOffsetY = (1 - easeBack) * (height * 0.04);
+        wordAlpha = Math.min(1, t * 2.5);
+      } else if (transitionKey === 'glow-fade') {
+        // グローフェード
+        wordScale = 0.94 + t * 0.06;
+        wordAlpha = Math.min(1, t * 1.8);
+        motionBlurAmount = (1 - t) * 35;
+      } else {
+        // glitch-pop
+        wordOffsetX = (1 - t) * (idx % 2 === 0 ? -12 : 12);
+        wordAlpha = t > 0.3 ? 1 : 0.4;
+      }
     } else {
-      // 静止ホールド期間（呼吸のようなごく微細なスケール 1.0 -> 1.02）
+      // ホールド期間
       const holdProgress = (progress - (wordEntryStart + wordEntryDuration)) / (0.84 - (wordEntryStart + wordEntryDuration));
       wordScale = 1.0 + (Math.max(0, holdProgress) * 0.02);
-      wordOffsetY = 0;
       wordAlpha = 1;
     }
 
-    const currentX = (width * 0.5) + (xOffsets[idx] || 0);
+    const currentX = baseX + (xOffsets[idx] || 0) + wordOffsetX;
     const currentY = startY + idx * lineHeight + wordOffsetY;
     const angle = angles[idx % angles.length];
 
     // ハイライト判定
     const isHighlighted = highlights.some(h => h.word && (wordText.includes(h.word) || h.word.includes(wordText)));
     const textColor = isHighlighted ? '#FFE600' : '#FFFFFF';
-    const highlightSizeBoost = isHighlighted ? 1.18 : 1.0;
+    const highlightSizeBoost = isHighlighted ? 1.35 : 1.0;
 
     ctx.save();
     ctx.translate(currentX, currentY);
@@ -197,20 +235,39 @@ function renderKineticAdoLyrics(
     ctx.scale(wordScale * globalExitScale * highlightSizeBoost, wordScale * globalExitScale * highlightSizeBoost);
     ctx.globalAlpha = Math.max(0, Math.min(1, wordAlpha * globalExitAlpha));
 
-    ctx.font = `900 ${baseFontSize}px "Impact", "Montserrat Black", "Hiragino Kaku Gothic ProN", "Noto Sans JP", sans-serif`;
+    ctx.font = `900 ${baseFontSize}px "Zen Kaku Gothic New", "Impact", "Montserrat Black", "Hiragino Kaku Gothic ProN", "Noto Sans JP", sans-serif`;
 
-    // 1. 強烈なブラックドロップシャドウ
+    // 1. Vook風 モーションブラー（残像シャドウ）
+    if (motionBlurAmount > 2) {
+      ctx.save();
+      ctx.shadowColor = isHighlighted ? 'rgba(255, 230, 0, 0.85)' : 'rgba(255, 255, 255, 0.7)';
+      ctx.shadowBlur = motionBlurAmount;
+      ctx.shadowOffsetX = transitionKey === 'blur-slide-left' ? -motionBlurAmount * 0.6 :
+                          transitionKey === 'blur-slide-right' ? motionBlurAmount * 0.6 : 0;
+      ctx.shadowOffsetY = transitionKey === 'blur-slide-up' ? motionBlurAmount * 0.6 : 0;
+      ctx.fillStyle = textColor;
+      ctx.fillText(wordText, 0, 0);
+      ctx.restore();
+    }
+
+    // 2. 強烈なブラックドロップシャドウ
     ctx.shadowColor = 'rgba(0, 0, 0, 0.95)';
-    ctx.shadowBlur = 24;
+    ctx.shadowBlur = isHighlighted ? 28 : 16;
     ctx.shadowOffsetX = 0;
     ctx.shadowOffsetY = 4;
 
-    // 2. 超極太黒縁取り（どんな背景でも超クッキリ）
+    // 3. ハイライト時は金色のネオングロー追加
+    if (isHighlighted) {
+      ctx.shadowColor = 'rgba(255, 230, 0, 0.8)';
+      ctx.shadowBlur = 24;
+    }
+
+    // 4. 超極太黒縁取り
     ctx.strokeStyle = '#000000';
-    ctx.lineWidth = strokeWidth * (isHighlighted ? 1.2 : 1.0);
+    ctx.lineWidth = strokeWidth * (isHighlighted ? 1.25 : 1.0);
     ctx.strokeText(wordText, 0, 0);
 
-    // 3. クッキリ鮮明な文字塗り
+    // 5. 文字塗り
     ctx.shadowColor = 'transparent';
     ctx.shadowBlur = 0;
     ctx.fillStyle = textColor;
@@ -229,7 +286,7 @@ function drawBakedSubtitles(ctx: CanvasRenderingContext2D | OffscreenCanvasRende
   const rawText = cut.telop?.fullText || cut.narrationJp || '';
   if (!rawText.trim()) return;
 
-  if (isMvMode) {
+  if (isMvMode || cut.telop?.style?.startsWith('mv-')) {
     renderKineticAdoLyrics(ctx, cut, currentTime, duration, width, height);
     return;
   }

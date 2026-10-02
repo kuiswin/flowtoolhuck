@@ -46,24 +46,29 @@ export default function App() {
   }, [resumeSeries]);
 
   const updateCutWrapped = useCallback((epId: number, cutId: number, updates: Partial<Cut>) => {
-    // ナレーションが更新された場合はテロップテキストとハイライトも自動同期
+    // ナレーションが更新された場合はテロップテキストとハイライトも自動同期（演出設定は保持）
     let finalUpdates = { ...updates };
     if (updates.narrationJp !== undefined) {
       const highlights = extractHighlights(updates.narrationJp);
+      const existingTelop = episodes.find(e => e.id === epId)?.cuts.find(c => c.id === cutId)?.telop;
       finalUpdates.telop = {
         fullText: updates.narrationJp,
-        highlights: highlights
+        highlights: highlights,
+        style: existingTelop?.style || 'mv-blur-slide',
+        transition: existingTelop?.transition || 'blur-slide-left',
+        position: existingTelop?.position || 'bottom-left',
+        directorNote: existingTelop?.directorNote || ''
       };
     }
     updateCut(epId, cutId, finalUpdates);
     setPreviewingCutData(prev => (prev && prev.epId === epId && prev.cut.id === cutId) ? { ...prev, cut: { ...prev.cut, ...finalUpdates } } : prev);
-  }, [updateCut]);
+  }, [updateCut, episodes]);
 
   useEffect(() => {
     initDB().then(refreshStories);
     const style = document.createElement('style');
     style.id = 'studio-core-styles';
-    style.textContent = `.no-wrap-row { display: flex; flex-direction: row; flex-wrap: nowrap; overflow-x: auto; scroll-behavior: smooth; } .dark-scrollbar::-webkit-scrollbar { height: 6px; width: 6px; } .dark-scrollbar::-webkit-scrollbar-thumb { background: #333; border-radius: 10px; } @keyframes slideIn { from { transform: translateY(10px); opacity: 0; } to { transform: translateY(0); opacity: 1; } } .animate-slide-in { animation: slideIn 0.3s ease-out forwards; } @keyframes dropdown-enter { from { opacity: 0; transform: scale(0.95) translateY(-5px); } to { opacity: 1; transform: scale(1) translateY(0); } } .animate-dropdown { animation: dropdown-enter 0.15s ease-out forwards; } .no-scrollbar::-webkit-scrollbar { display: none; } .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }`;
+    style.textContent = `@import url('https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@700;900&family=Outfit:wght@800;900&family=Montserrat:wght@800;900&family=Dela+Gothic+One&display=swap'); .no-wrap-row { display: flex; flex-direction: row; flex-wrap: nowrap; overflow-x: auto; scroll-behavior: smooth; } .dark-scrollbar::-webkit-scrollbar { height: 6px; width: 6px; } .dark-scrollbar::-webkit-scrollbar-thumb { background: #333; border-radius: 10px; } @keyframes slideIn { from { transform: translateY(10px); opacity: 0; } to { transform: translateY(0); opacity: 1; } } .animate-slide-in { animation: slideIn 0.3s ease-out forwards; } @keyframes dropdown-enter { from { opacity: 0; transform: scale(0.95) translateY(-5px); } to { opacity: 1; transform: scale(1) translateY(0); } } .animate-dropdown { animation: dropdown-enter 0.15s ease-out forwards; } .no-scrollbar::-webkit-scrollbar { display: none; } .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }`;
     document.head.appendChild(style);
   }, [refreshStories]);
 

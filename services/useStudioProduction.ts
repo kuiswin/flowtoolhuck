@@ -8,11 +8,8 @@ import {
   CUTS_PER_EPISODE, 
   TASTES,
   resolveImageModel,
-  resolveVideoModel,
-  resolveCameraWork,
-  resolveRecommendedTelopStaging
 } from '../constants';
-import { safeJsonParse, callWithRetry, formatErrorMessage, createDefaultCut } from './utils';
+import { safeJsonParse, callWithRetry, formatErrorMessage, createDefaultCut, isCutSelectedForVideo } from './utils';
 import { saveStory, getAllReferenceAssets, saveReferenceAsset } from './db';
 import { downloadZip } from './exportService';
 import { renderFullEpisodeMovie, renderKenBurnsVideo } from './browserVideoService';
@@ -157,6 +154,23 @@ export function useStudioProduction({ settings, logs, addLog, refreshStories }: 
     addLog(`🚀 第 ${nextEpNumber} 話から自動再開できます。「生成開始」を押してください。`, 'info');
   }, [addLog]);
 
+  const buildCutTasks = (ep: Episode, cuts: Cut[], styleKey?: string): GenerationTask[] => {
+    return cuts.map(c => ({
+      epId: ep.id,
+      cutId: c.id,
+      prompt: c.promptEn,
+      styleKey: styleKey || ep.taste || settings.taste,
+      imageModel: settings.imageModel,
+      isMvMode: ep.isMvMode,
+      storyContext: ep.summary || '',
+      eraAnalysis: ep.eraAnalysis,
+      forbiddenAnachronisms: ep.forbiddenAnachronisms,
+      authenticAttireEn: ep.authenticAttireEn,
+      forbiddenKeywordsEn: ep.forbiddenKeywordsEn,
+      referenceImageMediaId: activeReferenceRef.current?.mediaId
+    }));
+  };
+
   const handleGenerateRemaining = async (epId: number) => {
     const ep = episodesRef.current.find(e => e.id === epId);
     if (!ep) return;
@@ -167,20 +181,7 @@ export function useStudioProduction({ settings, logs, addLog, refreshStories }: 
     }
     updateEpisode(epId, { isGeneratingRemainingImages: true });
     addLog(`🎨 Ep.${epId}: 残り ${remainingCuts.length} 枚の画像生成を開始...`, 'process');
-    const tasks: GenerationTask[] = remainingCuts.map(c => ({
-      epId, 
-      cutId: c.id, 
-      prompt: c.promptEn, 
-      styleKey: ep.taste || settings.taste, 
-      imageModel: settings.imageModel, 
-      isMvMode: ep.isMvMode,
-      storyContext: ep.summary || '', 
-      eraAnalysis: ep.eraAnalysis, 
-      forbiddenAnachronisms: ep.forbiddenAnachronisms, 
-      authenticAttireEn: ep.authenticAttireEn, 
-      forbiddenKeywordsEn: ep.forbiddenKeywordsEn
-    }));
-    await runTasks(tasks);
+    await runTasks(buildCutTasks(ep, remainingCuts));
     updateEpisode(epId, { isGeneratingRemainingImages: false });
     addLog(`✅ Ep.${epId}: すべての画像生成が完了しました。`, 'success');
     if (settings.autoVideo && !isAbortedRef.current) {
@@ -448,15 +449,6 @@ export function useStudioProduction({ settings, logs, addLog, refreshStories }: 
         let sharedScript: any = null;
         let baseCutsData: any[] = [];
 
-        const ratio = settings.videoRatio;
-        const getIsSelected = (idx: number) => {
-          if (ratio === 'none') return false;
-          if (ratio === '30%') return [0, 4, 8, 11].includes(idx);
-          if (ratio === '50%') return [0, 2, 4, 6, 8, 10].includes(idx);
-          if (ratio === '100%') return true;
-          return false;
-        };
-
         if (existingEp) {
           // 既存エピソードから【画風名】等のプレフィックスを取り除いた純粋なタイトルを取得
           const cleanTitleJp = existingEp.titleJp.replace(/^【.*?】\s*/, '');
@@ -479,7 +471,7 @@ export function useStudioProduction({ settings, logs, addLog, refreshStories }: 
             id: c.id,
             narration: c.narrationJp,
             plot: c.promptEn || c.scenePlot || '',
-            isSelected: c.isSelectedForVideo ?? getIsSelected(j),
+            isSelected: c.isSelectedForVideo ?? isCutSelectedForVideo(j, settings.videoRatio),
             highlights: c.telop?.highlights || extractHighlights(c.narrationJp, existingEp.highlightWords || [])
           }));
         } else {
@@ -530,7 +522,7 @@ Output JSON ONLY:
               id: j + 1,
               narration,
               plot,
-              isSelected: getIsSelected(j),
+              isSelected: isCutSelectedForVideo(j, settings.videoRatio),
               highlights: extractHighlights(narration, cutHighlights)
             };
           });
@@ -579,20 +571,7 @@ Output JSON ONLY:
 
           addLog(`🎨 [${idx + 1}/${targetTastes.length}] 画風「${shortTaste}」の描画タスクを開始...（先行${settings.previewCutCount}カット）`, 'process');
           const currentEp = matrixEpisodes[idx];
-          const tasks: GenerationTask[] = currentEp.cuts.slice(0, settings.previewCutCount).map(c => ({
-            epId,
-            cutId: c.id,
-            prompt: c.promptEn,
-            styleKey: tasteKey,
-            imageModel: settings.imageModel,
-            storyContext: sharedScript.summary || '',
-            eraAnalysis: sharedScript.eraAnalysisJp,
-            forbiddenAnachronisms: sharedScript.forbiddenAnachronisms,
-            authenticAttireEn: sharedScript.authenticAttireEn,
-            forbiddenKeywordsEn: sharedScript.forbiddenKeywordsEn
-          }));
-
-          await runTasks(tasks);
+          await runTasks(buildCutTasks(currentEp, currentEp.cuts.slice(0, settings.previewCutCount), tasteKey));
           updateEpisode(epId, { isGenerating: false, isPreviewDone: true, isDone: true });
           addLog(`✅ 画風「${shortTaste}」の生成が完了しました！`, 'success');
         }
@@ -663,15 +642,6 @@ Output JSON ONLY:
             cuts: []
           });
 
-          const ratio = settings.videoRatio;
-          const getIsSelected = (idx: number) => {
-            if (ratio === 'none') return false;
-            if (ratio === '30%') return [0, 4, 8, 11].includes(idx);
-            if (ratio === '50%') return [0, 2, 4, 6, 8, 10].includes(idx);
-            if (ratio === '100%') return true;
-            return false;
-          };
-
           const rawCuts = Array.isArray(parsed.cuts) ? parsed.cuts : (Array.isArray(parsed.scenes) ? parsed.scenes : []);
           const baseCutsData = Array.from({ length: CUTS_PER_EPISODE }, (_, j) => {
             const cutData = rawCuts[j] || {};
@@ -680,7 +650,7 @@ Output JSON ONLY:
             const cutHighlights = cutData.highlights || parsed.highlightWords || [];
             const preset = getStoryboardPreset(j + 1, true, false);
             
-            const cut = createDefaultCut(j + 1, narration, plot, getIsSelected(j));
+            const cut = createDefaultCut(j + 1, narration, plot, isCutSelectedForVideo(j, settings.videoRatio));
             cut.shotScale = preset.scale;
             cut.cinematicAngle = preset.angle;
             cut.telop.highlights = extractHighlights(narration, cutHighlights);
@@ -716,22 +686,7 @@ Output JSON ONLY:
           addLog(`✨ 第${epIndex}曲『${mvEpisode.titleJp}』全12カットの情景演出が確定！描画を開始します...`, 'success');
 
           const targetCutCount = Math.min(settings.previewCutCount, CUTS_PER_EPISODE);
-          const tasks: GenerationTask[] = mvEpisode.cuts.slice(0, targetCutCount).map(c => ({
-            epId: epIndex,
-            cutId: c.id,
-            prompt: c.promptEn,
-            styleKey: settings.taste,
-            imageModel: settings.imageModel,
-            isMvMode: true,
-            storyContext: mvEpisode.summary || '',
-            eraAnalysis: mvEpisode.eraAnalysis,
-            forbiddenAnachronisms: mvEpisode.forbiddenAnachronisms,
-            authenticAttireEn: mvEpisode.authenticAttireEn,
-            forbiddenKeywordsEn: mvEpisode.forbiddenKeywordsEn,
-            referenceImageMediaId: activeReferenceRef.current?.mediaId
-          }));
-
-          await runTasks(tasks);
+          await runTasks(buildCutTasks(mvEpisode, mvEpisode.cuts.slice(0, targetCutCount)));
 
           const isAllDone = targetCutCount >= CUTS_PER_EPISODE;
           updateEpisode(epIndex, { 
@@ -905,22 +860,13 @@ Output JSON ONLY:
           const sharedScript: any = safeJsonParse<any>(scriptRes.text, { titleJp: currentPlan.titleJp, titleEn: currentPlan.titleEn, cuts: [] });
           addLog(`✨ 【第${epId}話】脚本＆時代考証が完成！（考証: ${sharedScript.eraAnalysisJp?.slice(0, 24) || '完了'}...）`, 'success');
 
-          const ratio = settings.videoRatio;
-          const getIsSelected = (idx: number) => {
-            if (ratio === 'none') return false;
-            if (ratio === '30%') return [0, 4, 8, 11].includes(idx);
-            if (ratio === '50%') return [0, 2, 4, 6, 8, 10].includes(idx);
-            if (ratio === '100%') return true;
-            return false;
-          };
-
           const rawCuts = Array.isArray(sharedScript.cuts) ? sharedScript.cuts : (Array.isArray(sharedScript.scenes) ? sharedScript.scenes : (Array.isArray(sharedScript) ? sharedScript : []));
 
           const episodeCuts: Cut[] = Array.from({ length: CUTS_PER_EPISODE }, (_, j) => {
             const cutData = rawCuts[j] || {};
             const narration = cutData.narrationJp || cutData.narration || '';
             const plot = cutData.basicPlot || cutData.promptEn || cutData.prompt || '';
-            const cut = createDefaultCut(j + 1, narration, plot, getIsSelected(j));
+            const cut = createDefaultCut(j + 1, narration, plot, isCutSelectedForVideo(j, settings.videoRatio));
             
             // AI指定のハイライト、またはエピソード代表キーワード、または漢字熟語自動抽出を適用
             const cutHighlights = cutData.highlights || sharedScript.highlightWords || [];
@@ -947,22 +893,8 @@ Output JSON ONLY:
           });
 
           addLog(`🎨 【第${epId}話】先行プレビュー ${settings.previewCutCount} カットの描画タスクを開始...（並列度: ${settings.parallelCount}）`, 'process');
-          const tasks: GenerationTask[] = episodeCuts.slice(0, settings.previewCutCount).map(c => ({
-            epId, 
-            cutId: c.id, 
-            prompt: c.promptEn, 
-            styleKey: settings.taste, 
-            imageModel: settings.imageModel, 
-            isMvMode: settings.isMvMode,
-            storyContext: sharedScript.summary || '', 
-            eraAnalysis: sharedScript.eraAnalysisJp, 
-            forbiddenAnachronisms: sharedScript.forbiddenAnachronisms, 
-            authenticAttireEn: sharedScript.authenticAttireEn, 
-            forbiddenKeywordsEn: sharedScript.forbiddenKeywordsEn,
-            referenceImageMediaId: activeReferenceRef.current?.mediaId
-          }));
-
-          await runTasks(tasks);
+          const currentEp = episodesRef.current.find(e => e.id === epId)!;
+          await runTasks(buildCutTasks(currentEp, episodeCuts.slice(0, settings.previewCutCount)));
           addLog(`🎉 【第${epId}話】「${currentPlan.titleJp}」の先行プレビュー制作が完了しました！`, 'success');
 
           const cutsToAnimate = episodeCuts.filter(c => c.isSelectedForVideo);

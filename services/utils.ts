@@ -120,25 +120,17 @@ export async function callWithRetry<T>(
   throw new Error('Maximum retries reached');
 }
 
-export function getCleanTtsText(text: string): string {
-  if (!text) return "";
-  const bracketMatch = text.match(/[「『](.*?)[」』]/);
-  let cleaned = bracketMatch ? bracketMatch[1] : text;
-  cleaned = cleaned.replace(/^[^\s「『]+[:：]\s*/, "");
-  cleaned = cleaned.replace(/[（）()<>\[\]【】{}#@*]/g, "");
-  return cleaned.trim();
-}
-
-export function extractSpeaker(text: string): string {
-  if (!text) return "";
-  const speakerMatch = text.match(/^([^:：「『]+)[:：]/) || text.match(/^([^:：「『]+)[「『]/);
-  return speakerMatch ? speakerMatch[1].trim() : "";
-}
-
 export function createLogMessage(message: string): string {
   const now = new Date();
   const time = now.toLocaleTimeString('ja-JP', { hour12: false });
   return `[${time}] ${message}`;
+}
+
+export function isCutSelectedForVideo(idx: number, ratio?: string): boolean {
+  if (ratio === '30%') return [0, 4, 8, 11].includes(idx);
+  if (ratio === '50%') return [0, 2, 4, 6, 8, 10].includes(idx);
+  if (ratio === '100%') return true;
+  return false;
 }
 
 export function createDefaultCut(id: number, narration = '', prompt = '', isSelected = false): any {

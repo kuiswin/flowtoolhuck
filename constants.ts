@@ -175,21 +175,6 @@ export const KEN_BURNS_PRESETS = [
   { label: '見下ろす (Tilt Down)', value: 'tilt-down' }
 ];
 
-export const BGM_TRACKS = [
-  '夕暮れのノスタルジー',
-  '静寂なピアノ独奏',
-  'Lo-fi Hip Hop',
-  'アンビエント・ノイズ',
-  'シネマティック・ハイブリッド'
-];
-
-export const VOICE_CHARACTERS = [
-  { id: 'aoi', name: '葵 (Aoi)', style: '落ち着いた語り手・中音' },
-  { id: 'shiori', name: '詩織 (Shiori)', style: '透明感のある少女・高音' },
-  { id: 'ren', name: '蓮 (Ren)', style: '深みのある青年・低音' },
-  { id: 'kenji', name: '健二 (Kenji)', style: '力強い少年・中低音' }
-];
-
 export const CAMERA_WORK_OPTIONS = CAMERA_WORK_REGISTRY.map(c => ({
   label: c.label,
   value: c.motionPrompt

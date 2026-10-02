@@ -66,6 +66,10 @@ export interface Cut {
   bgmMediaId?: string;
   voiceId?: string;
   isMvMode?: boolean;
+  finalPromptUsed?: string;
+  finalNegativeUsed?: string;
+  styleKeyUsed?: string;
+  imageModelUsed?: string;
 }
 
 export interface Episode {

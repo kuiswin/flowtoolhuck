@@ -442,6 +442,76 @@ export const MediaPreviewModal: React.FC<MediaPreviewModalProps> = ({
                             </div>
 
                             <TextInput label="画像プロンプト (EN)" value={cut.promptEn || ''} onChange={v => onUpdateCut({ promptEn: v })} />
+
+                            {/* ── 🎨 画像生成インプット解析インスペクター ── */}
+                            <div className="flex flex-col gap-2 p-3 rounded-xl bg-purple-950/20 border border-purple-500/30 mt-1">
+                                <div className="flex items-center justify-between">
+                                    <span className="text-[11px] font-black text-purple-300 flex items-center gap-1.5">
+                                        <span className="material-symbols-outlined text-[15px] text-purple-400">tune</span>
+                                        画像生成インプット解析 (Prompt Inspector)
+                                    </span>
+                                    <span className="text-[9px] px-2 py-0.5 rounded bg-purple-500/20 text-purple-300 font-bold border border-purple-500/30">
+                                        {cut.styleKeyUsed ? `画風: ${cut.styleKeyUsed.split(' (')[0].split('（')[0]}` : '画風情報'}
+                                    </span>
+                                </div>
+
+                                <div className="grid grid-cols-2 gap-2 text-[10px]">
+                                    <div className="bg-black/50 p-2 rounded-lg border border-white/5 flex flex-col">
+                                        <span className="text-white/40 font-bold text-[9px]">適用画風 (Style)</span>
+                                        <span className="text-white/90 font-medium truncate" title={cut.styleKeyUsed || '未記録'}>
+                                            {cut.styleKeyUsed || '未記録'}
+                                        </span>
+                                    </div>
+                                    <div className="bg-black/50 p-2 rounded-lg border border-white/5 flex flex-col">
+                                        <span className="text-white/40 font-bold text-[9px]">使用モデル (Model)</span>
+                                        <span className="text-white/90 font-medium truncate" title={cut.imageModelUsed || currentImageModel || '未記録'}>
+                                            {cut.imageModelUsed || currentImageModel || '未記録'}
+                                        </span>
+                                    </div>
+                                </div>
+
+                                {/* 実際にAPIへ送られた完全合成プロンプト */}
+                                <div className="flex flex-col gap-1 bg-black/60 p-2.5 rounded-lg border border-white/5">
+                                    <div className="flex items-center justify-between">
+                                        <span className="text-[10px] font-bold text-amber-400 flex items-center gap-1">
+                                            <span>⚡ 送信された完全プロンプト (Master Prompt)</span>
+                                        </span>
+                                        {cut.finalPromptUsed && (
+                                            <button 
+                                                type="button" 
+                                                onClick={() => navigator.clipboard.writeText(cut.finalPromptUsed || '')}
+                                                className="text-[9px] text-amber-300 hover:text-white bg-amber-500/20 hover:bg-amber-500/40 px-1.5 py-0.5 rounded border border-amber-500/30 transition-colors cursor-pointer"
+                                            >
+                                                コピー
+                                            </button>
+                                        )}
+                                    </div>
+                                    <p className="text-[10px] text-white/70 font-mono leading-relaxed max-h-24 overflow-y-auto dark-scrollbar select-text break-words">
+                                        {cut.finalPromptUsed || (cut.promptEn ? `(推定) Masterpiece, authentic ${cut.styleKeyUsed || ''}... ${cut.promptEn}` : '生成ログがありません')}
+                                    </p>
+                                </div>
+
+                                {/* 送信されたネガティブプロンプト */}
+                                <div className="flex flex-col gap-1 bg-black/60 p-2.5 rounded-lg border border-white/5">
+                                    <div className="flex items-center justify-between">
+                                        <span className="text-[10px] font-bold text-red-400 flex items-center gap-1">
+                                            <span>🚫 送信されたネガティブプロンプト</span>
+                                        </span>
+                                        {cut.finalNegativeUsed && (
+                                            <button 
+                                                type="button" 
+                                                onClick={() => navigator.clipboard.writeText(cut.finalNegativeUsed || '')}
+                                                className="text-[9px] text-red-300 hover:text-white bg-red-500/20 hover:bg-red-500/40 px-1.5 py-0.5 rounded border border-red-500/30 transition-colors cursor-pointer"
+                                            >
+                                                コピー
+                                            </button>
+                                        )}
+                                    </div>
+                                    <p className="text-[10px] text-white/70 font-mono leading-relaxed max-h-20 overflow-y-auto dark-scrollbar select-text break-words">
+                                        {cut.finalNegativeUsed || cut.negativePrompt || '（指定なし）'}
+                                    </p>
+                                </div>
+                            </div>
                         </div>
 
                         <div className="pt-6 border-t border-white/5 flex flex-col gap-4">

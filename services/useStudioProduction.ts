@@ -271,6 +271,14 @@ export function useStudioProduction({ settings, logs, addLog, refreshStories }: 
     try {
       const { finalPrompt, finalNegative, referenceImageMediaIds } = buildImagePromptAndNegative(task, settings, activeReferenceRef.current);
       
+      // 生成前に投入パラメータを保存（失敗してもインスペクターで追えるようにする）
+      updateCut(epId, cutId, {
+        finalPromptUsed: finalPrompt,
+        finalNegativeUsed: finalNegative,
+        styleKeyUsed: task.styleKey || settings.taste,
+        imageModelUsed: modelDef.label
+      });
+
       const res = await callWithRetry<any>(
         () => Flow.generate.image({ 
           prompt: finalPrompt, 
@@ -282,11 +290,17 @@ export function useStudioProduction({ settings, logs, addLog, refreshStories }: 
         (attempt, max, delay) => addLog(`Retrying Image (attempt ${attempt}/${max}) after ${delay} ms...`, 'warning'),
         5, 90000
       );
-      updateCut(epId, cutId, { imageMediaId: res.mediaId, imageBase64: res.base64, isGeneratingImage: false });
+      updateCut(epId, cutId, { 
+        imageMediaId: res.mediaId, 
+        imageBase64: res.base64, 
+        isGeneratingImage: false,
+        error: undefined
+      });
       addLog(`✨ Ep.${epId} C${cutId.toString().padStart(2, '0')}: 画像生成完了`, 'success');
     } catch (err) {
-      updateCut(epId, cutId, { isGeneratingImage: false, error: '生成失敗' });
-      addLog(`❌ Ep.${epId} C${cutId.toString().padStart(2, '0')}: 画像失敗 - ${formatErrorMessage(err)}`, 'error');
+      const errorMsg = formatErrorMessage(err);
+      updateCut(epId, cutId, { isGeneratingImage: false, error: errorMsg });
+      addLog(`❌ Ep.${epId} C${cutId.toString().padStart(2, '0')}: 画像失敗 - ${errorMsg}`, 'error');
     }
   };
 

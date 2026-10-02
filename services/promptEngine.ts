@@ -112,9 +112,13 @@ export function buildFinalCinematicPromptAndNegative(
   const masterStylePrefix = `Masterpiece, authentic ${rawStyle}. Consistent visual art style in ${rawStyle}.`;
   const masterStylePrompt = `[MASTER ART STYLE: ${rawStyle}, strictly maintain identical visual medium and rendering consistency across scenes]`;
 
+  const isNonPhoto = styleKey.includes('アニメ') || styleKey.includes('イラスト') || styleKey.includes('マンガ') || styleKey.includes('セル画') || styleKey.includes('ドット') || styleKey.includes('ピクセル') || styleKey.includes('水彩') || styleKey.includes('油絵') || styleKey.includes('版画');
+
   // Layer 2 & 3: Camera Context & Action
   const cameraContext = isMv 
-    ? 'Candid atmospheric indie music video still, natural human anatomy, unposed natural posture, soft rim lighting, serene breathing space, cinematic 35mm photography aesthetic, 8k resolution'
+    ? (isNonPhoto 
+        ? 'Candid atmospheric indie music video visual still, serene breathing space, aesthetic cinematic color grading, beautiful artistic composition' 
+        : 'Candid atmospheric indie music video still, natural human anatomy, unposed natural posture, soft rim lighting, serene breathing space, cinematic 35mm photography aesthetic, 8k resolution')
     : 'Cinematic composition, dynamic natural pose, natural human anatomy, solid torso, complete body framing, grounded perspective, 8k resolution';
   
   // Layer 4: Period Attire
@@ -129,8 +133,7 @@ export function buildFinalCinematicPromptAndNegative(
   }
 
   // Layer 6: Negative Rules (厳密な優先度で結合)
-  const isIllustration = styleKey.includes('アニメ') || styleKey.includes('イラスト') || styleKey.includes('マンガ') || styleKey.includes('セル画');
-  const illustrationNegative = isIllustration ? 'photorealistic, realistic photo, hyperrealistic photograph, 3d render, cgi' : '';
+  const illustrationNegative = isNonPhoto ? 'photorealistic, realistic photo, hyperrealistic photograph, real life, live-action, 35mm photograph, DSLR, camera photo, 3d render, cgi' : '';
 
   const dynamicForbidden = forbiddenKeywordsEn || (forbiddenAnachronisms || []).join(', ');
 

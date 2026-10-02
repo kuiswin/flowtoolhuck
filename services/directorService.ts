@@ -198,6 +198,155 @@ export function extractHighlights(narrationText: string, suggestedWords: string[
   return validHighlights;
 }
 
+export interface LyricSegment {
+  text: string;
+  isHighlight: boolean;
+  color?: string;
+}
+
+export interface LyricLine {
+  text: string;
+  segments: LyricSegment[];
+  hasHighlight: boolean;
+}
+
+/**
+ * 日本語リリックテキストを自然な文節行に分割し、
+ * 各行の中でハイライト指定単語「だけ」を正確にセグメント化する（助詞や他単語の誤着色を防止）
+ */
+export function buildLyricLines(fullText: string, highlights: Array<{ word: string; color?: string }>): LyricLine[] {
+  const clean = (fullText || '').replace(/^[「『\s]+|[」』\s:：]+$/g, '').trim();
+  if (!clean) return [];
+
+  // 1. 行の分割
+  let lines: string[] = [];
+
+  if (clean.includes('\n')) {
+    lines = clean.split('\n').map(s => s.trim()).filter(Boolean);
+  } else if (clean.includes('、') || clean.includes(' ') || clean.includes('　')) {
+    lines = clean.split(/[\s　、]+/).map(s => s.trim()).filter(Boolean);
+  }
+
+  // もし区切り文字がないか1行だけの場合、形態素・助詞の切れ目で自然に2〜3行に分割
+  if (lines.length <= 1) {
+    const raw = lines[0] || clean;
+    const particles = [
+      'ながら', 'まま', 'のに', 'ので', 'ても', 'でも', 'から', 'より', 'けど', 'たら', 'して', 'まで', 
+      'ば', 'は', 'が', 'を', 'に', 'へ', 'で', 'と', 'の', 'て'
+    ];
+    
+    // キーワードを分断しないためのキーワード保護境界
+    const keywordRanges: Array<[number, number]> = [];
+    highlights.forEach(h => {
+      if (!h.word) return;
+      let pos = 0;
+      while ((pos = raw.indexOf(h.word, pos)) !== -1) {
+        keywordRanges.push([pos, pos + h.word.length]);
+        pos += 1;
+      }
+    });
+
+    const isInsideKeyword = (index: number) => {
+      return keywordRanges.some(([start, end]) => index > start && index < end);
+    };
+
+    const tempLines: string[] = [];
+    let cur = '';
+
+    for (let i = 0; i < raw.length; i++) {
+      cur += raw[i];
+      const matchedParticle = particles.find(p => cur.endsWith(p));
+      const canBreak = matchedParticle && 
+                       cur.length >= 3 && 
+                       !isInsideKeyword(i + 1) && 
+                       (raw.length - i - 1) >= 3;
+
+      if (canBreak && tempLines.length < 3) {
+        tempLines.push(cur);
+        cur = '';
+      }
+    }
+    if (cur) tempLines.push(cur);
+    lines = tempLines.length > 0 ? tempLines : [raw];
+  }
+
+  // 最大4行に制限
+  lines = lines.slice(0, 4);
+
+  // 2. 各行の中で、ハイライト単語「だけ」を抽出してセグメント化
+  // 長い単語を優先してマッチング
+  const sortedHighlights = [...highlights].filter(h => h.word).sort((a, b) => b.word.length - a.word.length);
+
+  return lines.map(lineText => {
+    const charHighlight = new Array<{ isHighlight: boolean; color?: string }>(lineText.length);
+    for (let i = 0; i < lineText.length; i++) {
+      charHighlight[i] = { isHighlight: false };
+    }
+
+    sortedHighlights.forEach(h => {
+      if (!h.word) return;
+      let pos = 0;
+      while ((pos = lineText.indexOf(h.word, pos)) !== -1) {
+        // すでに別のハイライトが割り当てられていなければ設定
+        let canSet = true;
+        for (let k = 0; k < h.word.length; k++) {
+          if (charHighlight[pos + k]?.isHighlight) {
+            canSet = false;
+            break;
+          }
+        }
+        if (canSet) {
+          for (let k = 0; k < h.word.length; k++) {
+            charHighlight[pos + k] = { isHighlight: true, color: h.color || '#FFE600' };
+          }
+        }
+        pos += 1;
+      }
+    });
+
+    // 連続する文字をセグメントにまとめる
+    const segments: LyricSegment[] = [];
+    let curSegText = '';
+    let curIsHigh = false;
+    let curColor = '#FFE600';
+
+    for (let i = 0; i < lineText.length; i++) {
+      const hInfo = charHighlight[i];
+      if (i === 0) {
+        curSegText = lineText[i];
+        curIsHigh = hInfo.isHighlight;
+        curColor = hInfo.color || '#FFE600';
+      } else if (hInfo.isHighlight === curIsHigh && (!curIsHigh || hInfo.color === curColor)) {
+        curSegText += lineText[i];
+      } else {
+        segments.push({
+          text: curSegText,
+          isHighlight: curIsHigh,
+          color: curIsHigh ? curColor : undefined
+        });
+        curSegText = lineText[i];
+        curIsHigh = hInfo.isHighlight;
+        curColor = hInfo.color || '#FFE600';
+      }
+    }
+    if (curSegText) {
+      segments.push({
+        text: curSegText,
+        isHighlight: curIsHigh,
+        color: curIsHigh ? curColor : undefined
+      });
+    }
+
+    const hasHighlight = segments.some(s => s.isHighlight);
+
+    return {
+      text: lineText,
+      segments,
+      hasHighlight
+    };
+  });
+}
+
 /**
  * 各話の脚本（12カット分）および時代考証をAIに動的生成させるプロンプト
  * （世界観・テーマからGeminiが時代考証・衣装・NG要素およびカットごとの金文字強調キーワードを自律生成）

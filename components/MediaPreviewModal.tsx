@@ -16,7 +16,7 @@ import {
 } from '../constants';
 import { Flow } from 'flow-sdk';
 import { callWithRetry } from '../services/utils';
-import { extractHighlights } from '../services/directorService';
+import { extractHighlights, buildLyricLines } from '../services/directorService';
 import { normalizeKenBurnsPreset } from '../services/browserVideoService';
 import { TextInput, SectionLabel, PillButton, ToggleSwitch, FieldDropdown } from './Primitives';
 
@@ -369,45 +369,20 @@ export const MediaPreviewModal: React.FC<MediaPreviewModalProps> = ({
           transKey === 'glitch-pop' ? 'vook-motion-glitch-pop' :
           'vook-motion-blur-slide-left';
 
-        const posKey = cut.telop?.position || 'bottom-left';
-
-        // 映画風（cinema-subtle）または墨文字（traditional-sumi）の場合のみ横長プレート
+        const posKey = cut.telop?.position || 'bottom-center';
         const isPlateStyle = cut.telop?.style === 'cinema-subtle' || cut.telop?.style === 'traditional-sumi';
 
         if (!isPlateStyle) {
-            // Vook風 単語・意味ブロックに分割
-            const cleanText = text.replace(/^[「『\s]+|[」』\s:：]+$/g, '').trim();
-            const words = (() => {
-                if (cleanText.includes(' ') || cleanText.includes('　') || cleanText.includes('、')) {
-                    const raw = cleanText.split(/[\s　、]+/).filter(Boolean);
-                    if (raw.length >= 2) return raw.slice(0, 4);
-                }
-                const parts: string[] = [];
-                let cur = '';
-                const particles = ['は', 'が', 'を', 'に', 'へ', 'で', 'と', 'から', 'より', 'の', 'て', 'まま', 'けど', 'たら', 'して'];
-                for (let i = 0; i < cleanText.length; i++) {
-                    cur += cleanText[i];
-                    if (particles.some(p => cur.endsWith(p)) && cur.length >= 3 && parts.length < 3 && i < cleanText.length - 2) {
-                        parts.push(cur);
-                        cur = '';
-                    } else if (cur.length >= 6 && parts.length < 3 && i < cleanText.length - 2) {
-                        parts.push(cur);
-                        cur = '';
-                    }
-                }
-                if (cur) parts.push(cur);
-                return parts.length > 0 ? parts : [cleanText];
-            })();
+            const lyricLines = buildLyricLines(text, highlights);
 
             // レイアウトに応じた配置スタイリング
             const isLeft = posKey === 'bottom-left';
-            const isCenter = posKey === 'center-stagger' || posKey === 'bottom-center';
 
             // 単語ごとの水平オフセット（Vookステアステップ）
             const xOffsets = isLeft 
                 ? ['0%', '4%', '8%', '12%']
-                : words.length === 1 ? ['0%'] :
-                  words.length === 2 ? ['-8%', '8%'] :
+                : lyricLines.length === 1 ? ['0%'] :
+                  lyricLines.length === 2 ? ['-8%', '8%'] :
                   ['-12%', '0%', '12%'];
 
             const angles = isLeft ? [-1.5, 0.5, -1.0, 1.0] : [-3.0, 1.5, -2.0, 2.5];
@@ -418,8 +393,7 @@ export const MediaPreviewModal: React.FC<MediaPreviewModalProps> = ({
                     className={`absolute ${isLeft ? 'bottom-[6%] left-0 px-5 items-start' : 'bottom-[8%] left-0 px-4 items-center'} w-full flex flex-col justify-end pointer-events-none z-40`}
                 >
                     <div className={`flex flex-col ${isLeft ? 'items-start' : 'items-center'} gap-2 w-full max-w-[96%]`}>
-                        {words.map((word, wIdx) => {
-                            const isHigh = highlights.some(h => h.word && (word.includes(h.word) || h.word.includes(word)));
+                        {lyricLines.map((line, wIdx) => {
                             const angle = angles[wIdx % angles.length];
                             const xOff = xOffsets[wIdx] || '0%';
                             const delay = wIdx * 0.12; // Vook風スタッガー
@@ -434,25 +408,29 @@ export const MediaPreviewModal: React.FC<MediaPreviewModalProps> = ({
                                         animationFillMode: 'both'
                                     }}
                                 >
-                                    <div className={`inline-flex items-center backdrop-blur-md rounded-xl transition-all shadow-2xl ${
-                                        isHigh 
-                                          ? 'bg-black/60 border border-amber-400/50 px-3.5 py-0.5 shadow-amber-500/20' 
-                                          : 'bg-black/40 border border-white/10 px-2.5 py-0.5'
+                                    <div className={`inline-flex items-baseline backdrop-blur-md rounded-xl transition-all shadow-2xl px-3.5 py-1 ${
+                                        line.hasHighlight 
+                                          ? 'bg-black/65 border border-amber-400/40 shadow-amber-500/20' 
+                                          : 'bg-black/45 border border-white/10'
                                     }`}>
-                                        <span
-                                            className="font-[900] tracking-wide select-none inline-block"
-                                            style={{
-                                                color: isHigh ? '#FFE600' : '#FFFFFF',
-                                                fontSize: isHigh ? '2.35rem' : '1.45rem',
-                                                textShadow: isHigh 
-                                                  ? '0 0 20px rgba(255, 230, 0, 0.9), 0 0 35px rgba(255, 200, 0, 0.5), 0 3px 8px rgba(0,0,0,0.95)' 
-                                                  : '0 2px 6px rgba(0,0,0,0.95), 0 0 4px rgba(0,0,0,0.85)',
-                                                fontFamily: '"Zen Kaku Gothic New", "Montserrat", "Outfit", "Noto Sans JP", sans-serif',
-                                                letterSpacing: isHigh ? '0.04em' : '0.02em'
-                                            }}
-                                        >
-                                            {word}
-                                        </span>
+                                        {line.segments.map((seg, sIdx) => (
+                                            <span
+                                                key={sIdx}
+                                                className="font-[900] select-none inline-block align-baseline"
+                                                style={{
+                                                    color: seg.isHighlight ? (seg.color || '#FFE600') : '#FFFFFF',
+                                                    fontSize: seg.isHighlight ? '2.35rem' : '1.45rem',
+                                                    textShadow: seg.isHighlight 
+                                                      ? '0 0 20px rgba(255, 230, 0, 0.95), 0 0 35px rgba(255, 200, 0, 0.6), 0 3px 8px rgba(0,0,0,0.95)' 
+                                                      : '0 2px 6px rgba(0,0,0,0.95), 0 0 4px rgba(0,0,0,0.85)',
+                                                    fontFamily: '"Zen Kaku Gothic New", "Montserrat", "Outfit", "Noto Sans JP", sans-serif',
+                                                    letterSpacing: seg.isHighlight ? '0.04em' : '0.02em',
+                                                    lineHeight: 1.15
+                                                }}
+                                            >
+                                                {seg.text}
+                                            </span>
+                                        ))}
                                     </div>
                                 </div>
                             );

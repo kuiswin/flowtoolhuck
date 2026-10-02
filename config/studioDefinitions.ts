@@ -269,7 +269,7 @@ export const TWELVE_CUT_STORYBOARD_PRESETS: StoryShotPreset[] = [
   {
     scale: 'Wide',
     tag: '引き・世界観',
-    cinematicAngle: 'High-angle landscape view looking down from above, character is an active figure in the historic townscape, sweeping atmospheric environment',
+    cinematicAngle: 'High-angle landscape view looking down from above, character is an active figure in the townscape / environmental setting, sweeping atmospheric background',
     mangaAngle: 'Massive full-bleed edge-to-edge opening splash illustration, grand world setting, extreme atmospheric depth, speed lines',
     mvAngle: 'Cinematic establishing wide landscape, atmospheric natural scenery, subject walking or standing naturally in the distance, gentle wind, beautiful natural light, serene music video opening'
   },
@@ -332,7 +332,7 @@ export const TWELVE_CUT_STORYBOARD_PRESETS: StoryShotPreset[] = [
   {
     scale: 'Medium',
     tag: '歩き出し・流れる時',
-    cinematicAngle: 'Centered cinematic medium portrait, dramatic side-lighting, dignified historic presence',
+    cinematicAngle: 'Centered cinematic medium portrait, dramatic side-lighting, dignified cinematic presence',
     mangaAngle: 'Dynamic leaping/running action, extreme foreshortening, kinetic speed lines, borderless edge-to-edge artwork',
     mvAngle: 'Smooth moving perspective, walking forward at a gentle pace, natural relaxed gait, candid indie music video frame'
   },
@@ -355,8 +355,8 @@ export const TWELVE_CUT_STORYBOARD_PRESETS: StoryShotPreset[] = [
 // ── 7. 基本ネガティブプロンプト規約 ────────────────────────────────────
 export const BASELINE_NEGATIVE_TOKENS = {
   anatomicalIntegrity: 'giant, giantess, floating head, severed body, floating torso, half body cut off by scenery, scale error, diorama, simple mugshot, bad anatomy, deformed fingers',
-  antiReferenceStiffness: 'identical pose as reference image, repeating reference image pose, sitting on floor, crossed legs on floor, static mugshot pose, repeating reference angle',
+  antiReferenceStiffness: 'identical pose as reference image, repeating reference image pose, static mugshot pose, repeating reference angle',
   antiAnachronisms: 'modern clothing, wristwatch, eyeglasses, sneakers, smartphone, headphones, electricity pole, asphalt road',
   antiFrameAndBorder: 'frame, border, picture frame, ornate frame, arch frame, decorative border, white border, white margin, white gutter, paper margin, comic panel outline, panel border, outer frame, blank edge, cropped border, boxed layout, empty spacing',
-  renderingQuality: 'lowres, worst quality, text, watermark, signature, blurry, pixel art, 8-bit, 16-bit'
+  renderingQuality: 'lowres, worst quality, text, watermark, signature, blurry, artifact, jpeg artifacts, poorly rendered'
 };

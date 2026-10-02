@@ -166,7 +166,17 @@ export function useStudioProduction({ settings, logs, addLog, refreshStories }: 
     updateEpisode(epId, { isGeneratingRemainingImages: true });
     addLog(`🎨 Ep.${epId}: 残り ${remainingCuts.length} 枚の画像生成を開始...`, 'process');
     const tasks: GenerationTask[] = remainingCuts.map(c => ({
-      epId, cutId: c.id, prompt: c.promptEn, styleKey: settings.taste, imageModel: settings.imageModel, storyContext: ep.summary || '', eraAnalysis: ep.eraAnalysis, forbiddenAnachronisms: ep.forbiddenAnachronisms, authenticAttireEn: ep.authenticAttireEn, forbiddenKeywordsEn: ep.forbiddenKeywordsEn
+      epId, 
+      cutId: c.id, 
+      prompt: c.promptEn, 
+      styleKey: ep.taste || settings.taste, 
+      imageModel: settings.imageModel, 
+      isMvMode: ep.isMvMode,
+      storyContext: ep.summary || '', 
+      eraAnalysis: ep.eraAnalysis, 
+      forbiddenAnachronisms: ep.forbiddenAnachronisms, 
+      authenticAttireEn: ep.authenticAttireEn, 
+      forbiddenKeywordsEn: ep.forbiddenKeywordsEn
     }));
     await runTasks(tasks);
     updateEpisode(epId, { isGeneratingRemainingImages: false });
@@ -391,7 +401,7 @@ export function useStudioProduction({ settings, logs, addLog, refreshStories }: 
           currentAssetRef.current = { name: asset.name, base64: asset.base64, mimeType: asset.mimeType };
           addLog('🔍 キャラクターDNA抽出中...', 'process');
           const uploadRes = await Flow.upload({ base64: asset.base64, mimeType: asset.mimeType as any, name: `Ref: ${asset.name}` });
-          const screeningPrompt = buildCharacterScreeningPrompt(settings.era, settings.country);
+          const screeningPrompt = buildCharacterScreeningPrompt(settings.era, settings.country, settings.isMvMode);
           const screenRes = await callWithRetry<any>(
             () => Flow.generate.text(screeningPrompt, { images: [{ base64: asset.base64, mimeType: asset.mimeType }] }),
             (attempt, max, delay) => addLog(`Retrying DNA Analysis (attempt ${attempt}/${max}) after ${delay} ms...`, 'warning'),

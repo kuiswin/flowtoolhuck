@@ -6,15 +6,39 @@ import { safeJsonParse, callWithRetry } from './utils';
 /**
  * キャラクター画像からDNA（特徴）を抽出するためのプロンプトを構築
  */
-export function buildCharacterScreeningPrompt(era: string, country: string): string {
-  return `Analyze the character image for a historical drama set in "${era}", "${country}".
+export function buildCharacterScreeningPrompt(era: string = '', country: string = '', isMvMode?: boolean): string {
+  const isHistorical = era && (era.includes('江戸') || era.includes('幕末') || era.includes('明治') || era.includes('大正') || era.includes('戦後') || era.includes('昭和'));
+  
+  if (isMvMode) {
+    return `Analyze the character image for an indie aesthetic music video visual set in "${era || 'Modern'}", "${country || 'Japan'}".
+Identify facial features, hairstyles, expression, and distinctive aesthetic characteristics.
+Output JSON: {
+  "characterDna": "Description of facial features, hair, eyes, and physical traits",
+  "styleDna": "Consistent artistic rendering medium (e.g. anime illustration, cel shading, pop art)",
+  "antiPoseNegative": "awkward pose, unnatural anatomy, stiff posture",
+  "eraNegative": "out-of-character fantasy armor, medieval props"
+}`;
+  }
+
+  if (isHistorical) {
+    return `Analyze the character image for a historical drama set in "${era}", "${country}".
 Identify facial features, hairstyles, and iconic characteristics.
 Strictly ensure modern attire (school uniform, blazer, necktie, casual wear, sneakers, glasses, headphones) is converted to authentic period clothing for "${era}".
 Output JSON: {
   "characterDna": "Description of facial features and body traits",
   "styleDna": "Consistent artistic rendering medium",
-  "antiPoseNegative": "awkward pose, unnatural anatomy",
+  "antiPoseNegative": "awkward pose, unnatural anatomy, stiff posture",
   "eraNegative": "modern clothing, school uniform, sailor suit, blazer, necktie, modern casual, sneakers, eyeglasses, headphones, wristwatch, smartphone"
+}`;
+  }
+
+  return `Analyze the character image for a visual drama set in "${era || 'Contemporary'}", "${country || 'Japan'}".
+Identify facial features, hairstyles, clothing style, and iconic characteristics.
+Output JSON: {
+  "characterDna": "Description of facial features, hair, and distinct physical traits",
+  "styleDna": "Consistent artistic rendering medium",
+  "antiPoseNegative": "awkward pose, unnatural anatomy, stiff posture",
+  "eraNegative": "anachronistic armor, historic kimono in modern setting, out-of-place fantasy props"
 }`;
 }
 
@@ -296,19 +320,34 @@ MANDATORY RULE: This Cut ${cutId} MUST BE RADICALLY DIFFERENT from the previous 
 - Requested Framing for THIS cut is: ${preset.scale} (${preset.angle}).`
     : `Requested Framing: ${preset.scale} (${preset.angle}).`;
 
-  const directorPrompt = `You are a ${directorRole} designing a visual shot for a historical drama.
+  const isHistorical = settings.era && (settings.era.includes('江戸') || settings.era.includes('幕末') || settings.era.includes('明治') || settings.era.includes('大正') || settings.era.includes('戦後') || settings.era.includes('昭和'));
+  const genreDesc = settings.isMvMode 
+    ? "an aesthetic music video" 
+    : settings.isMangaMode 
+      ? "a dramatic comic/manga series" 
+      : isHistorical 
+        ? "a historical drama" 
+        : "a cinematic visual drama";
+
+  const wardrobeDesc = settings.isMvMode
+    ? "stylish aesthetic wardrobe matching the music video theme"
+    : isHistorical
+      ? "authentic historical period attire"
+      : "natural character attire matching the setting";
+
+  const directorPrompt = `You are a ${directorRole} designing a visual shot for ${genreDesc}.
 Context: "${prompt}".
 Style: "${rawStyle}".
 ${characterGuidance}
 ${previousContrastMandate}
 
-Avoid scale errors. If wide shot, character MUST be small and buildings realistic. If close-up, show head/shoulders with natural proportions.
+Avoid scale errors. If wide shot, character MUST be small and background realistic. If close-up, show head/shoulders with natural proportions.
 ${mangaExtraDirecting}
 ${mvExtraDirecting}
 
 Output ONLY valid JSON:
 {
-  "enhancedPrompt": "Extremely detailed scene description in English including lighting, props, historical attire, atmosphere, shot angle, and distinct character pose/action",
+  "enhancedPrompt": "Extremely detailed scene description in English including lighting, props, ${wardrobeDesc}, atmosphere, shot angle, and distinct character pose/action",
   "cameraWork": "${preset.tag}",
   "cinematicAngle": "${preset.angle}",
   "shotScale": "${preset.scale}"

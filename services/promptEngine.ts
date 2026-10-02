@@ -97,7 +97,27 @@ export function getStoryboardPreset(
 
 /**
  * 6層レイヤーに基づき、プロンプトとネガティブプロンプトを完全合成
- * （音楽MVモード時はアンニュイ情景美と穏やかなライティングを注入し、激しいアクション・叫びを完全排除）
+/**
+ * 画風が写真（実写・フォト）かアート・イラストかを判定
+ */
+export function isPhotoStyle(styleKey: string = '', rawStyle: string = ''): boolean {
+  const combined = `${styleKey} ${rawStyle}`.toLowerCase();
+  
+  // アート・イラスト・描画系キーワード（これらがあれば絶対に非写真）
+  const artKeywords = [
+    'アニメ', 'イラスト', 'マンガ', '漫画', 'セル画', 'ドット', 'ピクセル', '水彩', '油絵', '油彩', '版画', '浮世絵', '劇画', 'レトロモダン', '線画',
+    'anime', 'manga', 'illustration', 'cel', 'pixel', '8-bit', '16-bit', 'watercolor', 'oil painting', 'ukiyo-e', 'woodblock', 'art nouveau', 'chibi', 'ligne claire', 'drawing', 'sketch', 'vector', 'lo-fi anime'
+  ];
+  if (artKeywords.some(k => combined.includes(k))) return false;
+
+  // 写真キーワードがある場合のみ写真判定
+  const photoKeywords = ['写真', '実写', 'フォト', 'photo', 'photograph', 'dslr', '35mm', 'realistic portrait', 'cinematic live-action'];
+  return photoKeywords.some(k => combined.includes(k));
+}
+
+/**
+ * 6層レイヤーに基づき、プロンプトとネガティブプロンプトを完全合成
+ * （画風に応じた動的判定を行い、イラスト・ドット絵・アニメへの不要な写真ワード注入を完全排除）
  */
 export function buildFinalCinematicPromptAndNegative(
   task: GenerationTask,
@@ -112,14 +132,32 @@ export function buildFinalCinematicPromptAndNegative(
   const masterStylePrefix = `Masterpiece, authentic ${rawStyle}. Consistent visual art style in ${rawStyle}.`;
   const masterStylePrompt = `[MASTER ART STYLE: ${rawStyle}, strictly maintain identical visual medium and rendering consistency across scenes]`;
 
-  const isNonPhoto = styleKey.includes('アニメ') || styleKey.includes('イラスト') || styleKey.includes('マンガ') || styleKey.includes('セル画') || styleKey.includes('ドット') || styleKey.includes('ピクセル') || styleKey.includes('水彩') || styleKey.includes('油絵') || styleKey.includes('版画');
+  const isPhoto = isPhotoStyle(styleKey, rawStyle);
+  const isNonPhoto = !isPhoto;
+  const isPixel = (styleKey + ' ' + rawStyle).toLowerCase().includes('ドット') || 
+                  (styleKey + ' ' + rawStyle).toLowerCase().includes('ピクセル') || 
+                  (styleKey + ' ' + rawStyle).toLowerCase().includes('pixel') || 
+                  (styleKey + ' ' + rawStyle).toLowerCase().includes('8-bit');
 
   // Layer 2 & 3: Camera Context & Action
-  const cameraContext = isMv 
-    ? (isNonPhoto 
-        ? 'Candid atmospheric indie music video visual still, serene breathing space, aesthetic cinematic color grading, beautiful artistic composition' 
-        : 'Candid atmospheric indie music video still, natural human anatomy, unposed natural posture, soft rim lighting, serene breathing space, cinematic 35mm photography aesthetic, 8k resolution')
-    : 'Cinematic composition, dynamic natural pose, natural human anatomy, solid torso, complete body framing, grounded perspective, 8k resolution';
+  let cameraContext = '';
+  if (isMv) {
+    if (isPixel) {
+      cameraContext = 'Atmospheric indie music video visual still, clean retro pixel art aesthetic, charming indie game backdrop, serene breathing space, beautiful composition';
+    } else if (isNonPhoto) {
+      cameraContext = 'Candid atmospheric indie music video visual still, serene breathing space, aesthetic cinematic color grading, beautiful artistic composition';
+    } else {
+      cameraContext = 'Candid atmospheric indie music video still, natural human anatomy, unposed natural posture, soft rim lighting, serene breathing space, cinematic 35mm photography aesthetic';
+    }
+  } else {
+    if (isPixel) {
+      cameraContext = 'Iconic pixel art composition, clear silhouette, expressive retro gaming perspective, charming retro game visual';
+    } else if (isNonPhoto) {
+      cameraContext = 'Cinematic composition, dynamic natural pose, natural anatomy, solid torso, complete body framing, grounded perspective';
+    } else {
+      cameraContext = 'Cinematic composition, dynamic natural pose, natural human anatomy, solid torso, complete body framing, grounded perspective, 8k resolution, cinematic lighting';
+    }
+  }
   
   // Layer 4: Period Attire
   const dynamicAttire = authenticAttireEn ? `[PERIOD ATTIRE: ${authenticAttireEn}]` : '';

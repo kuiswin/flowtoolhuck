@@ -21,6 +21,7 @@ interface MediaPreviewModalProps {
     cut: Cut;
     episodeId: number;
     currentImageModel?: string;
+    isMvMode?: boolean;
     onClose: () => void;
     onAnimate: (m: VideoModelType) => void;
     onBrowserAnimate: () => void;
@@ -29,7 +30,7 @@ interface MediaPreviewModalProps {
 }
 
 export const MediaPreviewModal: React.FC<MediaPreviewModalProps> = ({
-    isOpen, cut, episodeId, currentImageModel, onClose, onAnimate, onBrowserAnimate, onUpdateCut, onRegenerateImage
+    isOpen, cut, episodeId, currentImageModel, isMvMode, onClose, onAnimate, onBrowserAnimate, onUpdateCut, onRegenerateImage
 }) => {
     const videoRef = useRef<HTMLVideoElement>(null);
     const [aiWish, setAiWish] = useState('');
@@ -180,6 +181,49 @@ export const MediaPreviewModal: React.FC<MediaPreviewModalProps> = ({
                 pos += 1;
             }
         });
+
+        if (isMvMode) {
+            return (
+                <div className="absolute inset-0 pointer-events-none z-40 overflow-hidden flex items-center justify-center">
+                    {text.split('').map((char, i) => {
+                        const highlight = highlightIndices.get(i);
+                        const color = highlight ? (highlight.color || '#FFE600') : '#FFFFFF';
+                        const isKanji = /[\u4e00-\u9faf]/.test(char);
+                        const baseScale = (highlight ? (highlight.sizeScale || 1.4) : 1.0) * (isKanji ? 1.1 : 1.0);
+                        
+                        const seed = i + 1;
+                        const angles = [-45, -30, -15, 0, 15, 30, 45, 90];
+                        const angle = angles[(seed * 7) % angles.length];
+                        const posX = ((seed * 11) % 60) - 30; // -30% to +30% offset from center
+                        const posY = ((seed * 17) % 60) - 30;
+                        const delay = i * 0.08;
+
+                        return (
+                            <span
+                                key={i}
+                                className="absolute font-[900] select-none"
+                                style={{
+                                    transform: `translate(${posX}vw, ${posY}vh) rotate(${angle}deg)`,
+                                }}
+                            >
+                                <span
+                                    className="inline-block animate-kinetic-zoom-in opacity-0"
+                                    style={{
+                                        color: color,
+                                        fontSize: `${baseScale * 3}rem`,
+                                        WebkitTextStroke: '2px black',
+                                        textShadow: '0 0 15px rgba(0,0,0,0.8)',
+                                        animationDelay: `${delay}s`,
+                                    }}
+                                >
+                                    {char}
+                                </span>
+                            </span>
+                        );
+                    })}
+                </div>
+            );
+        }
 
         return (
             <div className="absolute bottom-[4%] left-0 w-full px-3 flex flex-col items-center pointer-events-none z-40 animate-in fade-in slide-in-from-bottom-2 duration-300">

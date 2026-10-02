@@ -62,12 +62,115 @@ function drawKenBurnsFrame(
   ctx.drawImage(img as any, dx, dy, drawW, drawH);
 }
 
+
+
+/**
+ * Ado風キネティック・タイポグラフィ（飛び交う動的リリック演出）
+ */
+function renderKineticAdoLyrics(
+  ctx: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D,
+  cut: Cut,
+  currentTime: number,
+  duration: number,
+  width: number,
+  height: number
+) {
+  const rawText = cut.telop?.fullText || cut.narrationJp || '';
+  if (!rawText.trim()) return;
+
+  // Highlights to boost scale & color
+  const highlights = cut.telop?.highlights || [];
+  const text = rawText.replace(/^[\s「『]+|[:：\s」』]+$/g, '').slice(0, 36);
+
+  const baseFontSize = 72; // Larger for impact
+  const strokeWidth = 14;
+
+  ctx.save();
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.lineJoin = 'round';
+  ctx.lineCap = 'round';
+
+  const highlightIndices = new Map<number, { color: string; sizeScale: number }>();
+  highlights.forEach(h => {
+    if (!h.word) return;
+    let pos = 0;
+    while ((pos = text.indexOf(h.word, pos)) !== -1) {
+      for (let k = 0; k < h.word.length; k++) {
+        highlightIndices.set(pos + k, h);
+      }
+      pos += 1;
+    }
+  });
+
+  const progress = currentTime / duration; // 0.0 to 1.0
+
+  text.split('').forEach((char, index) => {
+    const isKanji = /[\u4e00-\u9faf]/.test(char);
+    const highlight = highlightIndices.get(index);
+    const color = highlight ? (highlight.color || '#FFE600') : '#FFFFFF';
+    const baseScale = (highlight ? (highlight.sizeScale || 1.3) : 1.0) * (isKanji ? 1.1 : 1.0);
+
+    // Seeded random layout based on character index
+    const seed = index + 1;
+    const angles = [-45, -30, -15, 0, 15, 30, 45, 90];
+    const angle = angles[(seed * 7) % angles.length];
+    
+    // Position layout
+    // We want them scattered a bit, but readable
+    const posX = width * (0.2 + ((seed * 11) % 60) / 100);
+    const posY = height * (0.2 + ((seed * 17) % 60) / 100);
+    
+    // Animation timing logic
+    // Characters enter one by one based on index
+    const entryTime = (index / Math.max(text.length, 1)) * 0.4; 
+    const charProgress = Math.max(0, progress - entryTime) * (1 / (1 - entryTime));
+    
+    if (charProgress > 0) {
+      // Dynamic zoom-in & fly-in
+      const motionScale = charProgress < 0.2 ? (charProgress / 0.2) : 1.0;
+      const finalScale = baseScale * motionScale;
+      const alpha = charProgress < 0.1 ? (charProgress / 0.1) : (charProgress > 0.8 ? 1.0 - ((charProgress - 0.8) / 0.2) : 1.0);
+      
+      const offsetX = charProgress < 0.2 ? (1.0 - (charProgress / 0.2)) * width * ((seed % 2 === 0) ? -0.5 : 0.5) : 0;
+      const offsetY = charProgress < 0.2 ? (1.0 - (charProgress / 0.2)) * height * ((seed % 3 === 0) ? -0.5 : 0.5) : 0;
+
+      ctx.save();
+      ctx.translate(posX + offsetX, posY + offsetY);
+      ctx.rotate((angle * Math.PI) / 180);
+      ctx.scale(finalScale, finalScale);
+      
+      ctx.globalAlpha = Math.max(0, Math.min(1, alpha));
+      
+      ctx.font = `900 ${baseFontSize}px "Impact", "Montserrat Black", "Noto Sans JP", sans-serif`;
+
+      // Draw stroke
+      ctx.strokeStyle = 'black';
+      ctx.lineWidth = strokeWidth;
+      ctx.strokeText(char, 0, 0);
+
+      // Draw fill
+      ctx.fillStyle = color;
+      ctx.fillText(char, 0, 0);
+      
+      ctx.restore();
+    }
+  });
+
+  ctx.restore();
+}
+
 /**
  * 字幕を「アニメ風ド迫力スタイル」で焼き込む
  */
-function drawBakedSubtitles(ctx: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D, width: number, height: number, cut: Cut) {
+function drawBakedSubtitles(ctx: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D, width: number, height: number, cut: Cut, currentTime: number = 0, duration: number = 4, isMvMode: boolean = false) {
   const rawText = cut.telop?.fullText || cut.narrationJp || '';
   if (!rawText.trim()) return;
+
+  if (isMvMode) {
+    renderKineticAdoLyrics(ctx, cut, currentTime, duration, width, height);
+    return;
+  }
 
   const text = rawText.replace(/^[\s「『]+|[:：\s」』]+$/g, '').slice(0, 36);
   const highlights = cut.telop?.highlights || [];
@@ -280,7 +383,7 @@ export async function renderFullEpisodeMovie(
         ctx.fillStyle = 'black';
         ctx.fillRect(0, 0, width, height);
         ctx.drawImage(video, 0, 0, width, height);
-        drawBakedSubtitles(ctx, width, height, cut);
+        drawBakedSubtitles(ctx, width, height, cut, time, duration, !!episode.isMvMode);
         
         await canvasSource.add(globalTime, 1 / fps);
         globalTime += 1 / fps;
@@ -303,7 +406,7 @@ export async function renderFullEpisodeMovie(
         ctx.fillRect(0, 0, width, height);
         
         drawKenBurnsFrame(ctx, img, width, height, cut.kenBurnsPreset || 'none', progress);
-        drawBakedSubtitles(ctx, width, height, cut);
+        drawBakedSubtitles(ctx, width, height, cut, progress * duration, duration, !!episode.isMvMode);
         
         await canvasSource.add(globalTime, 1 / fps);
         globalTime += 1 / fps;
@@ -317,7 +420,7 @@ export async function renderFullEpisodeMovie(
   return new Blob([output.target.buffer!], { type: 'video/mp4' });
 }
 
-export async function renderKenBurnsVideo(cut: Cut, durationSec: number = 4): Promise<string> {
+export async function renderKenBurnsVideo(cut: Cut, durationSec: number = 4, isMvMode: boolean = false): Promise<string> {
   await document.fonts.ready;
   if (!cut.imageBase64) throw new Error('Image data missing');
 
@@ -349,7 +452,7 @@ export async function renderKenBurnsVideo(cut: Cut, durationSec: number = 4): Pr
     ctx.fillStyle = 'black';
     ctx.fillRect(0, 0, width, height);
     drawKenBurnsFrame(ctx, img, width, height, cut.kenBurnsPreset || 'none', progress);
-    drawBakedSubtitles(ctx, width, height, cut);
+    drawBakedSubtitles(ctx, width, height, cut, frame / fps, durationSec, isMvMode);
     await canvasSource.add(frame / fps, 1 / fps);
   }
 

@@ -65,6 +65,7 @@ export interface Cut {
   error?: string;
   bgmMediaId?: string;
   voiceId?: string;
+  isMvMode?: boolean;
 }
 
 export interface Episode {

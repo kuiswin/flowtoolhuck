@@ -88,7 +88,7 @@ export default function App() {
       {previewingCutData && (() => {
         const activeCut = episodes.find(e => e.id === previewingCutData.epId)?.cuts.find(c => c.id === previewingCutData.cut.id) || previewingCutData.cut;
         return (
-          <MediaPreviewModal isOpen={true} cut={activeCut} episodeId={previewingCutData.epId} currentImageModel={settings.imageModel} onClose={() => setPreviewingCutData(null)} onAnimate={m => generateVideo(previewingCutData.epId, activeCut.id, m)} onBrowserAnimate={() => generateBrowserVideo(previewingCutData.epId, activeCut.id)} onUpdateCut={updates => updateCutWrapped(previewingCutData.epId, activeCut.id, updates)} onRegenerateImage={(model, prompt, neg) => {
+          <MediaPreviewModal isOpen={true} cut={activeCut} episodeId={previewingCutData.epId} currentImageModel={settings.imageModel} isMvMode={previewingCutData.epId ? episodes.find(e => e.id === previewingCutData.epId)?.isMvMode : settings.isMvMode} onClose={() => setPreviewingCutData(null)} onAnimate={m => generateVideo(previewingCutData.epId, activeCut.id, m)} onBrowserAnimate={() => generateBrowserVideo(previewingCutData.epId, activeCut.id)} onUpdateCut={updates => updateCutWrapped(previewingCutData.epId, activeCut.id, updates)} onRegenerateImage={(model, prompt, neg) => {
               const ep = episodes.find(e => e.id === previewingCutData.epId);
               generateImage({ epId: previewingCutData.epId, cutId: activeCut.id, prompt: prompt || activeCut.promptEn, negativePrompt: neg || activeCut.negativePrompt, styleKey: settings.taste, imageModel: model, eraAnalysis: ep?.eraAnalysis, forbiddenAnachronisms: ep?.forbiddenAnachronisms });
             }} 

@@ -95,45 +95,58 @@ export const StudioSidebar: React.FC<StudioSidebarProps> = ({
           />
         </div>
 
-        {/* ドラマ連番モード専用：連載レジュームセクション */}
-        {settings.productionMode === 'episodes' && (
-          <div className="flex items-center justify-between bg-white/5 p-2 rounded-xl border border-white/10 animate-in fade-in duration-300">
-            <div className="flex flex-col">
-              <span className="text-[11px] font-bold text-gray-300">連載レジューム</span>
-              <span className="text-[9px] text-gray-400">
-                {activeSeriesManifest 
-                  ? `『${activeSeriesManifest.seriesTitle}』(${activeSeriesManifest.completedEpisodeIds?.length || 0}/${activeSeriesManifest.totalEpisodes}話完了)` 
-                  : 'manifest.jsonから復元'}
-              </span>
+        {/* モード固有固定インフォエリア（高さ一定でタブ切替時のガタつきを防止） */}
+        <div className="min-h-[46px] flex flex-col justify-center">
+          {settings.productionMode === 'episodes' ? (
+            <div className="flex items-center justify-between bg-white/5 p-2 rounded-xl border border-white/10">
+              <div className="flex flex-col">
+                <span className="text-[11px] font-bold text-gray-300">連載レジューム</span>
+                <span className="text-[9px] text-gray-400">
+                  {activeSeriesManifest 
+                    ? `『${activeSeriesManifest.seriesTitle}』(${activeSeriesManifest.completedEpisodeIds?.length || 0}/${activeSeriesManifest.totalEpisodes}話完了)` 
+                    : 'manifest.jsonから復元'}
+                </span>
+              </div>
+              <button 
+                type="button" 
+                disabled={isProducing}
+                onClick={() => resumeFileRef.current?.click()}
+                className="px-2.5 py-1 text-xs bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/30 rounded-lg flex items-center gap-1 transition-colors"
+              >
+                <span className="material-symbols-outlined text-[14px]">file_open</span>
+                読込
+              </button>
             </div>
-            <button 
-              type="button" 
-              disabled={isProducing}
-              onClick={() => resumeFileRef.current?.click()}
-              className="px-2.5 py-1 text-xs bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/30 rounded-lg flex items-center gap-1 transition-colors"
-            >
-              <span className="material-symbols-outlined text-[14px]">file_open</span>
-              読込
-            </button>
-          </div>
-        )}
+          ) : settings.productionMode === 'mv' ? (
+            <div className="flex items-center justify-between bg-purple-950/40 px-3 py-1.5 rounded-xl border border-purple-500/30 text-purple-200">
+              <div className="flex items-center gap-1.5 min-w-0">
+                <span className="material-symbols-outlined text-[16px] text-purple-400 shrink-0">headphones</span>
+                <div className="flex flex-col min-w-0">
+                  <span className="text-[11px] font-bold text-purple-200 truncate">アンニュイ情景連続 MV</span>
+                  <span className="text-[9px] text-purple-300/70 truncate">音楽を際立たせる1曲12カット情景</span>
+                </div>
+              </div>
+              <span className="text-[9px] px-2 py-0.5 rounded-md bg-purple-500/20 text-purple-300 font-bold border border-purple-500/30 shrink-0">全12カット</span>
+            </div>
+          ) : (
+            <div className="flex items-center justify-between bg-pink-950/40 px-3 py-1.5 rounded-xl border border-pink-500/30 text-pink-200">
+              <div className="flex items-center gap-1.5 min-w-0">
+                <span className="material-symbols-outlined text-[16px] text-pink-400 shrink-0">palette</span>
+                <div className="flex flex-col min-w-0">
+                  <span className="text-[11px] font-bold text-pink-200 truncate">全画風マトリクス比較</span>
+                  <span className="text-[9px] text-pink-300/70 truncate">同一プロンプトで複数画風を一括検証</span>
+                </div>
+              </div>
+              <span className="text-[9px] px-2 py-0.5 rounded-md bg-pink-500/20 text-pink-300 font-bold border border-pink-400/30 shrink-0">自動比較</span>
+            </div>
+          )}
+        </div>
       </div>
 
       {/* ── スクロールエリア（設定詳細） ── */}
       <div className="flex flex-col gap-2.5 overflow-y-auto pr-1 dark-scrollbar flex-1 py-2.5">
         
-        {/* 音楽MVモード専用案内バナー */}
-        {settings.productionMode === 'mv' && (
-          <div className="flex flex-col gap-1.5 p-3 rounded-xl bg-gradient-to-r from-purple-950/60 to-indigo-950/40 border border-purple-500/40 shadow-inner animate-in fade-in duration-300">
-            <div className="flex items-center gap-1.5 text-xs font-bold text-purple-300">
-              <span className="material-symbols-outlined text-[16px] text-purple-400">headphones</span>
-              🎵 音楽MVモード（アンニュイ情景連続）
-            </div>
-            <p className="text-[10px] text-purple-200/80 leading-relaxed">
-              激しい事件や決め台詞を抑え、あてもなく歩く姿や揺れる光など、音楽を際立たせる心地よい12カットの情景連続性を演出します。
-            </p>
-          </div>
-        )}
+
 
         <ReferenceVault 
           assets={referenceAssets} 
@@ -165,26 +178,16 @@ export const StudioSidebar: React.FC<StudioSidebarProps> = ({
         <div className="flex flex-col gap-2.5">
           <FieldDropdown label="画像モデル" value={settings.imageModel} options={IMAGE_MODELS.map(m => m.label)} onChange={v => setSettings(s => ({ ...s, imageModel: v }))} disabled={isProducing} />
           
-          {settings.productionMode === 'mv' ? (
-            <div className="grid grid-cols-2 gap-2">
-              <NumberChoice label="並列数" value={settings.parallelCount} options={[1, 2, 3, 4]} onChange={v => setSettings(s => ({ ...s, parallelCount: v }))} />
-              <div className="flex flex-col gap-1 p-2 rounded-xl bg-white/5 border border-white/10 justify-center">
-                <span className="text-[10px] text-gray-400 font-bold">MV構成尺</span>
-                <span className="text-xs text-purple-300 font-black tracking-wide">1曲（全12カット）</span>
-              </div>
-            </div>
-          ) : (
-            <div className="grid grid-cols-2 gap-2">
-              <NumberChoice label="並列数" value={settings.parallelCount} options={[1, 2, 3, 4]} onChange={v => setSettings(s => ({ ...s, parallelCount: v }))} />
-              <NumberChoice 
-                label={settings.productionMode === 'style-matrix' ? '比較画風数' : '生成話数'} 
-                value={settings.episodeCount} 
-                options={settings.productionMode === 'style-matrix' ? [3, 5, 8, 11] : [1, 5, 10, 20, 50]} 
-                formatLabel={v => settings.productionMode === 'style-matrix' && v === 11 ? '11種 (全)' : `${v}${settings.productionMode === 'style-matrix' ? '種' : '話'}`}
-                onChange={v => setSettings(s => ({ ...s, episodeCount: v }))} 
-              />
-            </div>
-          )}
+          <div className="grid grid-cols-2 gap-2">
+            <NumberChoice label="並列数" value={settings.parallelCount} options={[1, 2, 3, 4]} onChange={v => setSettings(s => ({ ...s, parallelCount: v }))} />
+            <NumberChoice 
+              label={settings.productionMode === 'mv' ? '生成曲数' : (settings.productionMode === 'style-matrix' ? '比較画風数' : '生成話数')} 
+              value={settings.episodeCount} 
+              options={settings.productionMode === 'style-matrix' ? [3, 5, 8, 11] : [1, 5, 10, 20, 50]} 
+              formatLabel={v => settings.productionMode === 'style-matrix' && v === 11 ? '11種 (全)' : `${v}${settings.productionMode === 'mv' ? '曲' : (settings.productionMode === 'style-matrix' ? '種' : '話')}`}
+              onChange={v => setSettings(s => ({ ...s, episodeCount: v }))} 
+            />
+          </div>
 
           <NumberChoice 
             label={settings.productionMode === 'mv' ? '先行カット数' : '生成カット数'} 
@@ -207,22 +210,29 @@ export const StudioSidebar: React.FC<StudioSidebarProps> = ({
               🛑 緊急停止 (Abort)
             </PillButton>
           ) : (
-            <PillButton 
-              variant="solid" 
-              className={`h-11 font-black uppercase tracking-widest transition-all ${
+            <button 
+              type="button"
+              disabled={isProducing}
+              onClick={onStart}
+              className={`w-full h-11 rounded-xl flex items-center justify-center gap-2 font-black text-xs uppercase tracking-wider transition-all select-none cursor-pointer shadow-lg active:scale-[0.99] ${
                 settings.productionMode === 'mv' 
-                  ? 'bg-gradient-to-r from-purple-500 to-indigo-500 hover:from-purple-400 hover:to-indigo-400 text-white shadow-lg shadow-purple-500/25' 
-                  : 'bg-white hover:bg-gray-200 text-black'
-              }`} 
-              onClick={onStart} 
-              icon={<span className="material-symbols-outlined">{settings.productionMode === 'mv' ? 'music_note' : (settings.productionMode === 'style-matrix' ? 'palette' : 'auto_awesome')}</span>}
+                  ? 'bg-gradient-to-r from-purple-600 via-indigo-600 to-purple-600 hover:from-purple-500 hover:to-indigo-500 text-white shadow-purple-900/40 border border-purple-400/50' 
+                  : settings.productionMode === 'style-matrix' 
+                    ? 'bg-gradient-to-r from-pink-600 to-rose-600 hover:from-pink-500 hover:to-rose-500 text-white shadow-rose-900/40 border border-pink-400/50' 
+                    : 'bg-white hover:bg-gray-100 text-black shadow-white/10'
+              }`}
             >
-              {settings.productionMode === 'mv' 
-                ? '🎵 音楽MVを生成' 
-                : (settings.productionMode === 'style-matrix' 
-                    ? '🎨 画風比較を開始' 
-                    : (activeSeriesManifest ? `⏩ 第 ${(activeSeriesManifest.completedEpisodeIds?.length || 0) + 1} 話から再開` : '✨ ドラマ生成開始'))}
-            </PillButton>
+              <span className="material-symbols-outlined text-[18px]">
+                {settings.productionMode === 'mv' ? 'music_note' : (settings.productionMode === 'style-matrix' ? 'palette' : 'auto_awesome')}
+              </span>
+              <span>
+                {settings.productionMode === 'mv' 
+                  ? `🎵 音楽MVを生成 (${settings.episodeCount || 1}曲 / 各12カット)` 
+                  : (settings.productionMode === 'style-matrix' 
+                      ? '🎨 画風比較を開始' 
+                      : (activeSeriesManifest ? `⏩ 第 ${(activeSeriesManifest.completedEpisodeIds?.length || 0) + 1} 話から再開` : '✨ ドラマ生成開始'))}
+              </span>
+            </button>
           )}
           <PillButton variant="outline" className="text-red-400 h-9" onClick={onClear} icon={<span className="material-symbols-outlined">delete</span>}>全消去</PillButton>
         </div>

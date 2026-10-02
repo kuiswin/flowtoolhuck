@@ -6,6 +6,7 @@ import { VIDEO_MODELS_REGISTRY, resolveVideoModel } from '../config/studioDefini
 interface CutCardProps {
   cut: Cut;
   episodeId: number;
+  isMvMode?: boolean;
   onAnimateRequest: (epId: number, cutId: number, modelType: VideoModelType) => void;
   onPreviewCut: (epId: number, cutId: number) => void;
   onUpdateSelection: (epId: number, cutId: number, isSelected: boolean) => void;
@@ -14,7 +15,7 @@ interface CutCardProps {
 }
 
 export const CutCard: React.FC<CutCardProps> = ({ 
-  cut, episodeId, onAnimateRequest, onPreviewCut, onUpdateSelection, onUpdateModel, onRetry 
+  cut, episodeId, isMvMode, onAnimateRequest, onPreviewCut, onUpdateSelection, onUpdateModel, onRetry 
 }) => {
   const imageSrc = cut.imageBase64 ? `data:image/png;base64,${cut.imageBase64}` : null;
   const videoSrc = cut.videoBase64 ? `data:video/mp4;base64,${cut.videoBase64}` : null;
@@ -148,9 +149,30 @@ export const CutCard: React.FC<CutCardProps> = ({
       </div>
 
       <div className="p-2 flex flex-col gap-1.5 bg-gradient-to-b from-[#1a1a1a] to-[#141414]">
-        <p className="text-[10px] text-white/80 font-medium line-clamp-2 leading-snug h-[28px]">
-          {cut.narrationJp || "脚本策定中..."}
-        </p>
+        {isMvMode ? (
+          <div className="text-[10px] text-white/80 font-medium line-clamp-2 leading-snug h-[28px] overflow-hidden flex flex-wrap gap-[1px]">
+            {(cut.narrationJp || "脚本策定中...").split('').map((char, i) => (
+              <span 
+                key={i} 
+                className="inline-block"
+                style={{
+                  transform: `rotate(${((i * 13) % 40) - 20}deg)`
+                }}
+              >
+                <span
+                  className="inline-block animate-kinetic-zoom-in opacity-0"
+                  style={{ animationDelay: `${i * 0.05}s` }}
+                >
+                  {char}
+                </span>
+              </span>
+            ))}
+          </div>
+        ) : (
+          <p className="text-[10px] text-white/80 font-medium line-clamp-2 leading-snug h-[28px]">
+            {cut.narrationJp || "脚本策定中..."}
+          </p>
+        )}
         
         <div className="flex items-center justify-between mt-auto pt-1 border-t border-white/5">
            <span className={`text-[7px] px-1 py-0.5 rounded-sm font-bold uppercase tracking-tighter ${cut.videoModelUsed ? 'bg-white/10 text-white/40' : 'text-white/10'}`}>

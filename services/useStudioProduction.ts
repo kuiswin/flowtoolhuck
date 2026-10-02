@@ -9,7 +9,8 @@ import {
   TASTES,
   resolveImageModel,
   resolveVideoModel,
-  resolveCameraWork
+  resolveCameraWork,
+  resolveRecommendedTelopStaging
 } from '../constants';
 import { safeJsonParse, callWithRetry, formatErrorMessage, createDefaultCut } from './utils';
 import { saveStory, getAllReferenceAssets, saveReferenceAsset } from './db';
@@ -20,7 +21,7 @@ import {
   buildImagePromptAndNegative, 
   buildCharacterScreeningPrompt, 
   buildGrandDesignPrompt, 
-  buildNextEpisodePlanPrompt,
+  buildNextEpisodePlanPrompt, 
   buildScriptPrompt,
   extractHighlights,
   checkIsHistorical,
@@ -1005,6 +1006,44 @@ Output JSON ONLY:
     }
   };
 
+  const handleBulkRerollTelop = useCallback((epId: number) => {
+    const targetEp = episodesRef.current.find(e => e.id === epId);
+    if (!targetEp) return;
+
+    let prevStaging: any = undefined;
+    const isMv = !!targetEp.isMvMode || targetEp.titleJp.startsWith('🎵');
+    const isHist = checkIsHistorical(targetEp.era, targetEp.theme);
+
+    const updatedCuts = targetEp.cuts.map((c) => {
+      const staging = resolveRecommendedTelopStaging(c.id, isMv, isHist, prevStaging);
+      prevStaging = {
+        transition: staging.transition,
+        position: staging.position,
+        style: staging.style
+      };
+
+      const rawText = c.telop?.fullText || c.narrationJp || '';
+      const existingHighlights = c.telop?.highlights || [];
+      const highlights = existingHighlights.length > 0 ? existingHighlights : extractHighlights(rawText);
+
+      return {
+        ...c,
+        telop: {
+          fullText: rawText,
+          highlights,
+          style: staging.style,
+          transition: staging.transition,
+          position: staging.position,
+          directorNote: staging.directorNote
+        }
+      };
+    });
+
+    setEpisodes(prev => prev.map(e => e.id === epId ? { ...e, cuts: updatedCuts } : e));
+    episodesRef.current = episodesRef.current.map(e => e.id === epId ? { ...e, cuts: updatedCuts } : e);
+    addLog(`🎲 第 ${epId} 話: 全12カットのテロップ演出（動き・配置）を一括再抽選しました！（画像は保持）`, 'success');
+  }, [addLog]);
+
   const clearEpisodes = useCallback(() => {
     setEpisodes([]);
     episodesRef.current = [];
@@ -1013,5 +1052,5 @@ Output JSON ONLY:
     addLog('🧹 制作データを全消去しました。', 'info');
   }, [addLog]);
 
-  return { episodes, isProducing, startProduction, abortProduction, resumeSeries, activeSeriesManifest, handleGenerateRemaining, handleBulkVideo, handleBulkBrowserVideo, handleExportFullMovie, generateImage, generateVideo, generateBrowserVideo, updateCut, clearEpisodes };
+  return { episodes, isProducing, startProduction, abortProduction, resumeSeries, activeSeriesManifest, handleGenerateRemaining, handleBulkVideo, handleBulkBrowserVideo, handleExportFullMovie, handleBulkRerollTelop, generateImage, generateVideo, generateBrowserVideo, updateCut, clearEpisodes };
 }

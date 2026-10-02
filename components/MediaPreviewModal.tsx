@@ -336,13 +336,14 @@ interface MediaPreviewModalProps {
     onAnimate: (m: VideoModelType) => void;
     onBrowserAnimate: () => void;
     onUpdateCut: (updates: Partial<Cut>) => void;
+    onBulkRerollTelop?: (epId: number) => void;
     onRegenerateImage: (modelLabel: string, customPrompt?: string, customNeg?: string) => void;
 }
 
 export const MediaPreviewModal: React.FC<MediaPreviewModalProps> = ({
     isOpen, cut, episodeId, currentImageModel, isMvMode,
     hasPrev, hasNext, onPrev, onNext, currentIndex, totalCuts,
-    onClose, onAnimate, onBrowserAnimate, onUpdateCut, onRegenerateImage
+    onClose, onAnimate, onBrowserAnimate, onUpdateCut, onBulkRerollTelop, onRegenerateImage
 }) => {
     const videoRef = useRef<HTMLVideoElement>(null);
     const [aiWish, setAiWish] = useState('');
@@ -773,7 +774,38 @@ export const MediaPreviewModal: React.FC<MediaPreviewModalProps> = ({
                                 </div>
                             </div>
 
-                            <SectionLabel>テロップ設定</SectionLabel>
+                            <div className="flex items-center justify-between">
+                                <SectionLabel>テロップ設定</SectionLabel>
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        const rawText = cut.telop?.fullText || cut.narrationJp || '';
+                                        const highlights = (cut.telop?.highlights && cut.telop.highlights.length > 0)
+                                            ? cut.telop.highlights 
+                                            : extractHighlights(rawText);
+                                        const staging = resolveRecommendedTelopStaging(cut.id, isMvMode, false, {
+                                            transition: cut.telop?.transition,
+                                            position: cut.telop?.position,
+                                            style: cut.telop?.style
+                                        });
+                                        onUpdateCut({
+                                            telop: {
+                                                fullText: rawText,
+                                                highlights,
+                                                style: staging.style,
+                                                transition: staging.transition,
+                                                position: staging.position,
+                                                directorNote: staging.directorNote
+                                            }
+                                        });
+                                    }}
+                                    className="px-2 py-0.5 rounded-md text-[10px] font-black bg-purple-500/20 hover:bg-purple-500/35 text-purple-300 border border-purple-500/40 flex items-center gap-1 transition-all"
+                                    title="画像は変更せず、このカットのテロップ演出（動き・配置・スタイル）だけを再抽選します"
+                                >
+                                    <span className="material-symbols-outlined text-[13px]">casino</span>
+                                    演出リロール
+                                </button>
+                            </div>
                             <div className="bg-white/5 p-3.5 rounded-xl border border-white/5 flex flex-col gap-3">
                                 <ToggleSwitch label="字幕を表示する" checked={showTelop} onChange={setShowTelop} />
                                 
@@ -1087,6 +1119,50 @@ export const MediaPreviewModal: React.FC<MediaPreviewModalProps> = ({
                                                     <span className="text-[9px] text-white/30 italic">なし（全体均一表示）</span>
                                                 )}
                                             </div>
+                                        </div>
+
+                                        {/* 🎲 テロップ演出リロール（画像そのまま） */}
+                                        <div className="flex gap-2 pt-1 border-t border-white/5">
+                                            <button
+                                                type="button"
+                                                onClick={() => {
+                                                    const rawText = cut.telop?.fullText || cut.narrationJp || '';
+                                                    const highlights = (cut.telop?.highlights && cut.telop.highlights.length > 0)
+                                                        ? cut.telop.highlights 
+                                                        : extractHighlights(rawText);
+                                                    const staging = resolveRecommendedTelopStaging(cut.id, isMvMode, false, {
+                                                        transition: cut.telop?.transition,
+                                                        position: cut.telop?.position,
+                                                        style: cut.telop?.style
+                                                    });
+                                                    onUpdateCut({
+                                                        telop: {
+                                                            fullText: rawText,
+                                                            highlights,
+                                                            style: staging.style,
+                                                            transition: staging.transition,
+                                                            position: staging.position,
+                                                            directorNote: staging.directorNote
+                                                        }
+                                                    });
+                                                }}
+                                                className="flex-1 py-1.5 px-2.5 rounded-lg text-[10px] font-black bg-purple-500/25 hover:bg-purple-500/40 text-purple-200 border border-purple-500/50 flex items-center justify-center gap-1 transition-all shadow-md shadow-purple-950/20"
+                                                title="画像は変更せず、このカットのテロップ演出（動き・配置・スタイル）だけを再抽選します"
+                                            >
+                                                <span className="material-symbols-outlined text-[13px]">casino</span>
+                                                このカットの演出を再抽選
+                                            </button>
+                                            {onBulkRerollTelop && (
+                                                <button
+                                                    type="button"
+                                                    onClick={() => onBulkRerollTelop(episodeId)}
+                                                    className="py-1.5 px-3 rounded-lg text-[10px] font-black bg-amber-500/20 hover:bg-amber-500/35 text-amber-300 border border-amber-500/40 flex items-center justify-center gap-1 transition-all"
+                                                    title="全12カットのテロップ演出を一気に再抽選（画像は保持）"
+                                                >
+                                                    <span className="material-symbols-outlined text-[13px]">auto_mode</span>
+                                                    全カット一括リロール
+                                                </button>
+                                            )}
                                         </div>
                                     </div>
                                 );

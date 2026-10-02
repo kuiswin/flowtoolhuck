@@ -86,11 +86,12 @@ interface EpisodeSectionProps {
   onAnimateRequest: (epId: number, cutId: number, modelType: VideoModelType) => void;
   onPreviewCut: (epId: number, cut: Cut) => void;
   onUpdateCut: (epId: number, cutId: number, updates: Partial<Cut>) => void;
+  onBulkRerollTelop?: (epId: number) => void;
   onRetry?: (type: 'image' | 'video', epId: number, cutId: number) => void;
 }
 
 export const EpisodeSection: React.FC<EpisodeSectionProps> = ({
-  ep, onGenerateRemaining, onBulkVideo, onBulkBrowserVideo, onExportFullMovie, onDownloadZip, onAnimateRequest, onPreviewCut, onUpdateCut, onRetry
+  ep, onGenerateRemaining, onBulkVideo, onBulkBrowserVideo, onExportFullMovie, onDownloadZip, onAnimateRequest, onPreviewCut, onUpdateCut, onBulkRerollTelop, onRetry
 }) => {
   const isPending = !ep.isGenerating && !ep.isDone;
 
@@ -110,6 +111,18 @@ export const EpisodeSection: React.FC<EpisodeSectionProps> = ({
           </div>
           
           <div className="flex items-center gap-3 overflow-x-auto no-scrollbar">
+            {onBulkRerollTelop && (
+              <PillButton 
+                variant="outline" 
+                className="h-10 px-4 border-purple-500/40 text-purple-400 hover:text-purple-200 hover:border-purple-400 hover:bg-purple-950/30 font-black whitespace-nowrap shrink-0 transition-colors" 
+                disabled={ep.isGenerating || isPending} 
+                onClick={() => onBulkRerollTelop(ep.id)} 
+                icon={<span className="material-symbols-outlined text-purple-400">casino</span>}
+                title="画像は一切再生成せず、12カットすべてのテロップ演出（動き・配置・スタイル）だけを無限ランダムエンジンで一括再抽選します"
+              >
+                🎲 テロップ一括リロール
+              </PillButton>
+            )}
             <PillButton 
               variant="outline" 
               className="h-10 px-4 border-amber-500/30 text-amber-500 font-bold whitespace-nowrap shrink-0" 

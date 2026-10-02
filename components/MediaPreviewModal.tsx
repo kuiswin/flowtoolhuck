@@ -549,7 +549,7 @@ export const MediaPreviewModal: React.FC<MediaPreviewModalProps> = ({
         { color: '#BD00FF', glow: '0 0 16px rgba(189, 0, 255, 0.95), 0 0 28px rgba(160, 0, 240, 0.5), 0 2px 5px rgba(0,0,0,0.95)', border: 'border-purple-400/50', shadow: 'shadow-purple-500/25' }
     ];
 
-    const getNeonTheme = (text: string, lineIdx: number, cutId: number, customColor?: string) => {
+    const getNeonTheme = (word: string, highlightIdx: number, cutId: number, customColor?: string) => {
         if (customColor && customColor !== '#FFE600') {
             return {
                 color: customColor,
@@ -559,10 +559,11 @@ export const MediaPreviewModal: React.FC<MediaPreviewModalProps> = ({
             };
         }
         let hash = 0;
-        for (let i = 0; i < text.length; i++) {
-            hash = (hash << 5) - hash + text.charCodeAt(i);
+        const cleanWord = (word || '').trim();
+        for (let i = 0; i < cleanWord.length; i++) {
+            hash = (hash << 5) - hash + cleanWord.charCodeAt(i);
         }
-        const idx = Math.abs(hash + lineIdx * 3 + cutId * 5) % NEON_PALETTE.length;
+        const idx = Math.abs(hash + highlightIdx * 3 + cutId * 5) % NEON_PALETTE.length;
         return NEON_PALETTE[idx];
     };
 
@@ -650,7 +651,7 @@ export const MediaPreviewModal: React.FC<MediaPreviewModalProps> = ({
                                     }`}>
                                         {line.segments.map((seg, sIdx) => {
                                             const segNeon = seg.isHighlight 
-                                                ? getNeonTheme(seg.text, wIdx + sIdx, cut.id || 1, seg.color)
+                                                ? getNeonTheme(seg.text, sIdx, cut.id || 1, seg.color)
                                                 : null;
 
                                             return (
@@ -739,7 +740,7 @@ export const MediaPreviewModal: React.FC<MediaPreviewModalProps> = ({
                                     }`}>
                                         {line.segments.map((seg, sIdx) => {
                                             const segNeon = seg.isHighlight 
-                                                ? getNeonTheme(seg.text, wIdx + sIdx, cut.id || 1, seg.color)
+                                                ? getNeonTheme(seg.text, sIdx, cut.id || 1, seg.color)
                                                 : null;
 
                                             return (
@@ -771,13 +772,27 @@ export const MediaPreviewModal: React.FC<MediaPreviewModalProps> = ({
         }
 
         // プレートスタイル（cinema-subtle / traditional-sumi）
-        const highlightIndices = new Map<number, { color: string; sizeScale: number; word?: string }>();
-        highlights.forEach(h => {
+        // 各ハイライト単語に対して単語単位で一意のテーマを確定（単語内の全文字で色が完全に一致することを保証）
+        const wordThemeMap = new Map<string, { color: string; glow: string; border: string; shadow: string }>();
+        highlights.forEach((h, hIdx) => {
             if (!h.word) return;
+            const theme = getNeonTheme(h.word, hIdx, cut.id || 1, h.color);
+            wordThemeMap.set(h.word, theme);
+        });
+
+        const highlightIndices = new Map<number, { color: string; sizeScale: number; word: string; glow: string }>();
+        highlights.forEach((h, hIdx) => {
+            if (!h.word) return;
+            const theme = wordThemeMap.get(h.word) || NEON_PALETTE[0];
             let pos = 0;
             while ((pos = text.indexOf(h.word, pos)) !== -1) {
                 for (let k = 0; k < h.word.length; k++) {
-                    highlightIndices.set(pos + k, h);
+                    highlightIndices.set(pos + k, {
+                        word: h.word,
+                        color: theme.color,
+                        glow: theme.glow,
+                        sizeScale: h.sizeScale || 1.15
+                    });
                 }
                 pos += 1;
             }
@@ -803,9 +818,9 @@ export const MediaPreviewModal: React.FC<MediaPreviewModalProps> = ({
                         const isPunctuation = /[。、！？…]/.test(char);
                         const highlight = highlightIndices.get(i);
                         
-                        const neonTheme = highlight ? getNeonTheme(highlight.word || char, i, cut.id || 1, highlight.color) : null;
-                        const color = highlight ? (neonTheme?.color || '#FFE600') : '#FFFFFF';
-                        const scale = (isKanji ? 1.05 : 1.0) * (highlight ? (highlight.sizeScale || 1.15) : 1.0);
+                        const color = highlight ? highlight.color : '#FFFFFF';
+                        const glow = highlight ? highlight.glow : '0 2px 5px rgba(0,0,0,0.95), 0 0 3px rgba(0,0,0,0.9)';
+                        const scale = (isKanji ? 1.05 : 1.0) * (highlight ? highlight.sizeScale : 1.0);
 
                         return (
                             <span 
@@ -816,9 +831,7 @@ export const MediaPreviewModal: React.FC<MediaPreviewModalProps> = ({
                                     fontSize: `${scale * 1.15}rem`, 
                                     display: isPunctuation ? 'inline' : 'inline-block',
                                     margin: isPunctuation ? '0 1px 0 -1px' : '0 0.5px',
-                                    textShadow: highlight 
-                                      ? (neonTheme?.glow || '0 0 12px rgba(255, 230, 0, 0.85), 0 2px 5px rgba(0,0,0,0.95)') 
-                                      : '0 2px 5px rgba(0,0,0,0.95), 0 0 3px rgba(0,0,0,0.9)',
+                                    textShadow: glow,
                                     fontFamily: '"Zen Kaku Gothic New", "Montserrat", "Noto Sans JP", sans-serif'
                                 }}
                             >

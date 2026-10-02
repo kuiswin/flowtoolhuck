@@ -204,6 +204,30 @@ export function buildFinalCinematicPromptAndNegative(
 
   const dynamicForbidden = forbiddenKeywordsEn || (forbiddenAnachronisms || []).join(', ');
 
+  // 画風に必須のキーワード（例: neon, pop, pastel等）がAIの禁止ワードに誤混入した場合の衝突自動除外フィルター
+  const styleKeywords = `${styleKey} ${rawStyle}`.toLowerCase();
+  const sanitizedForbidden = dynamicForbidden
+    ? dynamicForbidden
+        .split(',')
+        .map(w => w.trim())
+        .filter(w => {
+          if (!w) return false;
+          const lower = w.toLowerCase();
+          const words = lower.split(/\s+/);
+          // 画風の定義に含まれる単語（neon, pop, pastel等）がネガティブに含まれていたら除去
+          return !words.some(word => word.length > 2 && styleKeywords.includes(word));
+        })
+        .join(', ')
+    : '';
+
+  // 白黒スタイル（「🖋️ 白黒劇画」等）が明示的に選ばれている場合以外は、白黒・モノクロ・スクリーントーン化をネガティブで徹底排除
+  const isExplicitMonochrome = (styleKey + ' ' + rawStyle).toLowerCase().includes('monochrome') || 
+                               (styleKey + ' ' + rawStyle).toLowerCase().includes('白黒') || 
+                               (styleKey + ' ' + rawStyle).toLowerCase().includes('black and white');
+  const antiMonochromeNegative = !isExplicitMonochrome && !settings.isMangaMode
+    ? 'monochrome, grayscale, black and white, desaturated, colorless, screentone, manga panels'
+    : '';
+
   // MVモード専用アンチネガティブ（叫び、劇的な怒り、過剰アクション、および非サビ時のカメラ目線の徹底排除）
   const mvAntiCameraLook = (isMv && !isAllowedEyeContact) ? `, ${MV_ANTI_CAMERA_LOOK_NEGATIVE}` : '';
 
@@ -214,8 +238,9 @@ export function buildFinalCinematicPromptAndNegative(
   const negativeLayers: string[] = [
     BASELINE_NEGATIVE_TOKENS.anatomicalIntegrity,
     BASELINE_NEGATIVE_TOKENS.antiReferenceStiffness,
+    antiMonochromeNegative,
     mvAntiDramaticNegative,
-    dynamicForbidden,
+    sanitizedForbidden,
     illustrationNegative,
     BASELINE_NEGATIVE_TOKENS.antiFrameAndBorder,
     negativePrompt || '', // 直前構図ネガティブ（最重要）

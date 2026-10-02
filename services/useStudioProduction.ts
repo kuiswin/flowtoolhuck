@@ -498,7 +498,7 @@ Output JSON ONLY:
             summary: `${settings.theme}の世界観で描かれるドラマ`
           });
 
-          const scriptPrompt = buildScriptPrompt(1, generatedPlan as any, settings.country, settings.theme, settings.era, settings.isMangaMode, settings.isMvMode);
+          const scriptPrompt = buildScriptPrompt(1, generatedPlan as any, settings.country, settings.theme, settings.era, settings.isMangaMode, settings.isMvMode, settings.taste);
           const scriptRes = await callWithRetry<any>(
             () => Flow.generate.text(scriptPrompt),
             (attempt, max, delay) => addLog(`Retrying Script Plot (attempt ${attempt}/${max}) after ${delay} ms...`, 'warning'),
@@ -608,13 +608,7 @@ Output JSON ONLY:
           };
 
           const scriptPrompt = buildScriptPrompt(
-            epIndex, 
-            mvPlan, 
-            settings.country, 
-            settings.theme, 
-            settings.era, 
-            false, 
-            true // isMvMode = true
+            epIndex, mvPlan, settings.country, settings.theme, settings.era, false, true, settings.taste
           );
 
           let scriptRes;
@@ -850,7 +844,7 @@ Output JSON ONLY:
           addLog(`📖 【第${epId}話】「${currentPlan.titleJp}」の脚本・時代考証をAIに執筆依頼中...`, 'process');
           updateEpisode(epId, { isGenerating: true });
 
-          const scriptPrompt = buildScriptPrompt(epId, currentPlan, settings.country, settings.theme, settings.era, settings.isMangaMode, settings.isMvMode);
+          const scriptPrompt = buildScriptPrompt(epId, currentPlan, settings.country, settings.theme, settings.era, settings.isMangaMode, settings.isMvMode, settings.taste);
           const scriptRes = await callWithRetry<any>(
             () => Flow.generate.text(scriptPrompt),
             (attempt, max, delay) => addLog(`Retrying Script Plot (attempt ${attempt}/${max}) after ${delay} ms...`, 'warning'),

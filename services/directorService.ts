@@ -388,10 +388,11 @@ export function buildScriptPrompt(
   theme: string, 
   era?: string, 
   isMangaMode?: boolean,
-  isMvMode?: boolean
+  isMvMode?: boolean,
+  taste?: string
 ): string {
   const worldSetting = era && era !== theme ? `${theme} (時代: ${era}, 地域: ${country})` : `${theme} (${country})`;
-  
+  const rawStyle = taste ? (TASTES[taste] || taste) : '';
   const isHistorical = checkIsHistorical(era, theme);
   
   const directorRole = isMvMode
@@ -431,16 +432,27 @@ Each cut's narrationJp must be 15-28 characters, punchy, lyrical, and catchy.
 For EACH cut, select 1 to 2 key emotional words (which MUST be EXACTLY present in narrationJp, e.g. "夜", "境界線", "息", "朝焼け", "名前") for the highlights array.`
     : "";
 
+  const visualStyleMandate = taste
+    ? `VISUAL ART STYLE INTEGRATION:
+Visual Style: "${taste}"
+Style Attributes: "${rawStyle}"
+MANDATORY VISUAL RULES:
+- Ensure all cut visual descriptions ("basicPlot") harmonize naturally with this art style, maintaining rich atmosphere and color.
+- NEVER describe scenes as monochrome, black and white, or sketch unless the art style itself is explicitly monochrome!
+- NEVER include elements of this art style (e.g., neon, pop, pastel, anime, cyber) in forbidden lists! Forbidden lists are ONLY for disruptive extremes (e.g. violent gore, screaming rage).`
+    : "";
+
   const contextTitle = isMvMode ? "Music Video Sequence" : isMangaMode ? "Comic Episode" : isHistorical ? "Historical Drama Episode" : "Drama Episode";
 
   return `You are a ${directorRole} and visual researcher.
 Create a 12-cut ${contextTitle} for Episode ${epId} ("${currentPlan.titleJp}").
 World Theme & Setting: "${worldSetting}".
+${visualStyleMandate}
 
 ${isMvMode ? mvInstructions : mangaInstructions}
 
 ${isMvMode ? 'ATMOSPHERIC & VISUAL HARMONY:' : (isHistorical ? 'STRICT HISTORICAL ACCURACY:' : 'AUTHENTIC SETTING & CULTURAL ACCURACY:')}
-Dynamically analyze the period, setting, and atmosphere implied by "${worldSetting}". Determine authentic aesthetic attire and identify elements that would break the mood and must NEVER appear.
+Dynamically analyze the period, setting, and atmosphere implied by "${worldSetting}". Determine authentic aesthetic attire and identify elements that would break the mood and must NEVER appear (NEVER forbid elements of the chosen Visual Art Style).
 
 CRITICAL SUBTITLE HIGHLIGHTS:
 For EACH cut, select 1 to 2 key terms (which MUST BE EXACTLY present in narrationJp) for the "highlights" array to be highlighted in gold text.
@@ -459,7 +471,7 @@ Output ONLY valid JSON matching this exact structure:
   "cuts": [
     { 
       "id": 1, 
-      "basicPlot": "Cinematic visual description of the cut in English", 
+      "basicPlot": "Cinematic visual description of the cut in English matching the art style", 
       "narrationJp": "${isMvMode ? '楽曲の歌詞・リリック（1曲の歌として繋がるエモい歌詞20文字前後）' : '重厚なナレーション（日本語）'}",
       "highlights": ["ナレーション内の重要語1", "ナレーション内の重要語2"]
     }
@@ -580,6 +592,7 @@ ${characterGuidance}
 ${previousContrastMandate}
 
 Avoid scale errors. If wide shot, character MUST be small and background realistic. If close-up, show head/shoulders with natural proportions.
+COLOR & MEDIUM FIDELITY: Maintain the authentic color grading, vibrant lighting, and visual medium of "${rawStyle}". Do NOT describe scenes as monochrome, grayscale, pencil sketch, or manga screentones unless the chosen style is explicitly monochrome.
 ${mangaExtraDirecting}
 ${mvExtraDirecting}
 

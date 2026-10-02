@@ -793,7 +793,7 @@ export const MediaPreviewModal: React.FC<MediaPreviewModalProps> = ({
         return (
             <div 
                 key={`${transKey}-${cut.telop?.style}-${posKey}-${text}`}
-                className={`absolute ${platePosClass} left-0 w-full px-4 flex flex-col pointer-events-none z-40 ${motionClass}`}
+                className={`absolute ${platePosClass} left-0 w-full px-4 flex flex-col pointer-events-none z-40 ${defaultMotionClass}`}
                 style={{ animationFillMode: 'both' }}
             >
                 {/* テロップ背景プレート（シネマ風グラスモーフィズム） */}
@@ -803,7 +803,8 @@ export const MediaPreviewModal: React.FC<MediaPreviewModalProps> = ({
                         const isPunctuation = /[。、！？…]/.test(char);
                         const highlight = highlightIndices.get(i);
                         
-                        const color = highlight ? (highlight.color || '#FFE600') : '#FFFFFF';
+                        const neonTheme = highlight ? getNeonTheme(highlight.word || char, i, cut.id || 1, highlight.color) : null;
+                        const color = highlight ? (neonTheme?.color || '#FFE600') : '#FFFFFF';
                         const scale = (isKanji ? 1.05 : 1.0) * (highlight ? (highlight.sizeScale || 1.15) : 1.0);
 
                         return (
@@ -816,7 +817,7 @@ export const MediaPreviewModal: React.FC<MediaPreviewModalProps> = ({
                                     display: isPunctuation ? 'inline' : 'inline-block',
                                     margin: isPunctuation ? '0 1px 0 -1px' : '0 0.5px',
                                     textShadow: highlight 
-                                      ? '0 0 12px rgba(255, 230, 0, 0.85), 0 2px 5px rgba(0,0,0,0.95)' 
+                                      ? (neonTheme?.glow || '0 0 12px rgba(255, 230, 0, 0.85), 0 2px 5px rgba(0,0,0,0.95)') 
                                       : '0 2px 5px rgba(0,0,0,0.95), 0 0 3px rgba(0,0,0,0.9)',
                                     fontFamily: '"Zen Kaku Gothic New", "Montserrat", "Noto Sans JP", sans-serif'
                                 }}

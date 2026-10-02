@@ -16685,20 +16685,20 @@ const Hw = `
     return /* @__PURE__ */ T.jsx(
       "div",
       {
-        className: `absolute ${Ve} left-0 w-full px-4 flex flex-col pointer-events-none z-40 ${motionClass}`,
+        className: `absolute ${Ve} left-0 w-full px-4 flex flex-col pointer-events-none z-40 ${me}`,
         style: { animationFillMode: "both" },
         children: /* @__PURE__ */ T.jsx("div", { className: "bg-black/70 backdrop-blur-md rounded-2xl px-5 py-2.5 flex flex-wrap justify-center items-baseline max-w-[92%] shadow-xl shadow-black/40 border border-white/15 leading-snug", children: W.split("").map((je, x) => {
-          const oe = /[\u4e00-\u9faf]/.test(je), Z = /[。、！？…]/.test(je), M = Me.get(x), I = M ? M.color || "#FFE600" : "#FFFFFF", U = (oe ? 1.05 : 1) * (M ? M.sizeScale || 1.15 : 1);
+          const oe = /[\u4e00-\u9faf]/.test(je), Z = /[。、！？…]/.test(je), M = Me.get(x), I = M ? S(M.word || je, x, t.id || 1, M.color) : null, U = M ? I?.color || "#FFE600" : "#FFFFFF", ce = (oe ? 1.05 : 1) * (M ? M.sizeScale || 1.15 : 1);
           return /* @__PURE__ */ T.jsx(
             "span",
             {
               className: "font-[900] tracking-normal select-none",
               style: {
-                color: I,
-                fontSize: `${U * 1.15}rem`,
+                color: U,
+                fontSize: `${ce * 1.15}rem`,
                 display: Z ? "inline" : "inline-block",
                 margin: Z ? "0 1px 0 -1px" : "0 0.5px",
-                textShadow: M ? "0 0 12px rgba(255, 230, 0, 0.85), 0 2px 5px rgba(0,0,0,0.95)" : "0 2px 5px rgba(0,0,0,0.95), 0 0 3px rgba(0,0,0,0.9)",
+                textShadow: M ? I?.glow || "0 0 12px rgba(255, 230, 0, 0.85), 0 2px 5px rgba(0,0,0,0.95)" : "0 2px 5px rgba(0,0,0,0.95), 0 0 3px rgba(0,0,0,0.9)",
                 fontFamily: '"Zen Kaku Gothic New", "Montserrat", "Noto Sans JP", sans-serif'
               },
               children: je

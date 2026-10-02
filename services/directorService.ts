@@ -169,16 +169,24 @@ Direct each cut with striking manga visual dynamics (epic splash double spreads,
     : "";
 
   const mvInstructions = isMvMode
-    ? `MUSIC VIDEO (MV) CONTINUITY DIRECTING:
-1. Seamless Environmental Continuity & Ennui Mood:
-This is a music video sequence where the music is the hero and the visual is an ambient, aesthetic backdrop.
-ABSOLUTELY NO dramatic conflict, no battles, no shouting, no plot twists, no theatrical drama.
-Maintain a steady, melancholic, nostalgic, or calm ennui atmosphere (e.g. strolling through the field, gentle breeze, quiet city streets, subtle everyday micro-moments).
-The 12 cuts must represent a seamless, cohesive flow in the SAME continuous world and atmosphere.
-2. Poetic & Lyrical Narration:
-narrationJp MUST be short, poetic lyrics or contemplative phrases (approx 15-30 Japanese characters per cut), NOT long dramatic exposition or character lines.
+    ? `MUSIC VIDEO (MV) CONTINUITY & LYRIC DIRECTING:
+1. Seamless Visual Flow in the Same World:
+This is an authentic music video sequence where the visual is a cinematic aesthetic backdrop to a song.
+Maintain a steady, atmospheric, nostalgic, or melancholic mood (e.g. city nightlights, walking through wind-swept fields, neon dusk, subway platform, rain on windows).
+The 12 cuts must form a seamless, cohesive visual universe.
+
+2. AUTHENTIC SONG LYRICS (REAL J-POP / VOCALOID / INDIE ROCK LYRICS):
+CRITICAL: Do NOT write third-person scenery narration (e.g. "ふと立ち止まり振り返れば...").
+Instead, narrationJp MUST be REAL EMOTIONAL SONG LYRICS (楽曲の歌詞そのもの) as if sung by Ado, Yorushika, ZUTOMAYO, YOASOBI, or Vaundy!
+The 12 cuts MUST tell a musical story like a single complete hit song:
+- Cuts 1-3 (Verse A): Quiet restlessness, unvoiced emotions, solitary late night. (e.g., "言えない言葉ばかりが部屋に積もってく", "掠れた声のまま夜を数えてた")
+- Cuts 4-6 (Verse B): Rising tempo, running through the dusk, heartbeats accelerating. (e.g., "曖昧な境界線を塗り潰してゆく", "滲んだ街灯の先へ走り出す")
+- Cuts 7-9 (Chorus / Drop): Emotional climax, powerful punchy lyrical hooks! (e.g., "叫べない夜の向こう側まで連れてって", "息を切らした僕らの居場所はここにある")
+- Cuts 10-12 (Outro / Epilogue): Lingering resonance, quiet dawn, resolved heartbeat. (e.g., "朝焼けが全てを染め直す前に", "風が止んだ空白に君の名前を呼ぶ")
+Each cut's narrationJp must be 15-28 characters, punchy, lyrical, and catchy.
+
 3. Aesthetic Subtitle Highlights:
-For EACH cut, select 1 to 2 tender poetic words (e.g. "風", "夕暮れ", "記憶", "微熱", "青空") present in narrationJp for the highlights array.`
+For EACH cut, select 1 to 2 key emotional words (which MUST be EXACTLY present in narrationJp, e.g. "夜", "境界線", "息", "朝焼け", "名前") for the highlights array.`
     : "";
 
   const contextTitle = isMvMode ? "Music Video Sequence" : "Drama Episode";
@@ -210,7 +218,7 @@ Output ONLY valid JSON matching this exact structure:
     { 
       "id": 1, 
       "basicPlot": "Cinematic visual description of the cut in English", 
-      "narrationJp": "${isMvMode ? '短く詩的な歌詞・ポエム（日本語20〜30文字）' : '重厚なナレーション（日本語）'}",
+      "narrationJp": "${isMvMode ? '楽曲の歌詞・リリック（1曲の歌として繋がるエモい歌詞20文字前後）' : '重厚なナレーション（日本語）'}",
       "highlights": ["ナレーション内の重要語1", "ナレーション内の重要語2"]
     }
   ]

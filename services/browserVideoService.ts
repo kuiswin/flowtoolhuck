@@ -65,7 +65,7 @@ function drawKenBurnsFrame(
 
 
 /**
- * Ado風キネティック・タイポグラフィ（飛び交う動的リリック演出）
+ * 音楽MVモード用 キネティック・リリック演出（Animate.css風の流麗なスライドイン＆バウンス＆高可読性テロップ）
  */
 function renderKineticAdoLyrics(
   ctx: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D,
@@ -78,83 +78,104 @@ function renderKineticAdoLyrics(
   const rawText = cut.telop?.fullText || cut.narrationJp || '';
   if (!rawText.trim()) return;
 
-  // Highlights to boost scale & color
   const highlights = cut.telop?.highlights || [];
-  const text = rawText.replace(/^[\s「『]+|[:：\s」』]+$/g, '').slice(0, 36);
+  const fullText = rawText.replace(/^[\s「『]+|[:：\s」』]+$/g, '').trim();
+  if (!fullText) return;
 
-  const baseFontSize = 72; // Larger for impact
-  const strokeWidth = 14;
+  // 15文字前後で区切って1行または2行にする（読点・スペース優先）
+  let lines: string[] = [];
+  if (fullText.includes(' ') || fullText.includes('　') || fullText.includes('、')) {
+    const parts = fullText.split(/[\s　、]+/);
+    if (parts.length >= 2) {
+      const mid = Math.ceil(parts.length / 2);
+      lines = [parts.slice(0, mid).join(' '), parts.slice(mid).join(' ')].filter(Boolean);
+    } else {
+      lines = [fullText];
+    }
+  } else if (fullText.length > 14) {
+    const half = Math.ceil(fullText.length / 2);
+    lines = [fullText.slice(0, half), fullText.slice(half)];
+  } else {
+    lines = [fullText];
+  }
+
+  // タイムラインアニメーション進行度 (0.0 〜 1.0)
+  const progress = Math.max(0, Math.min(1, currentTime / Math.max(duration, 0.1)));
+
+  // Animate.css "backInUp" 風のイージング計算
+  // 0.00 〜 0.18: 下からスッと上昇しながらスケールイン (0.85 -> 1.04 -> 1.0)
+  // 0.18 〜 0.82: しっかり静止して超ハッキリ読める！（呼吸のようなごく微小なスケール 1.0 -> 1.025）
+  // 0.82 〜 1.00: 穏やかにフェードアウト (1.0 -> 0.0)
+  let alpha = 1;
+  let offsetY = 0;
+  let scale = 1;
+
+  if (progress < 0.18) {
+    const t = progress / 0.18;
+    const c1 = 1.70158;
+    const c3 = c1 + 1;
+    const easeBack = 1 + c3 * Math.pow(t - 1, 3) + c1 * Math.pow(t - 1, 2);
+    alpha = Math.min(1, t * 1.5);
+    offsetY = (1 - easeBack) * (height * 0.08);
+    scale = 0.85 + (easeBack * 0.15);
+  } else if (progress > 0.82) {
+    const t = (progress - 0.82) / 0.18;
+    alpha = Math.max(0, 1 - t);
+    scale = 1.025 + (t * 0.05);
+  } else {
+    const holdT = (progress - 0.18) / (0.82 - 0.18);
+    alpha = 1;
+    scale = 1.0 + (holdT * 0.025);
+    offsetY = 0;
+  }
+
+  if (alpha <= 0.01) return;
 
   ctx.save();
+  ctx.globalAlpha = Math.max(0, Math.min(1, alpha));
+
+  // 画面の下寄り（縦動画・横動画ともにバランスの取れた位置: 75%）
+  const baseY = height * 0.75 + offsetY;
+  const centerX = width * 0.5;
+
+  ctx.translate(centerX, baseY);
+  ctx.scale(scale, scale);
+
+  const baseFontSize = Math.min(width * 0.065, 52);
+  const strokeWidth = Math.max(8, baseFontSize * 0.22);
+  const lineHeight = baseFontSize * 1.35;
+
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
   ctx.lineJoin = 'round';
   ctx.lineCap = 'round';
 
-  const highlightIndices = new Map<number, { color: string; sizeScale: number }>();
-  highlights.forEach(h => {
-    if (!h.word) return;
-    let pos = 0;
-    while ((pos = text.indexOf(h.word, pos)) !== -1) {
-      for (let k = 0; k < h.word.length; k++) {
-        highlightIndices.set(pos + k, h);
-      }
-      pos += 1;
-    }
-  });
+  const startY = lines.length === 2 ? -lineHeight * 0.5 : 0;
 
-  const progress = currentTime / duration; // 0.0 to 1.0
+  lines.forEach((lineText, lineIdx) => {
+    const currentY = startY + lineIdx * lineHeight;
 
-  text.split('').forEach((char, index) => {
-    const isKanji = /[\u4e00-\u9faf]/.test(char);
-    const highlight = highlightIndices.get(index);
-    const color = highlight ? (highlight.color || '#FFE600') : '#FFFFFF';
-    const baseScale = (highlight ? (highlight.sizeScale || 1.3) : 1.0) * (isKanji ? 1.1 : 1.0);
+    const isHighlighted = highlights.some(h => h.word && lineText.includes(h.word));
+    const textColor = isHighlighted ? '#FFE600' : '#FFFFFF';
 
-    // Seeded random layout based on character index
-    const seed = index + 1;
-    const angles = [-45, -30, -15, 0, 15, 30, 45, 90];
-    const angle = angles[(seed * 7) % angles.length];
-    
-    // Position layout
-    // We want them scattered a bit, but readable
-    const posX = width * (0.2 + ((seed * 11) % 60) / 100);
-    const posY = height * (0.2 + ((seed * 17) % 60) / 100);
-    
-    // Animation timing logic
-    // Characters enter one by one based on index
-    const entryTime = (index / Math.max(text.length, 1)) * 0.4; 
-    const charProgress = Math.max(0, progress - entryTime) * (1 / (1 - entryTime));
-    
-    if (charProgress > 0) {
-      // Dynamic zoom-in & fly-in
-      const motionScale = charProgress < 0.2 ? (charProgress / 0.2) : 1.0;
-      const finalScale = baseScale * motionScale;
-      const alpha = charProgress < 0.1 ? (charProgress / 0.1) : (charProgress > 0.8 ? 1.0 - ((charProgress - 0.8) / 0.2) : 1.0);
-      
-      const offsetX = charProgress < 0.2 ? (1.0 - (charProgress / 0.2)) * width * ((seed % 2 === 0) ? -0.5 : 0.5) : 0;
-      const offsetY = charProgress < 0.2 ? (1.0 - (charProgress / 0.2)) * height * ((seed % 3 === 0) ? -0.5 : 0.5) : 0;
+    ctx.font = `900 ${baseFontSize}px "Impact", "Montserrat Black", "Hiragino Kaku Gothic ProN", "Noto Sans JP", sans-serif`;
 
-      ctx.save();
-      ctx.translate(posX + offsetX, posY + offsetY);
-      ctx.rotate((angle * Math.PI) / 180);
-      ctx.scale(finalScale, finalScale);
-      
-      ctx.globalAlpha = Math.max(0, Math.min(1, alpha));
-      
-      ctx.font = `900 ${baseFontSize}px "Impact", "Montserrat Black", "Noto Sans JP", sans-serif`;
+    // 1. 強烈なドロップシャドウ
+    ctx.shadowColor = 'rgba(0, 0, 0, 0.9)';
+    ctx.shadowBlur = 20;
+    ctx.shadowOffsetX = 0;
+    ctx.shadowOffsetY = 4;
 
-      // Draw stroke
-      ctx.strokeStyle = 'black';
-      ctx.lineWidth = strokeWidth;
-      ctx.strokeText(char, 0, 0);
+    // 2. 超極太ブラック縁取り
+    ctx.strokeStyle = '#000000';
+    ctx.lineWidth = strokeWidth;
+    ctx.strokeText(lineText, 0, currentY);
 
-      // Draw fill
-      ctx.fillStyle = color;
-      ctx.fillText(char, 0, 0);
-      
-      ctx.restore();
-    }
+    // 3. 塗り
+    ctx.shadowColor = 'transparent';
+    ctx.shadowBlur = 0;
+    ctx.fillStyle = textColor;
+    ctx.fillText(lineText, 0, currentY);
   });
 
   ctx.restore();

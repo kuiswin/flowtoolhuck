@@ -150,23 +150,13 @@ export const CutCard: React.FC<CutCardProps> = ({
 
       <div className="p-2 flex flex-col gap-1.5 bg-gradient-to-b from-[#1a1a1a] to-[#141414]">
         {isMvMode ? (
-          <div className="text-[10px] text-white/80 font-medium line-clamp-2 leading-snug h-[28px] overflow-hidden flex flex-wrap gap-[1px]">
-            {(cut.narrationJp || "脚本策定中...").split('').map((char, i) => (
-              <span 
-                key={i} 
-                className="inline-block"
-                style={{
-                  transform: `rotate(${((i * 13) % 40) - 20}deg)`
-                }}
-              >
-                <span
-                  className="inline-block animate-kinetic-zoom-in opacity-0"
-                  style={{ animationDelay: `${i * 0.05}s` }}
-                >
-                  {char}
-                </span>
-              </span>
-            ))}
+          <div className="flex items-center gap-1.5 h-[28px] overflow-hidden">
+            <span className="text-[8px] px-1.5 py-0.5 rounded bg-purple-500/25 text-purple-300 font-black border border-purple-500/40 shrink-0 uppercase tracking-tighter">
+              LYRIC
+            </span>
+            <p className="text-[10px] text-white/95 font-bold line-clamp-2 leading-snug tracking-tight">
+              {cut.narrationJp || "歌詞策定中..."}
+            </p>
           </div>
         ) : (
           <p className="text-[10px] text-white/80 font-medium line-clamp-2 leading-snug h-[28px]">

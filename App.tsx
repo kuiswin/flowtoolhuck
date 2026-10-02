@@ -107,10 +107,33 @@ export default function App() {
         </div>
       </div>
       {previewingCutData && (() => {
-        const activeCut = episodes.find(e => e.id === previewingCutData.epId)?.cuts.find(c => c.id === previewingCutData.cut.id) || previewingCutData.cut;
+        const ep = episodes.find(e => e.id === previewingCutData.epId);
+        const cuts = ep?.cuts || [];
+        const currentIndex = cuts.findIndex(c => c.id === previewingCutData.cut.id);
+        const activeCut = (currentIndex >= 0 ? cuts[currentIndex] : previewingCutData.cut);
+        const hasPrev = currentIndex > 0;
+        const hasNext = currentIndex >= 0 && currentIndex < cuts.length - 1;
+        const handlePrev = hasPrev ? () => setPreviewingCutData({ epId: previewingCutData.epId, cut: cuts[currentIndex - 1] }) : undefined;
+        const handleNext = hasNext ? () => setPreviewingCutData({ epId: previewingCutData.epId, cut: cuts[currentIndex + 1] }) : undefined;
+
         return (
-          <MediaPreviewModal isOpen={true} cut={activeCut} episodeId={previewingCutData.epId} currentImageModel={settings.imageModel} isMvMode={previewingCutData.epId ? episodes.find(e => e.id === previewingCutData.epId)?.isMvMode : settings.isMvMode} onClose={() => setPreviewingCutData(null)} onAnimate={m => generateVideo(previewingCutData.epId, activeCut.id, m)} onBrowserAnimate={() => generateBrowserVideo(previewingCutData.epId, activeCut.id)} onUpdateCut={updates => updateCutWrapped(previewingCutData.epId, activeCut.id, updates)} onRegenerateImage={(model, prompt, neg) => {
-              const ep = episodes.find(e => e.id === previewingCutData.epId);
+          <MediaPreviewModal 
+            isOpen={true} 
+            cut={activeCut} 
+            episodeId={previewingCutData.epId} 
+            currentImageModel={settings.imageModel} 
+            isMvMode={ep?.isMvMode ?? settings.isMvMode} 
+            hasPrev={hasPrev}
+            hasNext={hasNext}
+            onPrev={handlePrev}
+            onNext={handleNext}
+            currentIndex={currentIndex >= 0 ? currentIndex + 1 : activeCut.id}
+            totalCuts={cuts.length}
+            onClose={() => setPreviewingCutData(null)} 
+            onAnimate={m => generateVideo(previewingCutData.epId, activeCut.id, m)} 
+            onBrowserAnimate={() => generateBrowserVideo(previewingCutData.epId, activeCut.id)} 
+            onUpdateCut={updates => updateCutWrapped(previewingCutData.epId, activeCut.id, updates)} 
+            onRegenerateImage={(model, prompt, neg) => {
               const epTaste = ep?.taste || activeCut.styleKeyUsed || settings.taste;
               generateImage({ 
                 epId: previewingCutData.epId, 

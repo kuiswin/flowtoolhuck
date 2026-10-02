@@ -20,6 +20,139 @@ import { extractHighlights } from '../services/directorService';
 import { normalizeKenBurnsPreset } from '../services/browserVideoService';
 import { TextInput, SectionLabel, PillButton, ToggleSwitch, FieldDropdown } from './Primitives';
 
+const VOOK_TELOP_STYLES = `
+    @keyframes kb-zoom-in { 0% { transform: scale(1); } 100% { transform: scale(1.15); } }
+    @keyframes kb-zoom-out { 0% { transform: scale(1.15); } 100% { transform: scale(1); } }
+    @keyframes kb-pan-left { 0% { transform: translateX(5%); } 100% { transform: translateX(-5%); } }
+    @keyframes kb-pan-right { 0% { transform: translateX(-5%); } 100% { transform: translateX(5%); } }
+    @keyframes kb-tilt-up { 0% { transform: translateY(5%); } 100% { transform: translateY(-5%); } }
+    @keyframes kb-tilt-down { 0% { transform: translateY(-5%); } 100% { transform: translateY(5%); } }
+    
+    .animate-ken-burns-zoom-in { animation: kb-zoom-in 8s ease-in-out infinite alternate; }
+    .animate-ken-burns-zoom-out { animation: kb-zoom-out 8s ease-in-out infinite alternate; }
+    .animate-ken-burns-pan-left { animation: kb-pan-left 8s ease-in-out infinite alternate; scale: 1.1; }
+    .animate-ken-burns-pan-right { animation: kb-pan-right 8s ease-in-out infinite alternate; scale: 1.1; }
+    .animate-ken-burns-tilt-up { animation: kb-tilt-up 8s ease-in-out infinite alternate; scale: 1.1; }
+    .animate-ken-burns-tilt-down { animation: kb-tilt-down 8s ease-in-out infinite alternate; scale: 1.1; }
+
+    /* ── Vook風 テロップトランジション（ブラースライド・キネティック） ── */
+    @keyframes vook-blur-slide-left {
+        0% {
+            opacity: 0;
+            transform: translateX(-70px) skewX(-8deg);
+            filter: blur(14px) brightness(1.3);
+        }
+        55% {
+            opacity: 1;
+            filter: blur(2px) brightness(1.1);
+        }
+        100% {
+            opacity: 1;
+            transform: translateX(0) skewX(0deg);
+            filter: blur(0px) brightness(1);
+        }
+    }
+
+    @keyframes vook-blur-slide-up {
+        0% {
+            opacity: 0;
+            transform: translateY(45px) scale(0.94);
+            filter: blur(12px) brightness(1.25);
+        }
+        55% {
+            opacity: 1;
+            filter: blur(2px) brightness(1.1);
+        }
+        100% {
+            opacity: 1;
+            transform: translateY(0) scale(1);
+            filter: blur(0px) brightness(1);
+        }
+    }
+
+    @keyframes vook-blur-slide-right {
+        0% {
+            opacity: 0;
+            transform: translateX(70px) skewX(8deg);
+            filter: blur(14px) brightness(1.3);
+        }
+        55% {
+            opacity: 1;
+            filter: blur(2px) brightness(1.1);
+        }
+        100% {
+            opacity: 1;
+            transform: translateX(0) skewX(0deg);
+            filter: blur(0px) brightness(1);
+        }
+    }
+
+    @keyframes vook-zoom-bounce {
+        0% {
+            opacity: 0;
+            transform: scale(0.4) translateY(20px);
+            filter: blur(8px);
+        }
+        65% {
+            opacity: 1;
+            transform: scale(1.06) translateY(-3px);
+            filter: blur(0.5px);
+        }
+        100% {
+            opacity: 1;
+            transform: scale(1) translateY(0);
+            filter: blur(0px);
+        }
+    }
+
+    @keyframes vook-glow-fade {
+        0% {
+            opacity: 0;
+            transform: scale(0.96);
+            filter: blur(16px) brightness(1.4);
+        }
+        100% {
+            opacity: 1;
+            transform: scale(1);
+            filter: blur(0px) brightness(1);
+        }
+    }
+
+    @keyframes vook-glitch-pop {
+        0% { opacity: 0; transform: translate(-5px, 2px); filter: contrast(1.6); }
+        35% { opacity: 1; transform: translate(3px, -2px); filter: contrast(1.3); }
+        70% { transform: translate(-1px, 1px); filter: contrast(1.1); }
+        100% { opacity: 1; transform: translate(0, 0); filter: contrast(1); }
+    }
+
+    .vook-motion-blur-slide-left {
+        animation: vook-blur-slide-left 0.65s cubic-bezier(0.16, 1, 0.3, 1) both;
+    }
+    .vook-motion-blur-slide-up {
+        animation: vook-blur-slide-up 0.6s cubic-bezier(0.16, 1, 0.3, 1) both;
+    }
+    .vook-motion-blur-slide-right {
+        animation: vook-blur-slide-right 0.65s cubic-bezier(0.16, 1, 0.3, 1) both;
+    }
+    .vook-motion-zoom-bounce {
+        animation: vook-zoom-bounce 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+    }
+    .vook-motion-glow-fade {
+        animation: vook-glow-fade 0.8s cubic-bezier(0.16, 1, 0.3, 1) both;
+    }
+    .vook-motion-glitch-pop {
+        animation: vook-glitch-pop 0.4s ease-out both;
+    }
+
+    /* ド迫力テロップ用CSS（text-shadowによる疑似フチ取り） */
+    .impact-telop {
+        text-shadow: 
+            3px 3px 0 #000, -3px -3px 0 #000, 3px -3px 0 #000, -3px 3px 0 #000,
+            0px 3px 0 #000, 0px -3px 0 #000, 3px 0px 0 #000, -3px 0px 0 #000,
+            5px 5px 10px rgba(0,0,0,0.8);
+        line-height: 1.1;
+    }
+`;
 
 interface MediaPreviewModalProps {
     isOpen: boolean;
@@ -27,6 +160,12 @@ interface MediaPreviewModalProps {
     episodeId: number;
     currentImageModel?: string;
     isMvMode?: boolean;
+    hasPrev?: boolean;
+    hasNext?: boolean;
+    onPrev?: () => void;
+    onNext?: () => void;
+    currentIndex?: number;
+    totalCuts?: number;
     onClose: () => void;
     onAnimate: (m: VideoModelType) => void;
     onBrowserAnimate: () => void;
@@ -35,7 +174,9 @@ interface MediaPreviewModalProps {
 }
 
 export const MediaPreviewModal: React.FC<MediaPreviewModalProps> = ({
-    isOpen, cut, episodeId, currentImageModel, isMvMode, onClose, onAnimate, onBrowserAnimate, onUpdateCut, onRegenerateImage
+    isOpen, cut, episodeId, currentImageModel, isMvMode,
+    hasPrev, hasNext, onPrev, onNext, currentIndex, totalCuts,
+    onClose, onAnimate, onBrowserAnimate, onUpdateCut, onRegenerateImage
 }) => {
     const videoRef = useRef<HTMLVideoElement>(null);
     const [aiWish, setAiWish] = useState('');
@@ -46,10 +187,18 @@ export const MediaPreviewModal: React.FC<MediaPreviewModalProps> = ({
 
     useEffect(() => {
         if (!isOpen) return;
-        const handler = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
+        const handler = (e: KeyboardEvent) => { 
+            if (e.key === 'Escape') {
+                onClose();
+            } else if (e.key === 'ArrowLeft' && onPrev) {
+                onPrev();
+            } else if (e.key === 'ArrowRight' && onNext) {
+                onNext();
+            }
+        };
         window.addEventListener('keydown', handler);
         return () => window.removeEventListener('keydown', handler);
-    }, [isOpen, onClose]);
+    }, [isOpen, onClose, onPrev, onNext]);
 
     // モーダル表示時、もし登録されたハイライトが本文に1つも合致していなければ自動修復
     useEffect(() => {
@@ -61,155 +210,21 @@ export const MediaPreviewModal: React.FC<MediaPreviewModalProps> = ({
             if (!hasAnyMatch) {
                 const auto = extractHighlights(text);
                 if (auto.length > 0) {
-                    onUpdateCut({ telop: { ...cut.telop!, fullText: text, highlights: auto } });
+                    const staging = resolveRecommendedTelopStaging(cut.id, isMvMode, false);
+                    onUpdateCut({ 
+                        telop: { 
+                            fullText: text, 
+                            highlights: auto,
+                            style: cut.telop?.style || staging.style,
+                            transition: cut.telop?.transition || staging.transition,
+                            position: cut.telop?.position || staging.position,
+                            directorNote: cut.telop?.directorNote || staging.directorNote
+                        } 
+                    });
                 }
             }
         }
     }, [isOpen, cut.id]);
-
-    // Ken Burns アニメーションのCSS
-    useEffect(() => {
-        if (!isOpen) return;
-        const id = 'ken-burns-styles';
-        if (!document.getElementById(id)) {
-            const style = document.createElement('style');
-            style.id = id;
-            style.textContent = `
-                @keyframes kb-zoom-in { 0% { transform: scale(1); } 100% { transform: scale(1.15); } }
-                @keyframes kb-zoom-out { 0% { transform: scale(1.15); } 100% { transform: scale(1); } }
-                @keyframes kb-pan-left { 0% { transform: translateX(5%); } 100% { transform: translateX(-5%); } }
-                @keyframes kb-pan-right { 0% { transform: translateX(-5%); } 100% { transform: translateX(5%); } }
-                @keyframes kb-tilt-up { 0% { transform: translateY(5%); } 100% { transform: translateY(-5%); } }
-                @keyframes kb-tilt-down { 0% { transform: translateY(-5%); } 100% { transform: translateY(5%); } }
-                
-                .animate-ken-burns-zoom-in { animation: kb-zoom-in 8s ease-in-out infinite alternate; }
-                .animate-ken-burns-zoom-out { animation: kb-zoom-out 8s ease-in-out infinite alternate; }
-                .animate-ken-burns-pan-left { animation: kb-pan-left 8s ease-in-out infinite alternate; scale: 1.1; }
-                .animate-ken-burns-pan-right { animation: kb-pan-right 8s ease-in-out infinite alternate; scale: 1.1; }
-                .animate-ken-burns-tilt-up { animation: kb-tilt-up 8s ease-in-out infinite alternate; scale: 1.1; }
-                .animate-ken-burns-tilt-down { animation: kb-tilt-down 8s ease-in-out infinite alternate; scale: 1.1; }
-
-                /* ── Vook風 テロップトランジション（ブラースライド・キネティック） ── */
-                @keyframes vook-blur-slide-left {
-                    0% {
-                        opacity: 0;
-                        transform: translateX(-80px) skewX(-10deg);
-                        filter: blur(16px) brightness(1.35);
-                    }
-                    60% {
-                        opacity: 1;
-                        filter: blur(3px) brightness(1.15);
-                    }
-                    100% {
-                        opacity: 1;
-                        transform: translateX(0) skewX(0deg);
-                        filter: blur(0px) brightness(1);
-                    }
-                }
-
-                @keyframes vook-blur-slide-up {
-                    0% {
-                        opacity: 0;
-                        transform: translateY(50px) scale(0.92);
-                        filter: blur(14px) brightness(1.3);
-                    }
-                    60% {
-                        opacity: 1;
-                        filter: blur(2px) brightness(1.1);
-                    }
-                    100% {
-                        opacity: 1;
-                        transform: translateY(0) scale(1);
-                        filter: blur(0px) brightness(1);
-                    }
-                }
-
-                @keyframes vook-blur-slide-right {
-                    0% {
-                        opacity: 0;
-                        transform: translateX(80px) skewX(10deg);
-                        filter: blur(16px) brightness(1.35);
-                    }
-                    60% {
-                        opacity: 1;
-                        filter: blur(3px) brightness(1.15);
-                    }
-                    100% {
-                        opacity: 1;
-                        transform: translateX(0) skewX(0deg);
-                        filter: blur(0px) brightness(1);
-                    }
-                }
-
-                @keyframes vook-zoom-bounce {
-                    0% {
-                        opacity: 0;
-                        transform: scale(0.4) translateY(25px);
-                        filter: blur(10px);
-                    }
-                    70% {
-                        opacity: 1;
-                        transform: scale(1.08) translateY(-4px);
-                        filter: blur(1px);
-                    }
-                    100% {
-                        opacity: 1;
-                        transform: scale(1) translateY(0);
-                        filter: blur(0px);
-                    }
-                }
-
-                @keyframes vook-glow-fade {
-                    0% {
-                        opacity: 0;
-                        transform: scale(0.96);
-                        filter: blur(18px) brightness(1.4);
-                    }
-                    100% {
-                        opacity: 1;
-                        transform: scale(1);
-                        filter: blur(0px) brightness(1);
-                    }
-                }
-
-                @keyframes vook-glitch-pop {
-                    0% { opacity: 0; transform: translate(-6px, 2px); filter: contrast(1.8) hue-rotate(90deg); }
-                    35% { opacity: 1; transform: translate(4px, -2px); filter: contrast(1.4) hue-rotate(-45deg); }
-                    70% { transform: translate(-2px, 1px); filter: contrast(1.1); }
-                    100% { opacity: 1; transform: translate(0, 0); filter: contrast(1) hue-rotate(0deg); }
-                }
-
-                .vook-motion-blur-slide-left {
-                    animation: vook-blur-slide-left 0.65s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-                }
-                .vook-motion-blur-slide-up {
-                    animation: vook-blur-slide-up 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-                }
-                .vook-motion-blur-slide-right {
-                    animation: vook-blur-slide-right 0.65s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-                }
-                .vook-motion-zoom-bounce {
-                    animation: vook-zoom-bounce 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
-                }
-                .vook-motion-glow-fade {
-                    animation: vook-glow-fade 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-                }
-                .vook-motion-glitch-pop {
-                    animation: vook-glitch-pop 0.4s ease-out forwards;
-                }
-
-                /* ド迫力テロップ用CSS（text-shadowによる疑似フチ取り） */
-                .impact-telop {
-                    text-shadow: 
-                        3px 3px 0 #000, -3px -3px 0 #000, 3px -3px 0 #000, -3px 3px 0 #000,
-                        0px 3px 0 #000, 0px -3px 0 #000, 3px 0px 0 #000, -3px 0px 0 #000,
-                        5px 5px 10px rgba(0,0,0,0.8);
-                    line-height: 1.1;
-                }
-            `;
-            document.head.appendChild(style);
-        }
-    }, [isOpen]);
 
     if (!isOpen) return null;
 
@@ -278,25 +293,15 @@ export const MediaPreviewModal: React.FC<MediaPreviewModalProps> = ({
     };
 
     const renderTelopContent = () => {
-        if (!showTelop || !cut.telop?.fullText) return null;
+        const rawText = (cut.telop?.fullText || cut.narrationJp || '').trim();
+        if (!showTelop || !rawText) return null;
         
-        const text = cut.telop.fullText;
-        const highlights = cut.telop.highlights || [];
+        const text = rawText;
+        const highlights = (cut.telop?.highlights && cut.telop.highlights.length > 0)
+            ? cut.telop.highlights 
+            : extractHighlights(text);
 
-        // 全一致箇所を正確にマッピング（同一単語が複数回登場しても確実にすべてハイライト）
-        const highlightIndices = new Map<number, { color: string; sizeScale: number }>();
-        highlights.forEach(h => {
-            if (!h.word) return;
-            let pos = 0;
-            while ((pos = text.indexOf(h.word, pos)) !== -1) {
-                for (let k = 0; k < h.word.length; k++) {
-                    highlightIndices.set(pos + k, h);
-                }
-                pos += 1;
-            }
-        });
-
-        const transKey = cut.telop?.transition || (isMvMode ? 'blur-slide-left' : 'blur-slide-up');
+        const transKey = cut.telop?.transition || 'blur-slide-left';
         const motionClass = 
           transKey === 'blur-slide-up' ? 'vook-motion-blur-slide-up' :
           transKey === 'blur-slide-right' ? 'vook-motion-blur-slide-right' :
@@ -305,9 +310,12 @@ export const MediaPreviewModal: React.FC<MediaPreviewModalProps> = ({
           transKey === 'glitch-pop' ? 'vook-motion-glitch-pop' :
           'vook-motion-blur-slide-left';
 
-        const posKey = cut.telop?.position || (isMvMode ? 'bottom-left' : 'bottom-center');
+        const posKey = cut.telop?.position || 'bottom-left';
 
-        if (isMvMode || cut.telop?.style === 'mv-blur-slide' || cut.telop?.style === 'mv-kinetic-pop') {
+        // 映画風（cinema-subtle）または墨文字（traditional-sumi）の場合のみ横長プレート
+        const isPlateStyle = cut.telop?.style === 'cinema-subtle' || cut.telop?.style === 'traditional-sumi';
+
+        if (!isPlateStyle) {
             // Vook風 単語・意味ブロックに分割
             const cleanText = text.replace(/^[「『\s]+|[」』\s:：]+$/g, '').trim();
             const words = (() => {
@@ -355,16 +363,16 @@ export const MediaPreviewModal: React.FC<MediaPreviewModalProps> = ({
                             const isHigh = highlights.some(h => h.word && (word.includes(h.word) || h.word.includes(word)));
                             const angle = angles[wIdx % angles.length];
                             const xOff = xOffsets[wIdx] || '0%';
-                            const delay = wIdx * 0.14; // Vook風スタッガー
+                            const delay = wIdx * 0.12; // Vook風スタッガー
 
                             return (
                                 <div
                                     key={wIdx}
-                                    className={`${motionClass} opacity-0`}
+                                    className={motionClass}
                                     style={{
                                         transform: `translateX(${xOff}) rotate(${angle}deg)`,
                                         animationDelay: `${delay}s`,
-                                        animationFillMode: 'forwards'
+                                        animationFillMode: 'both'
                                     }}
                                 >
                                     <div className={`inline-flex items-center backdrop-blur-md rounded-xl transition-all shadow-2xl ${
@@ -395,10 +403,24 @@ export const MediaPreviewModal: React.FC<MediaPreviewModalProps> = ({
             );
         }
 
+        // プレートスタイル（cinema-subtle / traditional-sumi）
+        const highlightIndices = new Map<number, { color: string; sizeScale: number }>();
+        highlights.forEach(h => {
+            if (!h.word) return;
+            let pos = 0;
+            while ((pos = text.indexOf(h.word, pos)) !== -1) {
+                for (let k = 0; k < h.word.length; k++) {
+                    highlightIndices.set(pos + k, h);
+                }
+                pos += 1;
+            }
+        });
+
         return (
             <div 
                 key={`${transKey}-${cut.telop?.style}-${posKey}-${text}`}
                 className={`absolute bottom-[5%] left-0 w-full px-4 flex flex-col items-center pointer-events-none z-40 ${motionClass}`}
+                style={{ animationFillMode: 'both' }}
             >
                 {/* テロップ背景プレート（約20%〜35%背景が透けて見えるシネマ風グラスモーフィズム） */}
                 <div className="bg-black/65 backdrop-blur-md rounded-2xl px-5 py-3 flex flex-wrap justify-center items-baseline max-w-[92%] shadow-xl shadow-black/40 border border-white/15 leading-snug">
@@ -435,14 +457,48 @@ export const MediaPreviewModal: React.FC<MediaPreviewModalProps> = ({
     };
 
     return (
-        <div className="fixed inset-0 z-[150] flex items-center justify-center p-2 sm:p-4">
+        <div className="fixed inset-0 z-[150] flex items-center justify-center p-2 sm:p-4 select-none">
+            <style dangerouslySetInnerHTML={{ __html: VOOK_TELOP_STYLES }} />
             <div className="absolute inset-0 bg-black/98 backdrop-blur-xl" onClick={onClose} />
 
             <div className="relative w-full max-w-[1200px] h-[95vh] lg:h-[85vh] bg-[#0c0c0c] border border-white/10 rounded-3xl overflow-hidden shadow-2xl flex flex-col lg:flex-row animate-in fade-in zoom-in-95 duration-200">
                 
                 {/* Canvas Area */}
-                <div className="flex-1 bg-black relative flex items-center justify-center p-4 lg:p-10 min-h-0 overflow-hidden">
+                <div className="flex-1 bg-black relative flex items-center justify-center p-3 sm:p-6 lg:p-10 min-h-0 overflow-hidden">
                     <div className="relative h-full w-full flex items-center justify-center">
+
+                        {/* ── 👈 前のカットへ移動する矢印ボタン ── */}
+                        {hasPrev && onPrev && (
+                            <button
+                                type="button"
+                                onClick={e => { e.stopPropagation(); onPrev(); }}
+                                className="absolute left-2 sm:left-4 top-1/2 -translate-y-1/2 z-50 w-11 h-11 sm:w-13 sm:h-13 rounded-full bg-black/75 hover:bg-amber-500 hover:text-black border border-white/20 hover:border-amber-400 text-white backdrop-blur-md flex items-center justify-center transition-all shadow-2xl cursor-pointer hover:scale-110 active:scale-95 group"
+                                title="前のカットへ移動 (キーボード ←)"
+                            >
+                                <span className="material-symbols-outlined text-[26px] sm:text-[30px] group-hover:-translate-x-0.5 transition-transform">chevron_left</span>
+                            </button>
+                        )}
+
+                        {/* ── 👉 次のカットへ移動する矢印ボタン ── */}
+                        {hasNext && onNext && (
+                            <button
+                                type="button"
+                                onClick={e => { e.stopPropagation(); onNext(); }}
+                                className="absolute right-2 sm:right-4 top-1/2 -translate-y-1/2 z-50 w-11 h-11 sm:w-13 sm:h-13 rounded-full bg-black/75 hover:bg-amber-500 hover:text-black border border-white/20 hover:border-amber-400 text-white backdrop-blur-md flex items-center justify-center transition-all shadow-2xl cursor-pointer hover:scale-110 active:scale-95 group"
+                                title="次のカットへ移動 (キーボード →)"
+                            >
+                                <span className="material-symbols-outlined text-[26px] sm:text-[30px] group-hover:translate-x-0.5 transition-transform">chevron_right</span>
+                            </button>
+                        )}
+
+                        {/* ── カット番号インジケーター ── */}
+                        {currentIndex !== undefined && totalCuts !== undefined && (
+                            <div className="absolute top-3 left-3 sm:top-4 sm:left-4 z-50 px-3 py-1 rounded-full bg-black/75 backdrop-blur-md border border-white/15 text-white/90 text-[11px] font-bold flex items-center gap-1.5 shadow-xl select-none">
+                                <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse" />
+                                <span>Cut {currentIndex} / {totalCuts}</span>
+                            </div>
+                        )}
+
                         <div className="relative h-full max-h-full aspect-[9/16] shadow-2xl rounded-xl overflow-hidden border border-white/10 group bg-[#111] flex items-center justify-center">
 
                             {videoSrc ? (

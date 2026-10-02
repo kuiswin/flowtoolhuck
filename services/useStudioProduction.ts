@@ -501,7 +501,7 @@ Output JSON ONLY:
           const scriptPrompt = buildScriptPrompt(1, generatedPlan as any, settings.country, settings.theme, settings.era, settings.isMangaMode, settings.isMvMode, settings.taste);
           const scriptRes = await callWithRetry<any>(
             () => Flow.generate.text(scriptPrompt),
-            (attempt, max, delay) => addLog(`Retrying Script Plot (attempt ${attempt}/${max}) after ${delay} ms...`, 'warning'),
+            (attempt, max, delay, err) => addLog(`⚠️ 脚本リトライ (${attempt}/${max}) ${delay}ms後... 理由: ${formatErrorMessage(err)}`, 'warning'),
             5
           );
           const parsed = safeJsonParse<any>(scriptRes.text, { titleJp: generatedPlan.titleJp, titleEn: generatedPlan.titleEn, cuts: [] });
@@ -615,11 +615,16 @@ Output JSON ONLY:
           try {
             scriptRes = await callWithRetry<any>(
               () => Flow.generate.text(scriptPrompt),
-              (attempt, max, delay) => addLog(`Retrying MV Script (attempt ${attempt}/${max}) after ${delay} ms...`, 'warning'),
+              (attempt, max, delay, err) => {
+                console.error(`[MV Script Retry ${attempt}/${max}]`, err);
+                addLog(`⚠️ MV脚本リトライ (${attempt}/${max}) ${delay}ms後... 理由: ${formatErrorMessage(err)}`, 'warning');
+              },
               5
             );
           } catch (e: any) {
-            addLog(`❌ 第${epIndex}曲の脚本策定に失敗しました: ${e.message}`, 'error');
+            const errorMsg = formatErrorMessage(e);
+            console.error(`[MV Script Failed]`, e, { prompt: scriptPrompt });
+            addLog(`❌ 第${epIndex}曲の脚本策定に失敗しました: ${errorMsg}`, 'error');
             continue;
           }
 
@@ -847,7 +852,10 @@ Output JSON ONLY:
           const scriptPrompt = buildScriptPrompt(epId, currentPlan, settings.country, settings.theme, settings.era, settings.isMangaMode, settings.isMvMode, settings.taste);
           const scriptRes = await callWithRetry<any>(
             () => Flow.generate.text(scriptPrompt),
-            (attempt, max, delay) => addLog(`Retrying Script Plot (attempt ${attempt}/${max}) after ${delay} ms...`, 'warning'),
+            (attempt, max, delay, err) => {
+              console.error(`[Drama Script Retry ${attempt}/${max}]`, err);
+              addLog(`⚠️ 第${epId}話 脚本リトライ (${attempt}/${max}) ${delay}ms後... 理由: ${formatErrorMessage(err)}`, 'warning');
+            },
             5
           );
 

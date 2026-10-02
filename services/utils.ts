@@ -48,11 +48,22 @@ export function formatErrorMessage(err: any): string {
   if (!err) return 'Unknown error';
   if (typeof err === 'string') return err;
   
-  if (err?.error?.message) return String(err.error.message);
-  if (err?.message) return String(err.message);
+  const parts: string[] = [];
+  if (err?.status) parts.push(`[Status ${err.status}]`);
+  if (err?.code) parts.push(`[Code ${err.code}]`);
   
-  if (err?.statusText) return `${err.status || ''}: ${err.statusText}`.trim();
-  if (err?.status) return `HTTP Status: ${err.status}`;
+  const mainMsg = err?.error?.message || err?.message || err?.statusText;
+  if (mainMsg) parts.push(String(mainMsg));
+
+  if (err?.error && typeof err.error === 'string') parts.push(err.error);
+  if (err?.details) {
+    try {
+      const detailsStr = typeof err.details === 'string' ? err.details : JSON.stringify(err.details);
+      parts.push(`(Details: ${detailsStr})`);
+    } catch (_) {}
+  }
+  
+  if (parts.length > 0) return parts.join(' ');
   
   try {
     const json = JSON.stringify(err);

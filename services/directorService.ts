@@ -439,7 +439,7 @@ Style Attributes: "${rawStyle}"
 MANDATORY VISUAL RULES:
 - Ensure all cut visual descriptions ("basicPlot") harmonize naturally with this art style, maintaining rich atmosphere and color.
 - NEVER describe scenes as monochrome, black and white, or sketch unless the art style itself is explicitly monochrome!
-- NEVER include elements of this art style (e.g., neon, pop, pastel, anime, cyber) in forbidden lists! Forbidden lists are ONLY for disruptive extremes (e.g. violent gore, screaming rage).`
+- NEVER include elements of this art style (e.g., neon, pop, pastel, anime, glowing lights) into forbidden lists!`
     : "";
 
   const contextTitle = isMvMode ? "Music Video Sequence" : isMangaMode ? "Comic Episode" : isHistorical ? "Historical Drama Episode" : "Drama Episode";
@@ -464,8 +464,8 @@ Output ONLY valid JSON matching this exact structure:
   "summary": "${isMvMode ? '楽曲の世界観・全体の雰囲気（日本語2〜3行）' : '話のあらすじ（日本語）'}",
   "eraAnalysisJp": "${isMvMode ? 'MVのビジュアルコンセプトと情緒の解説（日本語）' : '時代背景と舞台設定の考証解説（日本語）'}",
   "authenticAttireEn": "Detailed English prompt for natural attire and wardrobe matching ${worldSetting}",
-  "forbiddenKeywordsEn": "${isMvMode ? 'screaming, angry, weapon, battle, aggressive combat, chaotic destruction, theatrical over-acting' : 'Comma-separated English negative keywords for anachronisms that must NEVER appear in ' + worldSetting}",
-  "forbiddenAnachronisms": ["${isMvMode ? '激しい叫びや戦闘' : '日本語の禁止要素1'}", "${isMvMode ? '過剰な劇的演出' : '日本語の禁止要素2'}"],
+  "forbiddenKeywordsEn": "${isMvMode ? 'loud screaming, harsh dissonance, out-of-context modern clutter, theatrical over-acting' : 'Comma-separated English negative keywords for anachronisms that must NEVER appear in ' + worldSetting}",
+  "forbiddenAnachronisms": ["${isMvMode ? '過剰な劇的演出' : '日本語の禁止要素1'}", "${isMvMode ? '世界観を壊す不自然な要素' : '日本語の禁止要素2'}"],
   "coverCatchphraseJp": "${isMvMode ? '楽曲に寄り添うエモーショナルなフレーズ' : '超ド迫力キャッチコピー'}",
   "highlightWords": ["代表キーワード1", "代表キーワード2"],
   "cuts": [

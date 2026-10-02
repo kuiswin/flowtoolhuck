@@ -523,7 +523,12 @@ MANDATORY RULE: This Cut ${cutId} MUST BE RADICALLY DIFFERENT from the previous 
       ? "authentic historical period attire"
       : "natural character attire matching the setting";
 
-  const defaultTelop = resolveRecommendedTelopStaging(cutId, settings.isMvMode, isHistorical);
+  const defaultTelop = resolveRecommendedTelopStaging(
+    cutId, 
+    settings.isMvMode, 
+    isHistorical, 
+    previousShotInfo?.telop
+  );
 
   const directorPrompt = `You are a ${directorRole} designing a visual shot and motion-graphics telop staging for ${genreDesc}.
 Context: "${prompt}".

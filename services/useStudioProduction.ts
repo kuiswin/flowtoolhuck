@@ -256,7 +256,8 @@ export function useStudioProduction({ settings, logs, addLog, refreshStories }: 
         scale: directedUpdates.shotScale,
         angle: directedUpdates.cinematicAngle,
         prompt: directedUpdates.promptEn || task.prompt,
-        tag: directedUpdates.cameraWork
+        tag: directedUpdates.cameraWork,
+        telop: mergedUpdates.telop
       };
 
       preparedTasks.push({

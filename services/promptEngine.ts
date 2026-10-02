@@ -13,6 +13,11 @@ export interface PreviousShotContext {
   angle?: string;
   prompt?: string;
   tag?: string;
+  telop?: {
+    style?: any;
+    transition?: any;
+    position?: any;
+  };
 }
 
 /**

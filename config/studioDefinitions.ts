@@ -486,7 +486,19 @@ export function resolveTelopPosition(posId?: string): TelopPositionDefinition {
  * 2. 画面中央（メイン被写体）を覆い隠さないため、中央配置を排除し「左始まり」「右付け」「上部」「縦書き」に展開
  * 3. ユーザー絶賛の「左寄りの左始まり」と「右寄りの右付け」をテンポよく交互に展開
  */
-export function resolveRecommendedTelopStaging(cutId: number, isMvMode?: boolean, isHistorical?: boolean): {
+/**
+ * カット番号、楽曲構造、直前カット情報に基づいて動的に演出を生成する「無限バリエーションAIディレクター」
+ * 【数千本の量産に耐える完全ランダム × 音楽構造連動エンジン】
+ * 1. 画面中央（メイン被写体）を覆い隠さない安全レイアウト（下部左、下部右、上部、縦書き）
+ * 2. 直前カットの「出し方（トランジション）」と「配置構図」を100%除外するAnti-Repeat保証
+ * 3. 楽曲パート（Aメロ＝静、Bメロ＝変、サビ＝動★、アウトロ＝余韻）の情緒と盛り上がりを確実に維持
+ */
+export function resolveRecommendedTelopStaging(
+  cutId: number, 
+  isMvMode?: boolean, 
+  isHistorical?: boolean,
+  prevStaging?: { transition?: TelopTransition; position?: TelopPosition; style?: TelopStyle }
+): {
   style: TelopStyle;
   transition: TelopTransition;
   position: TelopPosition;
@@ -494,110 +506,108 @@ export function resolveRecommendedTelopStaging(cutId: number, isMvMode?: boolean
 } {
   const normCut = ((cutId - 1) % 12) + 1;
 
-  if (isMvMode) {
-    switch (normCut) {
-      case 1:
-        return {
-          style: 'mv-blur-slide',
-          transition: 'aos-fade-soft',
-          position: 'bottom-left',
-          directorNote: `[Verse A1・静] 物語の開幕。下部左寄りの左始まりステアステップとAOS上品ソフトフェードで背景アートと人物の佇まいを魅せる。`
-        };
-      case 2:
-        return {
-          style: 'mv-blur-slide',
-          transition: 'blur-slide-up',
-          position: 'bottom-right',
-          directorNote: `[Verse A2・動静] 下部右寄りの右付けへ反転！下からフワッと飛び込むブラースライドでリズミカルな変化を生む。`
-        };
-      case 3:
-        return {
-          style: 'mv-blur-slide',
-          transition: 'blur-slide-left',
-          position: 'top-cinema',
-          directorNote: `[Verse A3・変] 上部天吊りシネマへ跳躍。左からの高速ブラースライドで視線を上空へ誘導し余白を活かす。`
-        };
-      case 4:
-        return {
-          style: 'mv-vertical-lyric',
-          transition: 'aos-fade-soft',
-          position: 'vertical-right',
-          directorNote: `[Verse B1・変] 空間演出。右端を流れるエモ縦書きタイポグラフィで楽曲の転調と文学的な情緒を創出。`
-        };
-      case 5:
-        return {
-          style: 'mv-kinetic-pop',
-          transition: 'zoom-in-bounce',
-          position: 'bottom-left',
-          directorNote: `[Verse B2・動] 左寄りの左始まりへ戻りつつ、軽く跳ねるバウンス登場でサビへの加速感を予告。`
-        };
-      case 6:
-        return {
-          style: 'mv-blur-slide',
-          transition: 'blur-slide-right',
-          position: 'bottom-right',
-          directorNote: `[Bridge・動] 右寄りの右付けステアステップ。右から駆け抜けるブラースライドでサビ前の緊張感を最高潮に。`
-        };
-      case 7:
-        return {
-          style: 'mv-neon-glow',
-          transition: 'animista-slide-bck',
-          position: 'bottom-left',
-          directorNote: `[Chorus 1★・動] サビ爆発！中央のメイン被写体を塞がず、左寄りの左始まりからAnimista奥ズームインと金文字特大発光で圧倒。`
-        };
-      case 8:
-        return {
-          style: 'mv-kinetic-pop',
-          transition: 'gsap-kinetic-stagger',
-          position: 'bottom-right',
-          directorNote: `[Chorus 2★・動] 右寄りの右付けへ大胆反転！GSAP急減速スタッガーと呼吸フローティングでビートの熱狂と完全シンクロ。`
-        };
-      case 9:
-        return {
-          style: 'mv-blur-slide',
-          transition: 'glitch-pop',
-          position: 'top-cinema',
-          directorNote: `[Chorus 3★・変] 上部天吊りシネマ。メイン被写体の顔や手を遮らず、上空でグリッチ・カットインを炸裂。`
-        };
-      case 10:
-        return {
-          style: 'mv-vertical-lyric',
-          transition: 'aos-fade-soft',
-          position: 'vertical-left',
-          directorNote: `[Verse C・静] サビ終わりの静寂。左サイドの縦書きタイポグラフィで心に染み入る静かなモノローグ。`
-        };
-      case 11:
-        return {
-          style: 'mv-neon-glow',
-          transition: 'glow-fade',
-          position: 'bottom-right',
-          directorNote: `[Outro 1・静] 右寄りの右付けステアステップ。光の粒子がにじむアンビエントネオンが心地よい余韻を漂わせる。`
-        };
-      case 12:
-      default:
-        return {
-          style: 'cinema-subtle',
-          transition: 'aos-fade-soft',
-          position: 'bottom-left',
-          directorNote: `[Outro 2・静] 左寄りの左始まりで静かに完結。情景の余韻とともに美しくフェードアウト。`
-        };
-    }
-  }
+  // 配列から直前と被らない要素をランダム選出するヘルパー
+  const pickRandom = <T>(pool: T[], avoid?: T): T => {
+    const valid = avoid ? pool.filter(item => item !== avoid) : pool;
+    const list = valid.length > 0 ? valid : pool;
+    return list[Math.floor(Math.random() * list.length)];
+  };
 
-  if (isHistorical) {
-    const isEven = normCut % 2 === 0;
+  if (isMvMode) {
+    let stylePool: TelopStyle[] = [];
+    let transPool: TelopTransition[] = [];
+    let posPool: TelopPosition[] = [];
+    let sectionName = '';
+    let sectionMood = '';
+
+    if (normCut <= 3) {
+      // ── 【Aメロ (Verse A: 導入・静寂)】 ──
+      sectionName = `Verse A${normCut}`;
+      sectionMood = '静寂・導入';
+      stylePool = ['cinema-subtle', 'mv-blur-slide'];
+      transPool = ['aos-fade-soft', 'blur-slide-left', 'blur-slide-up', 'glow-fade'];
+      posPool = ['bottom-left', 'bottom-right'];
+    } else if (normCut <= 6) {
+      // ── 【Bメロ / Bridge (展開・空間変化・テンポアップ)】 ──
+      sectionName = normCut === 6 ? 'Bridge' : `Verse B${normCut - 3}`;
+      sectionMood = '空間変化・加速';
+      stylePool = ['mv-vertical-lyric', 'mv-blur-slide', 'mv-kinetic-pop'];
+      transPool = ['blur-slide-right', 'zoom-in-bounce', 'aos-fade-soft', 'blur-slide-left', 'animista-slide-bck'];
+      posPool = ['vertical-right', 'vertical-left', 'top-cinema', 'bottom-left', 'bottom-right'];
+    } else if (normCut <= 9) {
+      // ── 【サビ (Chorus: クライマックス・動★中央被写体回避)】 ──
+      sectionName = `Chorus ${normCut - 6}★`;
+      sectionMood = '最高潮・爆発';
+      stylePool = ['mv-neon-glow', 'mv-kinetic-pop', 'mv-blur-slide'];
+      transPool = ['animista-slide-bck', 'gsap-kinetic-stagger', 'zoom-in-bounce', 'glitch-pop'];
+      // 中央はメイン被写体を覆うため排除。左始まり・右付け・上空でド派手に炸裂！
+      posPool = ['bottom-left', 'bottom-right', 'top-cinema'];
+    } else {
+      // ── 【Cメロ / アウトロ (Verse C / Outro: 静寂・余韻)】 ──
+      sectionName = normCut === 10 ? 'Verse C (落ちサビ)' : `Outro ${normCut - 10}`;
+      sectionMood = '静寂・余韻フェード';
+      stylePool = ['mv-neon-glow', 'cinema-subtle', 'mv-vertical-lyric'];
+      transPool = ['glow-fade', 'aos-fade-soft', 'blur-slide-left'];
+      posPool = ['bottom-left', 'bottom-right', 'vertical-left', 'vertical-right'];
+    }
+
+    // 直前カットのトランジション＆配置を除外してランダム選出
+    const transition = pickRandom(transPool, prevStaging?.transition);
+    const position = pickRandom(posPool, prevStaging?.position);
+    const style = pickRandom(stylePool, prevStaging?.style);
+
+    const posLabel = 
+      position === 'bottom-left' ? '下部左寄り(左始まり)' :
+      position === 'bottom-right' ? '下部右寄り(右付け)' :
+      position === 'top-cinema' ? '上部シネマ(天吊り)' :
+      position === 'vertical-right' ? '右サイド縦書き' :
+      position === 'vertical-left' ? '左サイド縦書き' : '下部配置';
+
+    const transLabel = 
+      transition === 'animista-slide-bck' ? 'Animista奥ズーム' :
+      transition === 'gsap-kinetic-stagger' ? 'GSAP急減速スタッガー' :
+      transition === 'aos-fade-soft' ? 'AOS上品ソフトフェード' :
+      transition === 'zoom-in-bounce' ? 'ズームバウンス' :
+      transition === 'glitch-pop' ? 'グリッチカットイン' :
+      transition === 'glow-fade' ? 'ネオングローフェード' : 'ブラースライド';
+
     return {
-      style: 'brush-impact',
-      transition: isEven ? 'blur-slide-up' : 'animista-slide-bck',
-      position: isEven ? 'bottom-right' : 'bottom-left',
-      directorNote: `重厚な歴史考証に基づき、視認性の高い墨文字インパクトフチ取りテロップで物語の威厳を表現。`
+      style,
+      transition,
+      position,
+      directorNote: `[${sectionName}・${sectionMood}] ${posLabel} × ${transLabel}。メイン被写体を遮らず無限のバリエーションで楽曲の感情曲線とシンクロ。`
     };
   }
 
+  if (isHistorical) {
+    const style: TelopStyle = 'brush-impact';
+    const transPool: TelopTransition[] = ['blur-slide-up', 'animista-slide-bck', 'blur-slide-right', 'aos-fade-soft'];
+    const posPool: TelopPosition[] = ['bottom-left', 'bottom-right', 'vertical-right', 'top-cinema'];
+
+    const transition = pickRandom(transPool, prevStaging?.transition);
+    const position = pickRandom(posPool, prevStaging?.position);
+
+    return {
+      style,
+      transition,
+      position,
+      directorNote: `重厚な歴史考証に基づき、直前と異なる視覚動線（${position} × ${transition}）で物語の威厳を表現。`
+    };
+  }
+
+  // 一般シネマドラマモード
+  const stylePool: TelopStyle[] = ['cinema-subtle', 'mv-blur-slide'];
+  const transPool: TelopTransition[] = ['aos-fade-soft', 'blur-slide-up', 'blur-slide-left'];
+  const posPool: TelopPosition[] = ['bottom-left', 'bottom-right', 'top-cinema'];
+
+  const transition = pickRandom(transPool, prevStaging?.transition);
+  const position = pickRandom(posPool, prevStaging?.position);
+  const style = pickRandom(stylePool, prevStaging?.style);
+
   return {
-    style: 'cinema-subtle',
-    transition: normCut % 2 === 0 ? 'blur-slide-up' : 'aos-fade-soft',
-    position: normCut % 2 === 0 ? 'bottom-right' : 'bottom-left',
-    directorNote: `映像の没入感を阻害しないシネマ風グラスプレートテロップ。`
+    style,
+    transition,
+    position,
+    directorNote: `映画字幕風グラスプレート。直前カットと重ならないレイアウト（${position} × ${transition}）で映像への没入感を維持。`
   };
 }

@@ -80,11 +80,14 @@ export const CutCard: React.FC<CutCardProps> = ({
             </span>
           </div>
         ) : cut.error ? (
-          <div className="flex flex-col items-center gap-1 px-2 text-center">
-            <span className="material-symbols-outlined text-red-500 text-[20px] opacity-50">error</span>
-            <span className="text-[8px] text-red-400 font-bold uppercase">Failed</span>
+          <div className="flex flex-col items-center gap-0.5 px-2 text-center max-w-full z-20">
+            <span className="material-symbols-outlined text-red-500 text-[18px]">error</span>
+            <span className="text-[8px] text-red-400 font-bold uppercase tracking-wider">Failed</span>
+            <span className="text-[7px] text-red-300/90 line-clamp-2 max-w-[92%] leading-tight break-all font-mono" title={cut.error}>
+              {cut.error}
+            </span>
             {onRetry && (
-              <button onClick={handleRetry} className="mt-1 bg-white/10 hover:bg-white/20 border border-white/20 text-white rounded px-2 py-0.5 text-[8px] font-bold transition-all">Retry</button>
+              <button onClick={handleRetry} className="mt-1 bg-red-500/20 hover:bg-red-500/30 border border-red-500/40 text-red-200 rounded px-2 py-0.5 text-[8px] font-bold transition-all cursor-pointer">Retry</button>
             )}
           </div>
         ) : (

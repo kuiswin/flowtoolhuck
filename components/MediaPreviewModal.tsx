@@ -183,44 +183,69 @@ export const MediaPreviewModal: React.FC<MediaPreviewModalProps> = ({
         });
 
         if (isMvMode) {
-            // フレーズを1行または2行に分割
-            const fullText = text.trim();
-            let lines: string[] = [];
-            if (fullText.includes(' ') || fullText.includes('　') || fullText.includes('、')) {
-                const parts = fullText.split(/[\s　、]+/);
-                if (parts.length >= 2) {
-                    const mid = Math.ceil(parts.length / 2);
-                    lines = [parts.slice(0, mid).join(' '), parts.slice(mid).join(' ')].filter(Boolean);
-                } else {
-                    lines = [fullText];
+            // Ado風 単語・意味ブロックに分割
+            const cleanText = text.replace(/^[「『\s]+|[」』\s:：]+$/g, '').trim();
+            const words = (() => {
+                if (cleanText.includes(' ') || cleanText.includes('　') || cleanText.includes('、')) {
+                    const raw = cleanText.split(/[\s　、]+/).filter(Boolean);
+                    if (raw.length >= 2) return raw.slice(0, 4);
                 }
-            } else if (fullText.length > 14) {
-                const half = Math.ceil(fullText.length / 2);
-                lines = [fullText.slice(0, half), fullText.slice(half)];
-            } else {
-                lines = [fullText];
-            }
+                const parts: string[] = [];
+                let cur = '';
+                const particles = ['は', 'が', 'を', 'に', 'へ', 'で', 'と', 'から', 'より', 'の', 'て', 'まま', 'けど', 'たら', 'して'];
+                for (let i = 0; i < cleanText.length; i++) {
+                    cur += cleanText[i];
+                    if (particles.some(p => cur.endsWith(p)) && cur.length >= 3 && parts.length < 3 && i < cleanText.length - 2) {
+                        parts.push(cur);
+                        cur = '';
+                    } else if (cur.length >= 6 && parts.length < 3 && i < cleanText.length - 2) {
+                        parts.push(cur);
+                        cur = '';
+                    }
+                }
+                if (cur) parts.push(cur);
+                return parts.length > 0 ? parts : [cleanText];
+            })();
+
+            // 単語ごとの水平オフセット（Ado風ステアステップ / 段違いレイアウト）
+            const xOffsets = words.length === 1 ? ['0%'] :
+                             words.length === 2 ? ['-12%', '12%'] :
+                             ['-16%', '0%', '16%'];
+            const angles = [-3.5, 2.0, -2.5, 3.0];
 
             return (
-                <div className="absolute bottom-[14%] left-0 w-full px-6 flex flex-col items-center justify-center pointer-events-none z-40 animate-in fade-in slide-in-from-bottom-8 duration-500">
-                    <div className="flex flex-col items-center gap-1.5 max-w-[94%] text-center">
-                        {lines.map((line, lIdx) => {
-                            const isHigh = highlights.some(h => h.word && line.includes(h.word));
+                <div className="absolute bottom-[10%] left-0 w-full px-6 flex flex-col items-center justify-center pointer-events-none z-40">
+                    <div className="flex flex-col items-center gap-1.5 w-full max-w-[94%]">
+                        {words.map((word, wIdx) => {
+                            const isHigh = highlights.some(h => h.word && (word.includes(h.word) || h.word.includes(word)));
+                            const angle = angles[wIdx % angles.length];
+                            const xOff = xOffsets[wIdx] || '0%';
+                            const delay = wIdx * 0.22;
+
                             return (
-                                <p 
-                                    key={lIdx}
-                                    className="font-[900] tracking-wider leading-tight select-none"
+                                <div
+                                    key={wIdx}
+                                    className="animate-ado-word opacity-0"
                                     style={{
-                                        color: isHigh ? '#FFE600' : '#FFFFFF',
-                                        fontSize: '2.1rem',
-                                        WebkitTextStroke: '6px black',
-                                        paintOrder: 'stroke fill',
-                                        textShadow: '0 4px 20px rgba(0,0,0,0.9), 0 0 10px rgba(0,0,0,0.8)',
-                                        fontFamily: '"Impact", "Montserrat Black", "Hiragino Kaku Gothic ProN", "Noto Sans JP", sans-serif'
+                                        transform: `translateX(${xOff}) rotate(${angle}deg)`,
+                                        animationDelay: `${delay}s`,
+                                        animationFillMode: 'forwards'
                                     }}
                                 >
-                                    {line}
-                                </p>
+                                    <span
+                                        className="font-[900] tracking-wider select-none inline-block px-3 py-0.5"
+                                        style={{
+                                            color: isHigh ? '#FFE600' : '#FFFFFF',
+                                            fontSize: isHigh ? '2.3rem' : '1.9rem',
+                                            WebkitTextStroke: isHigh ? '7px black' : '6px black',
+                                            paintOrder: 'stroke fill',
+                                            textShadow: '0 4px 20px rgba(0,0,0,0.95), 0 0 12px rgba(0,0,0,0.85)',
+                                            fontFamily: '"Impact", "Montserrat Black", "Hiragino Kaku Gothic ProN", "Noto Sans JP", sans-serif'
+                                        }}
+                                    >
+                                        {word}
+                                    </span>
+                                </div>
                             );
                         })}
                     </div>

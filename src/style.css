@@ -167,3 +167,26 @@ body {
 .animate-kinetic-zoom-in {
   animation: kinetic-zoom-in 3.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) infinite;
 }
+
+/* Ado風キネティック・単語飛び込みアニメーション (Animate.css style) */
+@keyframes ado-word-in {
+  0% {
+    opacity: 0;
+    transform: translateY(45px) scale(0.4);
+    filter: blur(6px);
+  }
+  65% {
+    opacity: 1;
+    transform: translateY(-5px) scale(1.1);
+    filter: blur(0px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0px) scale(1);
+    filter: blur(0px);
+  }
+}
+
+.animate-ado-word {
+  animation: ado-word-in 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) both;
+}

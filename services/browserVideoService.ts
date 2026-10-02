@@ -65,7 +65,41 @@ function drawKenBurnsFrame(
 
 
 /**
- * 音楽MVモード用 キネティック・リリック演出（Animate.css風の流麗なスライドイン＆バウンス＆高可読性テロップ）
+ * 日本語テキストをスマートに単語・意味ブロックに分割（Ado風リリック単位）
+ */
+function splitIntoAdoWords(text: string): string[] {
+  const clean = text.replace(/^[「『\s]+|[」』\s:：]+$/g, '').trim();
+  if (!clean) return [];
+
+  // スペースや読点があればそれで分割
+  if (clean.includes(' ') || clean.includes('　') || clean.includes('、')) {
+    const rawParts = clean.split(/[\s　、]+/).filter(Boolean);
+    if (rawParts.length >= 2) return rawParts.slice(0, 4);
+  }
+
+  // 助詞や文字境界でスマートに2〜3語に分割
+  const parts: string[] = [];
+  let current = '';
+  const particles = ['は', 'が', 'を', 'に', 'へ', 'で', 'と', 'から', 'より', 'の', 'て', 'まま', 'けど', 'たら', 'して'];
+
+  for (let i = 0; i < clean.length; i++) {
+    current += clean[i];
+    const isParticle = particles.some(p => current.endsWith(p));
+    if (isParticle && current.length >= 3 && parts.length < 3 && i < clean.length - 2) {
+      parts.push(current);
+      current = '';
+    } else if (current.length >= 6 && parts.length < 3 && i < clean.length - 2) {
+      parts.push(current);
+      current = '';
+    }
+  }
+  if (current) parts.push(current);
+  return parts.length > 0 ? parts : [clean];
+}
+
+/**
+ * 音楽MVモード用 Ado風キネティック・タイポグラフィ
+ * 単語単位で段違いにレイアウトされ、Animate.css風にテンポよく流れるように飛び込み、しっかり読めてから抜ける！
  */
 function renderKineticAdoLyrics(
   ctx: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D,
@@ -79,103 +113,110 @@ function renderKineticAdoLyrics(
   if (!rawText.trim()) return;
 
   const highlights = cut.telop?.highlights || [];
-  const fullText = rawText.replace(/^[\s「『]+|[:：\s」』]+$/g, '').trim();
-  if (!fullText) return;
+  const words = splitIntoAdoWords(rawText);
+  if (words.length === 0) return;
 
-  // 15文字前後で区切って1行または2行にする（読点・スペース優先）
-  let lines: string[] = [];
-  if (fullText.includes(' ') || fullText.includes('　') || fullText.includes('、')) {
-    const parts = fullText.split(/[\s　、]+/);
-    if (parts.length >= 2) {
-      const mid = Math.ceil(parts.length / 2);
-      lines = [parts.slice(0, mid).join(' '), parts.slice(mid).join(' ')].filter(Boolean);
-    } else {
-      lines = [fullText];
-    }
-  } else if (fullText.length > 14) {
-    const half = Math.ceil(fullText.length / 2);
-    lines = [fullText.slice(0, half), fullText.slice(half)];
-  } else {
-    lines = [fullText];
-  }
-
-  // タイムラインアニメーション進行度 (0.0 〜 1.0)
+  // タイムライン進行度 (0.0 〜 1.0)
   const progress = Math.max(0, Math.min(1, currentTime / Math.max(duration, 0.1)));
 
-  // Animate.css "backInUp" 風のイージング計算
-  // 0.00 〜 0.18: 下からスッと上昇しながらスケールイン (0.85 -> 1.04 -> 1.0)
-  // 0.18 〜 0.82: しっかり静止して超ハッキリ読める！（呼吸のようなごく微小なスケール 1.0 -> 1.025）
-  // 0.82 〜 1.00: 穏やかにフェードアウト (1.0 -> 0.0)
-  let alpha = 1;
-  let offsetY = 0;
-  let scale = 1;
-
-  if (progress < 0.18) {
-    const t = progress / 0.18;
-    const c1 = 1.70158;
-    const c3 = c1 + 1;
-    const easeBack = 1 + c3 * Math.pow(t - 1, 3) + c1 * Math.pow(t - 1, 2);
-    alpha = Math.min(1, t * 1.5);
-    offsetY = (1 - easeBack) * (height * 0.08);
-    scale = 0.85 + (easeBack * 0.15);
-  } else if (progress > 0.82) {
-    const t = (progress - 0.82) / 0.18;
-    alpha = Math.max(0, 1 - t);
-    scale = 1.025 + (t * 0.05);
-  } else {
-    const holdT = (progress - 0.18) / (0.82 - 0.18);
-    alpha = 1;
-    scale = 1.0 + (holdT * 0.025);
-    offsetY = 0;
+  // 全体の退場アニメーション（0.84 〜 1.0: zoomOut & fadeOut）
+  let globalExitAlpha = 1;
+  let globalExitScale = 1;
+  if (progress > 0.84) {
+    const exitT = (progress - 0.84) / 0.16;
+    globalExitAlpha = Math.max(0, 1 - exitT);
+    globalExitScale = 1.0 + (exitT * 0.08);
   }
 
-  if (alpha <= 0.01) return;
-
-  ctx.save();
-  ctx.globalAlpha = Math.max(0, Math.min(1, alpha));
-
-  // 画面の下寄り（縦動画・横動画ともにバランスの取れた位置: 75%）
-  const baseY = height * 0.75 + offsetY;
-  const centerX = width * 0.5;
-
-  ctx.translate(centerX, baseY);
-  ctx.scale(scale, scale);
+  if (globalExitAlpha <= 0.01) return;
 
   const baseFontSize = Math.min(width * 0.065, 52);
   const strokeWidth = Math.max(8, baseFontSize * 0.22);
   const lineHeight = baseFontSize * 1.35;
 
+  // 単語数に応じた基準垂直位置（画面下部 70%〜80% に収める）
+  const totalHeight = words.length * lineHeight;
+  const startY = height * 0.76 - (totalHeight * 0.4);
+
+  // 単語ごとの水平オフセット（Ado風のステアステップ / 段違いレイアウト）
+  // 単語0: やや左 (-12%〜-8%), 単語1: 中央付近 (0%), 単語2: やや右 (+8%〜+12%)
+  const xOffsets = words.length === 1 ? [0] :
+                   words.length === 2 ? [-width * 0.08, width * 0.08] :
+                   [-width * 0.11, 0, width * 0.11];
+
+  const angles = [-3.5, 2.0, -2.5, 3.0]; // 単語ごとのわずかな傾きで躍動感を演出
+
+  ctx.save();
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
   ctx.lineJoin = 'round';
   ctx.lineCap = 'round';
 
-  const startY = lines.length === 2 ? -lineHeight * 0.5 : 0;
+  words.forEach((wordText, idx) => {
+    // 単語ごとの時間差登場（スタッガーアニメーション）
+    // 例: 単語0は0.04〜, 単語1は0.18〜, 単語2は0.32〜
+    const wordEntryStart = 0.04 + idx * 0.14;
+    const wordEntryDuration = 0.15; // 登場にかかる時間
 
-  lines.forEach((lineText, lineIdx) => {
-    const currentY = startY + lineIdx * lineHeight;
+    if (progress < wordEntryStart) return; // まだ登場していない
 
-    const isHighlighted = highlights.some(h => h.word && lineText.includes(h.word));
+    let wordAlpha = 1;
+    let wordScale = 1;
+    let wordOffsetY = 0;
+
+    const timeSinceEntry = progress - wordEntryStart;
+    if (timeSinceEntry < wordEntryDuration) {
+      // Animate.css "backInUp" バウンス登場
+      const t = timeSinceEntry / wordEntryDuration;
+      const c1 = 1.70158;
+      const c3 = c1 + 1;
+      const easeBack = 1 + c3 * Math.pow(t - 1, 3) + c1 * Math.pow(t - 1, 2);
+      wordAlpha = Math.min(1, t * 1.6);
+      wordOffsetY = (1 - easeBack) * (height * 0.06); // 下から飛び込み
+      wordScale = 0.35 + (easeBack * 0.65);
+    } else {
+      // 静止ホールド期間（呼吸のようなごく微細なスケール 1.0 -> 1.02）
+      const holdProgress = (progress - (wordEntryStart + wordEntryDuration)) / (0.84 - (wordEntryStart + wordEntryDuration));
+      wordScale = 1.0 + (Math.max(0, holdProgress) * 0.02);
+      wordOffsetY = 0;
+      wordAlpha = 1;
+    }
+
+    const currentX = (width * 0.5) + (xOffsets[idx] || 0);
+    const currentY = startY + idx * lineHeight + wordOffsetY;
+    const angle = angles[idx % angles.length];
+
+    // ハイライト判定
+    const isHighlighted = highlights.some(h => h.word && (wordText.includes(h.word) || h.word.includes(wordText)));
     const textColor = isHighlighted ? '#FFE600' : '#FFFFFF';
+    const highlightSizeBoost = isHighlighted ? 1.18 : 1.0;
+
+    ctx.save();
+    ctx.translate(currentX, currentY);
+    ctx.rotate((angle * Math.PI) / 180);
+    ctx.scale(wordScale * globalExitScale * highlightSizeBoost, wordScale * globalExitScale * highlightSizeBoost);
+    ctx.globalAlpha = Math.max(0, Math.min(1, wordAlpha * globalExitAlpha));
 
     ctx.font = `900 ${baseFontSize}px "Impact", "Montserrat Black", "Hiragino Kaku Gothic ProN", "Noto Sans JP", sans-serif`;
 
-    // 1. 強烈なドロップシャドウ
-    ctx.shadowColor = 'rgba(0, 0, 0, 0.9)';
-    ctx.shadowBlur = 20;
+    // 1. 強烈なブラックドロップシャドウ
+    ctx.shadowColor = 'rgba(0, 0, 0, 0.95)';
+    ctx.shadowBlur = 24;
     ctx.shadowOffsetX = 0;
     ctx.shadowOffsetY = 4;
 
-    // 2. 超極太ブラック縁取り
+    // 2. 超極太黒縁取り（どんな背景でも超クッキリ）
     ctx.strokeStyle = '#000000';
-    ctx.lineWidth = strokeWidth;
-    ctx.strokeText(lineText, 0, currentY);
+    ctx.lineWidth = strokeWidth * (isHighlighted ? 1.2 : 1.0);
+    ctx.strokeText(wordText, 0, 0);
 
-    // 3. 塗り
+    // 3. クッキリ鮮明な文字塗り
     ctx.shadowColor = 'transparent';
     ctx.shadowBlur = 0;
     ctx.fillStyle = textColor;
-    ctx.fillText(lineText, 0, currentY);
+    ctx.fillText(wordText, 0, 0);
+
+    ctx.restore();
   });
 
   ctx.restore();

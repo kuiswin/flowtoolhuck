@@ -218,60 +218,75 @@ export function buildLyricLines(fullText: string, highlights: Array<{ word: stri
   const clean = (fullText || '').replace(/^[「『\s]+|[」』\s:：]+$/g, '').trim();
   if (!clean) return [];
 
-  // 1. 行の分割
-  let lines: string[] = [];
+  const particles = [
+    'ながら', 'まま', 'のに', 'ので', 'ても', 'でも', 'から', 'より', 'けど', 'たら', 'して', 'まで', 
+    'ば', 'は', 'が', 'を', 'に', 'へ', 'で', 'と', 'の', 'て'
+  ];
 
+  // 1. 初期の粗い分割（改行、読点、スペース）
+  let initialChunks: string[] = [];
   if (clean.includes('\n')) {
-    lines = clean.split('\n').map(s => s.trim()).filter(Boolean);
+    initialChunks = clean.split('\n').map(s => s.trim()).filter(Boolean);
   } else if (clean.includes('、') || clean.includes(' ') || clean.includes('　')) {
-    lines = clean.split(/[\s　、]+/).map(s => s.trim()).filter(Boolean);
+    initialChunks = clean.split(/[\s　、]+/).map(s => s.trim()).filter(Boolean);
+  } else {
+    initialChunks = [clean];
   }
 
-  // もし区切り文字がないか1行だけの場合、形態素・助詞の切れ目で自然に2〜3行に分割
-  if (lines.length <= 1) {
-    const raw = lines[0] || clean;
-    const particles = [
-      'ながら', 'まま', 'のに', 'ので', 'ても', 'でも', 'から', 'より', 'けど', 'たら', 'して', 'まで', 
-      'ば', 'は', 'が', 'を', 'に', 'へ', 'で', 'と', 'の', 'て'
-    ];
-    
+  // 2. 各チャンクを検証し、1行が長すぎる（目安：11文字以上）場合は助詞や文節で美しく分割
+  const splitChunkNaturally = (raw: string): string[] => {
+    if (raw.length <= 11) return [raw];
+
     // キーワードを分断しないためのキーワード保護境界
-    const keywordRanges: Array<[number, number]> = [];
+    const localKeywordRanges: Array<[number, number]> = [];
     highlights.forEach(h => {
       if (!h.word) return;
       let pos = 0;
       while ((pos = raw.indexOf(h.word, pos)) !== -1) {
-        keywordRanges.push([pos, pos + h.word.length]);
+        localKeywordRanges.push([pos, pos + h.word.length]);
         pos += 1;
       }
     });
 
-    const isInsideKeyword = (index: number) => {
-      return keywordRanges.some(([start, end]) => index > start && index < end);
+    const isInsideLocalKw = (index: number) => {
+      return localKeywordRanges.some(([start, end]) => index > start && index < end);
     };
 
-    const tempLines: string[] = [];
+    const subLines: string[] = [];
     let cur = '';
 
     for (let i = 0; i < raw.length; i++) {
       cur += raw[i];
       const matchedParticle = particles.find(p => cur.endsWith(p));
       const canBreak = matchedParticle && 
-                       cur.length >= 3 && 
-                       !isInsideKeyword(i + 1) && 
+                       cur.length >= 4 && 
+                       !isInsideLocalKw(i + 1) && 
                        (raw.length - i - 1) >= 3;
 
-      if (canBreak && tempLines.length < 3) {
-        tempLines.push(cur);
+      if (canBreak && subLines.length < 2) {
+        subLines.push(cur);
         cur = '';
       }
     }
-    if (cur) tempLines.push(cur);
-    lines = tempLines.length > 0 ? tempLines : [raw];
+    if (cur) subLines.push(cur);
+    return subLines.length > 0 ? subLines : [raw];
+  };
+
+  let refinedLines: string[] = [];
+  for (const chunk of initialChunks) {
+    if (chunk.length > 11 && refinedLines.length < 4) {
+      const parts = splitChunkNaturally(chunk);
+      refinedLines.push(...parts);
+    } else {
+      refinedLines.push(chunk);
+    }
   }
 
-  // 最大4行に制限
-  lines = lines.slice(0, 4);
+  // 最大4行に制限（長すぎる場合は末尾行にまとめる）
+  if (refinedLines.length > 4) {
+    refinedLines = [...refinedLines.slice(0, 3), refinedLines.slice(3).join('')];
+  }
+  const lines = refinedLines.filter(Boolean);
 
   // 2. 各行の中で、ハイライト単語「だけ」を抽出してセグメント化
   // 長い単語を優先してマッチング

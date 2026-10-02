@@ -498,7 +498,7 @@ export const MediaPreviewModal: React.FC<MediaPreviewModalProps> = ({
                 return (
                     <div 
                         key={`${transKey}-${cut.telop?.style}-${posKey}-${text}`}
-                        className={`absolute top-[8%] ${isRightSide ? 'right-[5%]' : 'left-[5%]'} h-[80%] max-h-[82%] flex ${isRightSide ? 'flex-row-reverse' : 'flex-row'} items-start gap-3 pointer-events-none z-40 select-none`}
+                        className={`absolute top-[8%] ${isRightSide ? 'right-[5%]' : 'left-[5%]'} h-[80%] max-h-[82%] flex ${isRightSide ? 'flex-row-reverse' : 'flex-row'} items-start gap-2.5 pointer-events-none z-40 select-none`}
                     >
                         {lyricLines.map((line, wIdx) => {
                             const delay = wIdx * 0.12;
@@ -511,25 +511,24 @@ export const MediaPreviewModal: React.FC<MediaPreviewModalProps> = ({
                                         animationFillMode: 'both'
                                     }}
                                 >
-                                    <div className={`inline-flex flex-col items-center backdrop-blur-md rounded-2xl transition-all shadow-2xl px-2 py-4 ${
+                                    <div className={`inline-block whitespace-nowrap backdrop-blur-md rounded-2xl transition-all shadow-2xl px-2 py-4 ${
                                         line.hasHighlight 
-                                          ? 'bg-black/70 border border-amber-400/40 shadow-amber-500/20' 
-                                          : 'bg-black/50 border border-white/10'
+                                          ? 'bg-black/75 border border-amber-400/40 shadow-amber-500/20' 
+                                          : 'bg-black/55 border border-white/10'
                                     }`}>
                                         {line.segments.map((seg, sIdx) => (
                                             <span
                                                 key={sIdx}
-                                                className="font-[900] select-none block"
+                                                className="font-[900] select-none inline"
                                                 style={{
                                                     color: seg.isHighlight ? (seg.color || '#FFE600') : '#FFFFFF',
-                                                    fontSize: seg.isHighlight ? '2.1rem' : '1.35rem',
+                                                    fontSize: seg.isHighlight ? '1.45rem' : '1.2rem',
                                                     textShadow: seg.isHighlight 
-                                                      ? '0 0 20px rgba(255, 230, 0, 0.95), 0 0 35px rgba(255, 200, 0, 0.6), 0 3px 8px rgba(0,0,0,0.95)' 
-                                                      : '0 2px 6px rgba(0,0,0,0.95), 0 0 4px rgba(0,0,0,0.85)',
+                                                      ? '0 0 16px rgba(255, 230, 0, 0.95), 0 0 28px rgba(255, 200, 0, 0.5), 0 2px 6px rgba(0,0,0,0.95)' 
+                                                      : '0 2px 5px rgba(0,0,0,0.95), 0 0 3px rgba(0,0,0,0.85)',
                                                     fontFamily: '"Zen Kaku Gothic New", "Montserrat", "Outfit", "Noto Sans JP", sans-serif',
-                                                    letterSpacing: '0.15em',
-                                                    lineHeight: 1.25,
-                                                    margin: seg.isHighlight ? '4px 0' : '1px 0'
+                                                    letterSpacing: '0.14em',
+                                                    lineHeight: 1.2
                                                 }}
                                             >
                                                 {seg.text}
@@ -546,17 +545,17 @@ export const MediaPreviewModal: React.FC<MediaPreviewModalProps> = ({
             // 横書きレイアウト
             const isClimax = posKey === 'center-climax';
             const xOffsets = isLeft 
-                ? ['0%', '4%', '8%', '12%']
+                ? ['0%', '3%', '6%', '9%']
                 : isRight
-                ? ['0%', '-4%', '-8%', '-12%']
+                ? ['0%', '-3%', '-6%', '-9%']
                 : lyricLines.length === 1 ? ['0%'] :
-                  lyricLines.length === 2 ? ['-8%', '8%'] :
-                  ['-12%', '0%', '12%'];
+                  lyricLines.length === 2 ? ['-4%', '4%'] :
+                  ['-5%', '0%', '5%'];
 
-            const angles = isLeft ? [-1.5, 0.5, -1.0, 1.0] : 
-                           isRight ? [1.5, -0.5, 1.0, -1.0] : 
-                           isClimax ? [-1.0, 1.0, -0.5] :
-                           [-3.0, 1.5, -2.0, 2.5];
+            const angles = isLeft ? [-1.0, 0.8, -0.6, 0.8] : 
+                           isRight ? [1.0, -0.8, 0.6, -0.8] : 
+                           isClimax ? [-0.8, 0.8, -0.5] :
+                           [-1.2, 0.8, -1.0, 1.2];
 
             const containerPositionClass = 
                 isTop ? 'top-[7%] left-0 right-0 px-4 items-center justify-start' :
@@ -588,25 +587,25 @@ export const MediaPreviewModal: React.FC<MediaPreviewModalProps> = ({
                                         animationFillMode: 'both'
                                     }}
                                 >
-                                    <div className={`inline-flex items-baseline backdrop-blur-md rounded-xl transition-all shadow-2xl px-3.5 py-1 ${
+                                    <div className={`inline-flex items-baseline whitespace-nowrap backdrop-blur-md rounded-xl transition-all shadow-2xl px-3.5 py-1 ${
                                         line.hasHighlight 
-                                          ? 'bg-black/65 border border-amber-400/40 shadow-amber-500/20' 
-                                          : 'bg-black/45 border border-white/10'
+                                          ? 'bg-black/70 border border-amber-400/40 shadow-amber-500/20' 
+                                          : 'bg-black/50 border border-white/10'
                                     }`}>
                                         {line.segments.map((seg, sIdx) => (
                                             <span
                                                 key={sIdx}
-                                                className="font-[900] select-none inline-block align-baseline"
+                                                className="font-[900] select-none inline-block align-baseline whitespace-nowrap"
                                                 style={{
                                                     color: seg.isHighlight ? (seg.color || '#FFE600') : '#FFFFFF',
                                                     fontSize: isClimax 
-                                                      ? (seg.isHighlight ? '3.0rem' : '1.75rem')
-                                                      : (seg.isHighlight ? '2.35rem' : '1.45rem'),
+                                                      ? (seg.isHighlight ? '1.85rem' : '1.4rem')
+                                                      : (seg.isHighlight ? '1.55rem' : '1.25rem'),
                                                     textShadow: seg.isHighlight 
-                                                      ? '0 0 20px rgba(255, 230, 0, 0.95), 0 0 35px rgba(255, 200, 0, 0.6), 0 3px 8px rgba(0,0,0,0.95)' 
-                                                      : '0 2px 6px rgba(0,0,0,0.95), 0 0 4px rgba(0,0,0,0.85)',
+                                                      ? '0 0 16px rgba(255, 230, 0, 0.95), 0 0 28px rgba(255, 200, 0, 0.5), 0 2px 6px rgba(0,0,0,0.95)' 
+                                                      : '0 2px 5px rgba(0,0,0,0.95), 0 0 3px rgba(0,0,0,0.85)',
                                                     fontFamily: '"Zen Kaku Gothic New", "Montserrat", "Outfit", "Noto Sans JP", sans-serif',
-                                                    letterSpacing: seg.isHighlight ? '0.04em' : '0.02em',
+                                                    letterSpacing: seg.isHighlight ? '0.03em' : '0.01em',
                                                     lineHeight: 1.15
                                                 }}
                                             >
@@ -648,15 +647,15 @@ export const MediaPreviewModal: React.FC<MediaPreviewModalProps> = ({
                 className={`absolute ${platePosClass} left-0 w-full px-4 flex flex-col pointer-events-none z-40 ${motionClass}`}
                 style={{ animationFillMode: 'both' }}
             >
-                {/* テロップ背景プレート（約20%〜35%背景が透けて見えるシネマ風グラスモーフィズム） */}
-                <div className="bg-black/65 backdrop-blur-md rounded-2xl px-5 py-3 flex flex-wrap justify-center items-baseline max-w-[92%] shadow-xl shadow-black/40 border border-white/15 leading-snug">
+                {/* テロップ背景プレート（シネマ風グラスモーフィズム） */}
+                <div className="bg-black/70 backdrop-blur-md rounded-2xl px-5 py-2.5 flex flex-wrap justify-center items-baseline max-w-[92%] shadow-xl shadow-black/40 border border-white/15 leading-snug">
                     {text.split('').map((char, i) => {
                         const isKanji = /[\u4e00-\u9faf]/.test(char);
                         const isPunctuation = /[。、！？…]/.test(char);
                         const highlight = highlightIndices.get(i);
                         
                         const color = highlight ? (highlight.color || '#FFE600') : '#FFFFFF';
-                        const scale = (isKanji ? 1.06 : 1.0) * (highlight ? (highlight.sizeScale || 1.15) : 1.0);
+                        const scale = (isKanji ? 1.05 : 1.0) * (highlight ? (highlight.sizeScale || 1.15) : 1.0);
 
                         return (
                             <span 
@@ -664,7 +663,7 @@ export const MediaPreviewModal: React.FC<MediaPreviewModalProps> = ({
                                 className="font-[900] tracking-normal select-none"
                                 style={{ 
                                     color: color, 
-                                    fontSize: `${scale * 1.25}rem`, 
+                                    fontSize: `${scale * 1.15}rem`, 
                                     display: isPunctuation ? 'inline' : 'inline-block',
                                     margin: isPunctuation ? '0 1px 0 -1px' : '0 0.5px',
                                     textShadow: highlight 

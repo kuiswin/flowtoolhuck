@@ -1,6 +1,7 @@
 import { Cut, Episode, KenBurnsPreset } from '../types';
 import { Output, Mp4OutputFormat, BufferTarget, CanvasSource } from 'mediabunny';
 import { renderCoverCanvas } from './exportService';
+import { resolveNeonTheme } from '../constants';
 
 
 /**
@@ -200,16 +201,6 @@ function renderKineticAdoLyrics(
   ctx.lineJoin = 'round';
   ctx.lineCap = 'round';
 
-  // 多彩ネオンカラーパレット（ゴールド、シアン、マゼンタ、ライム、オレンジ、パープル）
-  const NEON_COLORS = [
-    { color: '#FFE600', glow: 'rgba(255, 230, 0, 0.85)' },
-    { color: '#00F0FF', glow: 'rgba(0, 240, 255, 0.85)' },
-    { color: '#FF2A85', glow: 'rgba(255, 42, 133, 0.85)' },
-    { color: '#39FF14', glow: 'rgba(57, 255, 20, 0.85)' },
-    { color: '#FF7A00', glow: 'rgba(255, 122, 0, 0.85)' },
-    { color: '#BD00FF', glow: 'rgba(189, 0, 255, 0.85)' },
-  ];
-
   words.forEach((wordText, idx) => {
     // 単語ごとのスタッガー登場 (0.04s, 0.18s, 0.32s...)
     const wordEntryStart = 0.04 + idx * 0.14;
@@ -296,21 +287,13 @@ function renderKineticAdoLyrics(
     const currentY = startY + idx * lineHeight + wordOffsetY + globalExitOffsetY;
     const angle = angles[idx % angles.length];
 
-    // ハイライト判定＆極彩色ネオンテーマ選定
+    // ハイライト判定＆共通ネオンテーマの取得
     const matchedHighlight = highlights.find(h => h.word && (wordText.includes(h.word) || h.word.includes(wordText)));
     const isHighlighted = !!matchedHighlight;
-    
-    let hash = 0;
-    for (let c = 0; c < wordText.length; c++) hash = (hash << 5) - hash + wordText.charCodeAt(c);
-    const themeIdx = Math.abs(hash + idx * 3 + (cut.id || 1) * 5) % NEON_COLORS.length;
-    const defaultNeon = NEON_COLORS[themeIdx];
+    const neonTheme = resolveNeonTheme(wordText, idx, cut.id || 1, matchedHighlight?.color);
 
-    const textColor = isHighlighted 
-      ? (matchedHighlight?.color && matchedHighlight.color !== '#FFE600' ? matchedHighlight.color : defaultNeon.color)
-      : '#FFFFFF';
-    const textGlow = isHighlighted
-      ? (matchedHighlight?.color && matchedHighlight.color !== '#FFE600' ? `${matchedHighlight.color}D9` : defaultNeon.glow)
-      : 'rgba(255, 255, 255, 0.7)';
+    const textColor = isHighlighted ? neonTheme.color : '#FFFFFF';
+    const textGlow = isHighlighted ? neonTheme.glow : 'rgba(255, 255, 255, 0.7)';
     const highlightSizeBoost = isHighlighted ? 1.35 : 1.0;
 
     ctx.save();

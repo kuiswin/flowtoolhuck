@@ -21,6 +21,18 @@ export interface PreviousShotContext {
 }
 
 /**
+ * MVモードにおけるサビ（クライマックス）判定（12カット中、Cut 8 のみ）
+ */
+export function isMvChorusCut(cutId: number = 1): boolean {
+  return (cutId % 12) === 8 || cutId === 8;
+}
+
+/**
+ * 非サビ時のカメラ目線・正面向きを徹底排除するアンチトークン
+ */
+export const MV_ANTI_CAMERA_LOOK_NEGATIVE = 'looking at camera, eye contact, looking at viewer, staring into lens, frontal eye contact, breaking fourth wall, posed portrait, mugshot, mugshot gaze, smiling at camera';
+
+/**
  * 直前カットの情報に基づいて、構図・ポーズ・アングルの重複を排除するネガティブプロンプトを自動生成
  * （ロジック定義テーブル POSE_CONTRAST_RULES および SHOT_SCALE_REGISTRY を参照）
  */
@@ -145,7 +157,7 @@ export function buildFinalCinematicPromptAndNegative(
                   (styleKey + ' ' + rawStyle).toLowerCase().includes('8-bit');
 
   // Layer 2 & 3: Camera Context & Action
-  const isAllowedEyeContact = isMv && ((task.cutId || 1) % 12 === 8 || task.cutId === 8);
+  const isAllowedEyeContact = isMv && isMvChorusCut(task.cutId || 1);
   let cameraContext = '';
   if (isMv) {
     const mvGazePrompt = isAllowedEyeContact
@@ -193,9 +205,7 @@ export function buildFinalCinematicPromptAndNegative(
   const dynamicForbidden = forbiddenKeywordsEn || (forbiddenAnachronisms || []).join(', ');
 
   // MVモード専用アンチネガティブ（叫び、劇的な怒り、過剰アクション、および非サビ時のカメラ目線の徹底排除）
-  const mvAntiCameraLook = (isMv && !isAllowedEyeContact)
-    ? ', looking at camera, eye contact, looking at viewer, staring into lens, frontal eye contact, breaking fourth wall, posed portrait, mugshot, smiling at camera'
-    : '';
+  const mvAntiCameraLook = (isMv && !isAllowedEyeContact) ? `, ${MV_ANTI_CAMERA_LOOK_NEGATIVE}` : '';
 
   const mvAntiDramaticNegative = isMv 
     ? `violent action, aggressive shouting, screaming mouth wide open, intense crying, dynamic combat, weapons, explosion, exaggerated action pose, heroic flexing${mvAntiCameraLook}`

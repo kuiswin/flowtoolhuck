@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { Cut, VideoModelType, KenBurnsPreset } from '../types';
 import { 
   CAMERA_WORK_OPTIONS, 
@@ -8,6 +8,8 @@ import {
   TELOP_STYLE_REGISTRY,
   TELOP_TRANSITION_REGISTRY,
   TELOP_POSITION_REGISTRY,
+  STUDIO_NEON_PALETTE,
+  resolveNeonTheme,
   sanitizeFilename,
   resolveImageModel,
   resolveVideoModel,
@@ -539,34 +541,6 @@ export const MediaPreviewModal: React.FC<MediaPreviewModalProps> = ({
         return `studio-kb-${preset}`;
     };
 
-    // 極彩色ネオンパレット（黄色一色からの脱却：ゴールド、シアン、マゼンタ、ライム、オレンジ、パープル）
-    const NEON_PALETTE = [
-        { color: '#FFE600', glow: '0 0 16px rgba(255, 230, 0, 0.95), 0 0 28px rgba(255, 200, 0, 0.5), 0 2px 5px rgba(0,0,0,0.95)', border: 'border-amber-400/50', shadow: 'shadow-amber-500/25' },
-        { color: '#00F0FF', glow: '0 0 16px rgba(0, 240, 255, 0.95), 0 0 28px rgba(0, 200, 255, 0.5), 0 2px 5px rgba(0,0,0,0.95)', border: 'border-cyan-400/50', shadow: 'shadow-cyan-500/25' },
-        { color: '#FF2A85', glow: '0 0 16px rgba(255, 42, 133, 0.95), 0 0 28px rgba(255, 0, 100, 0.5), 0 2px 5px rgba(0,0,0,0.95)', border: 'border-pink-500/50', shadow: 'shadow-pink-500/25' },
-        { color: '#39FF14', glow: '0 0 16px rgba(57, 255, 20, 0.95), 0 0 28px rgba(40, 220, 0, 0.5), 0 2px 5px rgba(0,0,0,0.95)', border: 'border-emerald-400/50', shadow: 'shadow-emerald-500/25' },
-        { color: '#FF7A00', glow: '0 0 16px rgba(255, 122, 0, 0.95), 0 0 28px rgba(255, 80, 0, 0.5), 0 2px 5px rgba(0,0,0,0.95)', border: 'border-orange-400/50', shadow: 'shadow-orange-500/25' },
-        { color: '#BD00FF', glow: '0 0 16px rgba(189, 0, 255, 0.95), 0 0 28px rgba(160, 0, 240, 0.5), 0 2px 5px rgba(0,0,0,0.95)', border: 'border-purple-400/50', shadow: 'shadow-purple-500/25' }
-    ];
-
-    const getNeonTheme = (word: string, highlightIdx: number, cutId: number, customColor?: string) => {
-        if (customColor && customColor !== '#FFE600') {
-            return {
-                color: customColor,
-                glow: `0 0 16px ${customColor}, 0 0 28px ${customColor}80, 0 2px 5px rgba(0,0,0,0.95)`,
-                border: 'border-white/40',
-                shadow: 'shadow-white/20'
-            };
-        }
-        let hash = 0;
-        const cleanWord = (word || '').trim();
-        for (let i = 0; i < cleanWord.length; i++) {
-            hash = (hash << 5) - hash + cleanWord.charCodeAt(i);
-        }
-        const idx = Math.abs(hash + highlightIdx * 3 + cutId * 5) % NEON_PALETTE.length;
-        return NEON_PALETTE[idx];
-    };
-
     // 複数行（2枠以上）の時に、行ごとに入り・出のベクトルをダイナミックに対向・ランダム化
     const getLineMotion = (lineIdx: number, totalLines: number, baseMotion: string, cutId: number) => {
         if (totalLines <= 1) return baseMotion;
@@ -584,7 +558,7 @@ export const MediaPreviewModal: React.FC<MediaPreviewModalProps> = ({
         return pair[lineIdx % pair.length];
     };
 
-    const renderTelopContent = () => {
+    const telopContent = useMemo(() => {
         const rawText = (cut.telop?.fullText || cut.narrationJp || '').trim();
         if (!showTelop || !rawText) return null;
         
@@ -632,8 +606,8 @@ export const MediaPreviewModal: React.FC<MediaPreviewModalProps> = ({
                             // 該当行のネオンテーマ（最初のハイライトから取得）
                             const firstHighlight = line.segments.find(s => s.isHighlight);
                             const neonTheme = firstHighlight 
-                                ? getNeonTheme(firstHighlight.text, wIdx, cut.id || 1, firstHighlight.color)
-                                : NEON_PALETTE[0];
+                                ? resolveNeonTheme(firstHighlight.text, wIdx, cut.id || 1, firstHighlight.color)
+                                : STUDIO_NEON_PALETTE[0];
 
                             return (
                                 <div
@@ -651,7 +625,7 @@ export const MediaPreviewModal: React.FC<MediaPreviewModalProps> = ({
                                     }`}>
                                         {line.segments.map((seg, sIdx) => {
                                             const segNeon = seg.isHighlight 
-                                                ? getNeonTheme(seg.text, sIdx, cut.id || 1, seg.color)
+                                                ? resolveNeonTheme(seg.text, sIdx, cut.id || 1, seg.color)
                                                 : null;
 
                                             return (
@@ -720,8 +694,8 @@ export const MediaPreviewModal: React.FC<MediaPreviewModalProps> = ({
                             // 行ごとのメインネオンテーマ
                             const firstHighlight = line.segments.find(s => s.isHighlight);
                             const neonTheme = firstHighlight 
-                                ? getNeonTheme(firstHighlight.text, wIdx, cut.id || 1, firstHighlight.color)
-                                : NEON_PALETTE[0];
+                                ? resolveNeonTheme(firstHighlight.text, wIdx, cut.id || 1, firstHighlight.color)
+                                : STUDIO_NEON_PALETTE[0];
 
                             return (
                                 <div
@@ -740,7 +714,7 @@ export const MediaPreviewModal: React.FC<MediaPreviewModalProps> = ({
                                     }`}>
                                         {line.segments.map((seg, sIdx) => {
                                             const segNeon = seg.isHighlight 
-                                                ? getNeonTheme(seg.text, sIdx, cut.id || 1, seg.color)
+                                                ? resolveNeonTheme(seg.text, sIdx, cut.id || 1, seg.color)
                                                 : null;
 
                                             return (
@@ -776,14 +750,14 @@ export const MediaPreviewModal: React.FC<MediaPreviewModalProps> = ({
         const wordThemeMap = new Map<string, { color: string; glow: string; border: string; shadow: string }>();
         highlights.forEach((h, hIdx) => {
             if (!h.word) return;
-            const theme = getNeonTheme(h.word, hIdx, cut.id || 1, h.color);
+            const theme = resolveNeonTheme(h.word, hIdx, cut.id || 1, h.color);
             wordThemeMap.set(h.word, theme);
         });
 
         const highlightIndices = new Map<number, { color: string; sizeScale: number; word: string; glow: string }>();
         highlights.forEach((h, hIdx) => {
             if (!h.word) return;
-            const theme = wordThemeMap.get(h.word) || NEON_PALETTE[0];
+            const theme = wordThemeMap.get(h.word) || STUDIO_NEON_PALETTE[0];
             let pos = 0;
             while ((pos = text.indexOf(h.word, pos)) !== -1) {
                 for (let k = 0; k < h.word.length; k++) {
@@ -842,7 +816,7 @@ export const MediaPreviewModal: React.FC<MediaPreviewModalProps> = ({
                 </div>
             </div>
         );
-    };
+    }, [showTelop, cut.telop, cut.narrationJp, cut.id]);
 
     return (
         <div className="fixed inset-0 z-[150] flex items-center justify-center p-2 sm:p-4 select-none">
@@ -899,7 +873,7 @@ export const MediaPreviewModal: React.FC<MediaPreviewModalProps> = ({
                                 <div className="w-full h-full flex flex-col items-center justify-center text-white/10 gap-3 uppercase tracking-widest text-[10px]">Rendering</div>
                             )}
 
-                            {renderTelopContent()}
+                            {telopContent}
 
                             <div className="absolute top-4 right-4 z-50 opacity-0 group-hover:opacity-100 transition-opacity">
                                 <button onClick={() => setShowTelop(!showTelop)} className={`w-10 h-10 rounded-full backdrop-blur-md border flex items-center justify-center transition-all ${showTelop ? 'bg-amber-500 border-amber-400 text-black' : 'bg-black/60 border-white/20 text-white/40'}`}>

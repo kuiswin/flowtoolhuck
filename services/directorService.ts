@@ -471,6 +471,8 @@ import {
   buildDynamicAntiPreviousNegative, 
   getStoryboardPreset, 
   buildFinalCinematicPromptAndNegative, 
+  isMvChorusCut,
+  MV_ANTI_CAMERA_LOOK_NEGATIVE,
   PreviousShotContext 
 } from './promptEngine';
 import { resolveCameraWork, resolveRecommendedTelopStaging } from '../config/studioDefinitions';
@@ -525,7 +527,7 @@ export async function directShot(
   const directorRole = settings.isMvMode ? "music video (MV) visual director" : settings.isMangaMode ? "comic book/manga storyboard artist" : "film director";
   
   // MVモード時のカメラ目線厳格制御（全12カット中、サビの1回[Cut 8]のみ許可、他は一切カメラを見ない）
-  const isAllowedEyeContact = settings.isMvMode && ((cutId % 12) === 8 || cutId === 8);
+  const isAllowedEyeContact = settings.isMvMode && isMvChorusCut(cutId);
   const mvGazeMandate = settings.isMvMode 
     ? (isAllowedEyeContact 
         ? "CRITICAL MV CLIMAX GAZE: This is the ONLY single cut in the entire music video where direct eye contact with the camera is permitted for powerful emotional resonance." 
@@ -595,8 +597,7 @@ Output ONLY valid JSON:
   // 定義テーブルに基づき直前構図を自動除外するネガティブ文字列を生成
   let antiPreviousNegative = buildDynamicAntiPreviousNegative(previousShotInfo);
   if (settings.isMvMode && !isAllowedEyeContact) {
-    const antiCameraLook = 'looking at camera, eye contact, looking at viewer, staring into lens, frontal eye contact, breaking fourth wall, posed portrait, mugshot gaze, smiling at camera';
-    antiPreviousNegative = antiPreviousNegative ? `${antiPreviousNegative}, ${antiCameraLook}` : antiCameraLook;
+    antiPreviousNegative = antiPreviousNegative ? `${antiPreviousNegative}, ${MV_ANTI_CAMERA_LOOK_NEGATIVE}` : MV_ANTI_CAMERA_LOOK_NEGATIVE;
   }
 
   try {

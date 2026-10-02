@@ -197,7 +197,40 @@ export const CAMERA_WORK_OPTIONS = CAMERA_WORK_REGISTRY.map(c => ({
 
 export const sanitizeFilename = (name: string) => (name || '').replace(/[\\/:*?"<>|]/g, '').trim();
 
+// ── 極彩色ネオンパレット（スタジオ統一定義） ──
+export interface NeonTheme {
+  color: string;
+  glow: string;
+  border: string;
+  shadow: string;
+}
 
+export const STUDIO_NEON_PALETTE: NeonTheme[] = [
+  { color: '#FFE600', glow: '0 0 16px rgba(255, 230, 0, 0.95), 0 0 28px rgba(255, 200, 0, 0.5), 0 2px 5px rgba(0,0,0,0.95)', border: 'border-amber-400/50', shadow: 'shadow-amber-500/25' },
+  { color: '#00F0FF', glow: '0 0 16px rgba(0, 240, 255, 0.95), 0 0 28px rgba(0, 200, 255, 0.5), 0 2px 5px rgba(0,0,0,0.95)', border: 'border-cyan-400/50', shadow: 'shadow-cyan-500/25' },
+  { color: '#FF2A85', glow: '0 0 16px rgba(255, 42, 133, 0.95), 0 0 28px rgba(255, 0, 100, 0.5), 0 2px 5px rgba(0,0,0,0.95)', border: 'border-pink-500/50', shadow: 'shadow-pink-500/25' },
+  { color: '#39FF14', glow: '0 0 16px rgba(57, 255, 20, 0.95), 0 0 28px rgba(40, 220, 0, 0.5), 0 2px 5px rgba(0,0,0,0.95)', border: 'border-emerald-400/50', shadow: 'shadow-emerald-500/25' },
+  { color: '#FF7A00', glow: '0 0 16px rgba(255, 122, 0, 0.95), 0 0 28px rgba(255, 80, 0, 0.5), 0 2px 5px rgba(0,0,0,0.95)', border: 'border-orange-400/50', shadow: 'shadow-orange-500/25' },
+  { color: '#BD00FF', glow: '0 0 16px rgba(189, 0, 255, 0.95), 0 0 28px rgba(160, 0, 240, 0.5), 0 2px 5px rgba(0,0,0,0.95)', border: 'border-purple-400/50', shadow: 'shadow-purple-500/25' }
+];
+
+export function resolveNeonTheme(word: string, highlightIdx: number, cutId: number, customColor?: string): NeonTheme {
+  if (customColor && customColor !== '#FFE600') {
+    return {
+      color: customColor,
+      glow: `0 0 16px ${customColor}, 0 0 28px ${customColor}80, 0 2px 5px rgba(0,0,0,0.95)`,
+      border: 'border-white/40',
+      shadow: 'shadow-white/20'
+    };
+  }
+  let hash = 0;
+  const cleanWord = (word || '').trim();
+  for (let i = 0; i < cleanWord.length; i++) {
+    hash = (hash << 5) - hash + cleanWord.charCodeAt(i);
+  }
+  const idx = Math.abs(hash + highlightIdx * 3 + cutId * 5) % STUDIO_NEON_PALETTE.length;
+  return STUDIO_NEON_PALETTE[idx];
+}
 
 // システム動作に必要なテクニカル定数
 export const STRICT_STYLE_SUFFIX = ' seamless full-bleed vertical 9:16 artwork. Strictly upright vertical perspective. Grounded immersive cinematic human eye-level framing. Absolutely NO drone shots, NO modern aerial drones, NO borders, NO text, NO kanji, NO numbers, NO year labels, NO signs indicating the year or date.';

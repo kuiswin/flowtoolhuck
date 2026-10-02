@@ -145,14 +145,19 @@ export function buildFinalCinematicPromptAndNegative(
                   (styleKey + ' ' + rawStyle).toLowerCase().includes('8-bit');
 
   // Layer 2 & 3: Camera Context & Action
+  const isAllowedEyeContact = isMv && ((task.cutId || 1) % 12 === 8 || task.cutId === 8);
   let cameraContext = '';
   if (isMv) {
+    const mvGazePrompt = isAllowedEyeContact
+      ? 'dramatic emotional climax, direct captivating eye contact with camera, powerful cinematic presence'
+      : 'unposed candid non-look angle, character looking away into distance or downcast in quiet contemplation, no camera look, no eye contact';
+
     if (isPixel) {
-      cameraContext = 'Atmospheric indie music video visual still, clean retro pixel art aesthetic, charming indie game backdrop, serene breathing space, beautiful composition';
+      cameraContext = `Atmospheric indie music video visual still, clean retro pixel art aesthetic, charming indie game backdrop, serene breathing space, beautiful composition, ${mvGazePrompt}`;
     } else if (isNonPhoto) {
-      cameraContext = 'Candid atmospheric indie music video visual still, serene breathing space, aesthetic cinematic color grading, beautiful artistic composition';
+      cameraContext = `Candid atmospheric indie music video visual still, serene breathing space, aesthetic cinematic color grading, beautiful artistic composition, ${mvGazePrompt}`;
     } else {
-      cameraContext = 'Candid atmospheric indie music video still, natural human anatomy, unposed natural posture, soft rim lighting, serene breathing space, cinematic 35mm photography aesthetic';
+      cameraContext = `Candid atmospheric indie music video still, natural human anatomy, unposed natural posture, soft rim lighting, serene breathing space, cinematic 35mm photography aesthetic, ${mvGazePrompt}`;
     }
   } else {
     if (isPixel) {
@@ -187,9 +192,13 @@ export function buildFinalCinematicPromptAndNegative(
 
   const dynamicForbidden = forbiddenKeywordsEn || (forbiddenAnachronisms || []).join(', ');
 
-  // MVモード専用アンチネガティブ（叫び、劇的な怒り、過剰アクション、武器を排除）
+  // MVモード専用アンチネガティブ（叫び、劇的な怒り、過剰アクション、および非サビ時のカメラ目線の徹底排除）
+  const mvAntiCameraLook = (isMv && !isAllowedEyeContact)
+    ? ', looking at camera, eye contact, looking at viewer, staring into lens, frontal eye contact, breaking fourth wall, posed portrait, mugshot, smiling at camera'
+    : '';
+
   const mvAntiDramaticNegative = isMv 
-    ? 'violent action, aggressive shouting, screaming mouth wide open, intense crying, dynamic combat, weapons, explosion, exaggerated action pose, heroic flexing'
+    ? `violent action, aggressive shouting, screaming mouth wide open, intense crying, dynamic combat, weapons, explosion, exaggerated action pose, heroic flexing${mvAntiCameraLook}`
     : '';
 
   const negativeLayers: string[] = [

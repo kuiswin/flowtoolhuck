@@ -523,7 +523,18 @@ export async function directShot(
     : resolveCameraWork(preset.tag).recommendedKenBurns;
 
   const directorRole = settings.isMvMode ? "music video (MV) visual director" : settings.isMangaMode ? "comic book/manga storyboard artist" : "film director";
-  const mvExtraDirecting = settings.isMvMode ? "MANDATORY FOR MV MODE: Atmospheric, ambient, and seamless continuity. Subdued, introspective, and aesthetic expression. No shouting, no melodramatic action poses, no theatrical over-acting. Natural, gentle movements or contemplative gaze matching the background mood." : "";
+  
+  // MVモード時のカメラ目線厳格制御（全12カット中、サビの1回[Cut 8]のみ許可、他は一切カメラを見ない）
+  const isAllowedEyeContact = settings.isMvMode && ((cutId % 12) === 8 || cutId === 8);
+  const mvGazeMandate = settings.isMvMode 
+    ? (isAllowedEyeContact 
+        ? "CRITICAL MV CLIMAX GAZE: This is the ONLY single cut in the entire music video where direct eye contact with the camera is permitted for powerful emotional resonance." 
+        : "CRITICAL MV GAZE MANDATE: The subject MUST NOT look at the camera/viewer under any circumstances! Direct the character looking away, gazing into the distance, eyes cast downward in thought, in pure side profile, or seen from behind. Strict candid documentary aesthetic—never break the fourth wall.")
+    : "";
+
+  const mvExtraDirecting = settings.isMvMode 
+    ? `MANDATORY FOR MV MODE: Atmospheric, ambient, and seamless continuity. Subdued, introspective, and aesthetic expression. No shouting, no melodramatic action poses, no theatrical over-acting. Natural, gentle movements or contemplative gaze matching the background mood. ${mvGazeMandate}` 
+    : "";
   const mangaExtraDirecting = settings.isMangaMode 
     ? "MANDATORY FOR MANGA: Full-bleed edge-to-edge artwork ONLY. Never generate panel borders, white gutters, frames, or blank margins. Fill the entire canvas with dynamic pen-inking, screentones, cel-shading, dynamic facial expressions, and comic-style impact." 
     : "";
@@ -582,7 +593,11 @@ Output ONLY valid JSON:
 }`;
 
   // 定義テーブルに基づき直前構図を自動除外するネガティブ文字列を生成
-  const antiPreviousNegative = buildDynamicAntiPreviousNegative(previousShotInfo);
+  let antiPreviousNegative = buildDynamicAntiPreviousNegative(previousShotInfo);
+  if (settings.isMvMode && !isAllowedEyeContact) {
+    const antiCameraLook = 'looking at camera, eye contact, looking at viewer, staring into lens, frontal eye contact, breaking fourth wall, posed portrait, mugshot gaze, smiling at camera';
+    antiPreviousNegative = antiPreviousNegative ? `${antiPreviousNegative}, ${antiCameraLook}` : antiCameraLook;
+  }
 
   try {
     const res = await Flow.generate.text(directorPrompt);

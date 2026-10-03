@@ -97,78 +97,84 @@ export const EpisodeSection: React.FC<EpisodeSectionProps> = ({
 
   return (
     <section className={`flex flex-col gap-8 animate-slide-in transition-opacity duration-700 ${isPending ? 'opacity-30' : 'opacity-100'}`}>
-      <div className="flex flex-col border-b border-white/10 pb-8 gap-6">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <div className="flex flex-col">
-              <div className="flex items-center gap-3">
-                <h2 className="text-3xl font-black italic uppercase tracking-tighter text-white">{ep.titleJp}</h2>
-                {ep.isDone && <span className="material-symbols-outlined text-green-500 font-bold">check_circle</span>}
-                {ep.isGenerating && <div className="w-5 h-5 border-2 border-amber-500/20 border-t-amber-500 rounded-full animate-spin" />}
-              </div>
-              <span className="text-sm text-white/40 uppercase tracking-widest">{ep.titleEn}</span>
-            </div>
+      <div className="flex flex-col border-b border-white/10 pb-6 gap-4">
+        {/* 上段: 横幅いっぱいのタイトル & 英語サブタイトル */}
+        <div className="flex flex-col gap-1 w-full">
+          <div className="flex items-center gap-3 flex-wrap">
+            <h2 className={`font-black italic uppercase tracking-tight text-white leading-tight ${
+              ep.titleJp.length > 30 ? 'text-lg sm:text-xl md:text-2xl' : (ep.titleJp.length > 20 ? 'text-xl sm:text-2xl md:text-3xl' : 'text-2xl sm:text-3xl md:text-4xl')
+            }`}>
+              {ep.titleJp}
+            </h2>
+            {ep.isDone && <span className="material-symbols-outlined text-green-500 font-bold text-xl">check_circle</span>}
+            {ep.isGenerating && <div className="w-5 h-5 border-2 border-amber-500/20 border-t-amber-500 rounded-full animate-spin shrink-0" />}
           </div>
-          
-          <div className="flex items-center gap-3 overflow-x-auto no-scrollbar">
-            {onBulkRerollTelop && (
-              <PillButton 
-                variant="outline" 
-                className="h-10 px-4 border-purple-500/40 text-purple-400 hover:text-purple-200 hover:border-purple-400 hover:bg-purple-950/30 font-black whitespace-nowrap shrink-0 transition-colors" 
-                disabled={ep.isGenerating || isPending} 
-                onClick={() => onBulkRerollTelop(ep.id)} 
-                icon={<span className="material-symbols-outlined text-purple-400">casino</span>}
-                title="画像は一切再生成せず、12カットすべてのテロップ演出（動き・配置・スタイル）だけを無限ランダムエンジンで一括再抽選します"
-              >
-                🎲 テロップ一括リロール
-              </PillButton>
-            )}
+          {ep.titleEn && (
+            <span className="text-xs sm:text-sm text-white/40 uppercase tracking-widest font-mono">
+              {ep.titleEn}
+            </span>
+          )}
+        </div>
+        
+        {/* 下段: アクションボタン群を横並びにはべらす */}
+        <div className="flex items-center gap-2.5 flex-wrap pt-0.5">
+          {onBulkRerollTelop && (
             <PillButton 
               variant="outline" 
-              className="h-10 px-4 border-amber-500/30 text-amber-500 font-bold whitespace-nowrap shrink-0" 
-              disabled={ep.isBatchGeneratingVideos || ep.isGenerating || isPending} 
-              onClick={() => onBulkBrowserVideo(ep.id)} 
-              icon={<span className="material-symbols-outlined text-amber-500">bolt</span>}
+              className="h-9 px-3.5 border-purple-500/40 text-purple-400 hover:text-purple-200 hover:border-purple-400 hover:bg-purple-950/30 font-black text-xs whitespace-nowrap shrink-0 transition-colors" 
+              disabled={ep.isGenerating || isPending} 
+              onClick={() => onBulkRerollTelop(ep.id)} 
+              icon={<span className="material-symbols-outlined text-purple-400 text-sm">casino</span>}
+              title="画像は一切再生成せず、12カットすべてのテロップ演出を一括再抽選"
             >
-              ⚡ ブラウザ動画化
+              🎲 テロップ一括リロール
             </PillButton>
-            <PillButton 
-              variant="filled" 
-              className="h-10 px-4 bg-indigo-600 text-white font-black border border-indigo-400/50 whitespace-nowrap shrink-0" 
-              disabled={ep.isExportingMovie || ep.isGenerating || isPending} 
-              onClick={() => onExportFullMovie(ep.id)} 
-              icon={ep.isExportingMovie ? <div className="w-4 h-4 border-2 border-white/10 border-t-white rounded-full animate-spin" /> : <span className="material-symbols-outlined">movie</span>}
-            >
-              🎬 動画結合 (MP4)
-            </PillButton>
-            <PillButton 
-              variant="outline" 
-              className="h-10 px-4 border-white/10 text-white/40 font-bold whitespace-nowrap shrink-0" 
-              disabled={ep.isGeneratingRemainingImages || ep.isGenerating || isPending} 
-              onClick={() => onGenerateRemaining(ep.id)} 
-              icon={ep.isGeneratingRemainingImages ? <div className="w-4 h-4 border-2 border-white/10 border-t-white rounded-full animate-spin" /> : <span className="material-symbols-outlined">palette</span>}
-            >
-              🎨 残り描画
-            </PillButton>
-            <PillButton 
-              variant="filled" 
-              className="h-10 px-6 bg-amber-500 text-black font-black whitespace-nowrap shrink-0" 
-              disabled={ep.isBatchGeneratingVideos || ep.isGenerating || isPending} 
-              onClick={() => onBulkVideo(ep.id)} 
-              icon={ep.isBatchGeneratingVideos ? <div className="w-4 h-4 border-2 border-white/10 border-t-white rounded-full animate-spin" /> : <span className="material-symbols-outlined">movie_filter</span>}
-            >
-              🎬 Veo一括
-            </PillButton>
-            <PillButton 
-              variant="outline" 
-              className="h-10 px-6 whitespace-nowrap shrink-0" 
-              disabled={isPending}
-              onClick={() => onDownloadZip(ep)} 
-              icon={<span className="material-symbols-outlined">download</span>}
-            >
-              パッケージ
-            </PillButton>
-          </div>
+          )}
+          <PillButton 
+            variant="outline" 
+            className="h-9 px-3.5 border-amber-500/30 text-amber-400 hover:text-amber-200 font-bold text-xs whitespace-nowrap shrink-0" 
+            disabled={ep.isBatchGeneratingVideos || ep.isGenerating || isPending} 
+            onClick={() => onBulkBrowserVideo(ep.id)} 
+            icon={<span className="material-symbols-outlined text-amber-500 text-sm">bolt</span>}
+          >
+            ⚡ ブラウザ動画化
+          </PillButton>
+          <PillButton 
+            variant="filled" 
+            className="h-9 px-4 bg-indigo-600 hover:bg-indigo-500 text-white font-black text-xs border border-indigo-400/50 whitespace-nowrap shrink-0" 
+            disabled={ep.isExportingMovie || ep.isGenerating || isPending} 
+            onClick={() => onExportFullMovie(ep.id)} 
+            icon={ep.isExportingMovie ? <div className="w-3.5 h-3.5 border-2 border-white/10 border-t-white rounded-full animate-spin" /> : <span className="material-symbols-outlined text-sm">movie</span>}
+          >
+            🎬 動画結合 (MP4)
+          </PillButton>
+          <PillButton 
+            variant="outline" 
+            className="h-9 px-3.5 border-white/10 hover:border-white/30 text-white/50 hover:text-white font-bold text-xs whitespace-nowrap shrink-0" 
+            disabled={ep.isGeneratingRemainingImages || ep.isGenerating || isPending} 
+            onClick={() => onGenerateRemaining(ep.id)} 
+            icon={ep.isGeneratingRemainingImages ? <div className="w-3.5 h-3.5 border-2 border-white/10 border-t-white rounded-full animate-spin" /> : <span className="material-symbols-outlined text-sm">palette</span>}
+          >
+            🎨 残り描画
+          </PillButton>
+          <PillButton 
+            variant="filled" 
+            className="h-9 px-4 bg-amber-500 hover:bg-amber-400 text-black font-black text-xs whitespace-nowrap shrink-0" 
+            disabled={ep.isBatchGeneratingVideos || ep.isGenerating || isPending} 
+            onClick={() => onBulkVideo(ep.id)} 
+            icon={ep.isBatchGeneratingVideos ? <div className="w-3.5 h-3.5 border-2 border-black/10 border-t-black rounded-full animate-spin" /> : <span className="material-symbols-outlined text-sm">movie_filter</span>}
+          >
+            🎬 Veo一括
+          </PillButton>
+          <PillButton 
+            variant="outline" 
+            className="h-9 px-4 border-white/10 hover:border-white/30 text-white/50 hover:text-white font-bold text-xs whitespace-nowrap shrink-0" 
+            disabled={isPending}
+            onClick={() => onDownloadZip(ep)} 
+            icon={<span className="material-symbols-outlined text-sm">download</span>}
+          >
+            パッケージ
+          </PillButton>
         </div>
         <HistoricalCard ep={ep} />
       </div>

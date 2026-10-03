@@ -244,7 +244,7 @@ export const StudioSidebar: React.FC<StudioSidebarProps> = ({
                 {settings.productionMode === 'mv' 
                   ? `🎵 音楽MVを生成 (${settings.episodeCount || 1}曲 / 各12カット)` 
                   : (settings.productionMode === 'style-matrix' 
-                      ? '🎨 画風比較を開始' 
+                      ? `🎨 画風比較を開始 (${settings.episodeCount || 3}画風 / 各2枚)` 
                       : (activeSeriesManifest ? `⏩ 第 ${(activeSeriesManifest.completedEpisodeIds?.length || 0) + 1} 話から再開` : '✨ ドラマ生成開始'))}
               </span>
             </button>

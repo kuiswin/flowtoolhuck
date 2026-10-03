@@ -231,10 +231,17 @@ export const downloadZip = async (
     folder.file('cover.png', coverBlob);
 
     const hasMedia = ep.cuts.some(c => !!c.imageBase64 || !!c.videoBase64);
-    if (hasMedia) {
-      addLog(`🎞️ 結合動画（扉絵入り）をレンダリング中...`, 'info');
-      const movieBlob = await renderFullEpisodeMovie(ep, () => {});
-      folder.file('full_movie.mp4', movieBlob);
+    if (ep.fullMovieBase64) {
+      folder.file('full_movie.mp4', ep.fullMovieBase64, { base64: true });
+    } else if (hasMedia) {
+      try {
+        addLog(`🎞️ 結合動画（扉絵入り）をレンダリング中...`, 'info');
+        const movieBlob = await renderFullEpisodeMovie(ep, () => {});
+        folder.file('full_movie.mp4', movieBlob);
+      } catch (err: any) {
+        console.warn('Full movie rendering skipped in ZIP:', err);
+        addLog(`⚠️ 結合動画の同梱をスキップし素材優先でパッケージ化します`, 'warning');
+      }
     }
     
     const scriptJson = {
@@ -259,7 +266,6 @@ export const downloadZip = async (
 
         return {
           id: c.id,
-          // 裏で流れるセリフ・ナレーション
           dialogue: narration,
           narrationJp: narration,
           narrationEn: c.narrationEn || '',
@@ -268,7 +274,6 @@ export const downloadZip = async (
           cameraWork: c.cameraWork || 'static',
           cameraMotion: c.cameraMotion || '',
           kenBurnsPreset: c.kenBurnsPreset || 'none',
-          // テロップの文字・目立たせる文字・様式の完全網羅
           telop: {
             fullText: c.telop?.fullText || narration,
             highlightKeywords: hlWords,
@@ -291,30 +296,50 @@ export const downloadZip = async (
     logLines.push(`[${new Date().toLocaleTimeString('ja-JP')}] 📦 パッケージング完了`);
     folder.file('production_logs.txt', logLines.join('\n'));
 
+    addLog(`📦 ZIPアーカイブを圧縮中...`, 'process');
     const zipBlob = await zip.generateAsync({ type: 'blob' });
-    
-    // ダウンロード完了を確実に待機するためPromise化
-    await new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onloadend = async () => {
-        try {
-          const base64 = (reader.result as string).split(',')[1];
-          const now = new Date();
-          const pad = (n: number) => String(n).padStart(2, '0');
-          const timestamp = `${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}_${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}`;
-          const safeTitle = (ep.titleJp || '無題').replace(/[\/\\:*?"<>|]/g, '_').replace(/\s+/g, '_').slice(0, 25);
-          const filename = `${timestamp}_${safeTitle}.zip`;
 
-          await Flow.download({ base64, mimeType: 'application/zip', filename });
-          addLog(`✅ パッケージ「${filename}」をダウンロードしました。`, 'success');
-          resolve(true);
-        } catch (e) {
-          reject(e);
-        }
-      };
-      reader.onerror = reject;
-      reader.readAsDataURL(zipBlob);
-    });
+    const now = new Date();
+    const pad = (n: number) => String(n).padStart(2, '0');
+    const timestamp = `${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}_${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}`;
+    const safeTitle = (ep.titleJp || '無題').replace(/[\/\\:*?"<>|]/g, '_').replace(/\s+/g, '_').slice(0, 25);
+    const filename = `${timestamp}_${safeTitle}.zip`;
+
+    // 1. 最優先: ブラウザ直接ダウンロード（a download）でサイズ上限ゼロ・高速保存
+    let directSuccess = false;
+    try {
+      const blobUrl = URL.createObjectURL(zipBlob);
+      const a = document.createElement('a');
+      a.href = blobUrl;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      setTimeout(() => URL.revokeObjectURL(blobUrl), 15000);
+      directSuccess = true;
+      addLog(`✅ パッケージ「${filename}」をダウンロードしました。`, 'success');
+    } catch (directErr) {
+      console.warn('Direct browser download failed, trying Flow.download fallback', directErr);
+    }
+
+    // 2. フォールバック: Flow.download（直接ダウンロードが制限された場合）
+    if (!directSuccess) {
+      await new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onloadend = async () => {
+          try {
+            const base64 = (reader.result as string).split(',')[1];
+            await Flow.download({ base64, mimeType: 'application/zip', filename });
+            addLog(`✅ パッケージ「${filename}」をダウンロードしました。`, 'success');
+            resolve(true);
+          } catch (e) {
+            reject(e);
+          }
+        };
+        reader.onerror = reject;
+        reader.readAsDataURL(zipBlob);
+      });
+    }
   } catch (err: any) { addLog(`❌ ZIP生成エラー: ${err.message}`, 'error'); }
 };
 

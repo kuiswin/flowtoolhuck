@@ -219,43 +219,15 @@ export const EpisodeSection: React.FC<EpisodeSectionProps> = ({
           </PillButton>
           <PillButton 
             variant="outline" 
-            className={`h-9 px-4 font-black text-xs whitespace-nowrap shrink-0 transition-all shadow-lg cursor-pointer ${
-              ep.packageZipBlobUrl 
-                ? 'bg-emerald-500/25 hover:bg-emerald-500/35 border-emerald-400 text-emerald-200 shadow-emerald-950/60 ring-1 ring-emerald-400/50' 
-                : 'bg-emerald-500/10 hover:bg-emerald-500/20 border-emerald-500/40 hover:border-emerald-400 text-emerald-300 hover:text-emerald-100 shadow-emerald-950/30'
-            }`}
+            className="h-9 px-4 border-white/20 hover:border-white/40 text-white/70 hover:text-white font-bold text-xs whitespace-nowrap shrink-0 transition-all cursor-pointer" 
             disabled={isPending}
             onClick={() => onDownloadZip(ep)} 
-            icon={<span className="material-symbols-outlined text-sm text-emerald-400">archive</span>}
-            title="CT192 (Port 8090) へのドラッグ＆ドロップ用 ZIP パッケージを一括ダウンロード"
+            icon={<span className="material-symbols-outlined text-sm">download</span>}
+            title="素材パッケージ（画像・動画・字幕・スクリプト）を一括ダウンロード"
           >
-            {ep.packageZipBlobUrl ? `📦 ZIP保存 (${ep.packageZipSizeStr || 'Ready'})` : '📦 ZIPダウンロード'}
+            パッケージ
           </PillButton>
         </div>
-        
-        {/* ZIPパッケージ準備完了バナー (ダイレクト保存リンク) */}
-        {ep.packageZipBlobUrl && (
-          <div className="bg-emerald-950/30 border border-emerald-500/40 rounded-2xl p-4 flex items-center justify-between gap-4 animate-in fade-in slide-in-from-top-2 duration-300">
-            <div className="flex items-center gap-3">
-              <span className="material-symbols-outlined text-emerald-400 text-2xl">check_circle</span>
-              <div className="flex flex-col">
-                <span className="text-xs font-bold text-white">ZIPパッケージの準備ができています ({ep.packageZipSizeStr})</span>
-                <span className="text-[11px] text-white/50 font-mono truncate max-w-md">{ep.packageZipFilename}</span>
-              </div>
-            </div>
-            <a
-              href={ep.packageZipBlobUrl}
-              download={ep.packageZipFilename || `FlowTool_Ep${ep.id}_Package.zip`}
-              target="_blank"
-              rel="noopener noreferrer"
-              onClick={() => onDownloadZip(ep)}
-              className="px-4 py-2 bg-emerald-500 hover:bg-emerald-400 text-black text-xs font-black rounded-xl shadow-lg shadow-emerald-950/50 flex items-center gap-1.5 transition-transform hover:scale-105 active:scale-95 cursor-pointer whitespace-nowrap"
-            >
-              <span className="material-symbols-outlined text-sm">download</span>
-              今すぐ保存
-            </a>
-          </div>
-        )}
 
         <HistoricalCard ep={ep} />
       </div>

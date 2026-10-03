@@ -44,6 +44,15 @@ Jules は就寝中のユーザーに代わり、コードベース全体の**徹
   - カット番号が 12 を超えた連番（Cut 13〜24 等）でも `cutId % 12 === 8` で正確にサビ位置だけが判定されているか。
   - ドラマ連番モード（`isMvMode === false`）やマンガモード（`isMangaMode === true`）に意図しない副作用を与えていないか。
 
+### 5. 全7制作モード別カメラワーク＆ケンバーン自動連動の検証（最新追加）
+- **対象ファイル**: `config/studioDefinitions.ts`, `services/directorService.ts`, `services/useStudioProduction.ts`, `components/CutCard.tsx`
+- **仕様**:
+  - `resolveRecommendedCameraWorkAndKenBurns` により、各制作モード特性に応じたカメラワーク＆ケンバーン演出（MVの展開連動、ドラマの映画的ローテーション、雑学のズームイン、名言/画風比較/漫画の固定等）が正しく初期化・適用されること。
+  - `CutCard.tsx` 表面にショットスケール（WIDE等）と並んでケンバーン演出バッジ（`📹 ZOOM IN` 等）が美しく表示され、動画化済みカットでは非表示になること。
+- **チェックポイント**:
+  - モード切替時や新規エピソード生成時に、各カットに正しい `kenBurnsPreset` および `cameraWork` が設定され、フォールバック（意図しない固定）が発生していないか。
+  - ブラウザ動画化（Mediabunny / Canvas描画）時にも、設定されたケンバーン効果が正確にレンダリングされるか。
+
 ---
 
 ## 🛠️ コマンドと実行パイプライン

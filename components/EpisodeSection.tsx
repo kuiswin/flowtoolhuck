@@ -168,12 +168,13 @@ export const EpisodeSection: React.FC<EpisodeSectionProps> = ({
           </PillButton>
           <PillButton 
             variant="outline" 
-            className="h-9 px-4 border-white/10 hover:border-white/30 text-white/50 hover:text-white font-bold text-xs whitespace-nowrap shrink-0" 
+            className="h-9 px-4 bg-emerald-500/10 hover:bg-emerald-500/20 border-emerald-500/40 hover:border-emerald-400 text-emerald-300 hover:text-emerald-100 font-black text-xs whitespace-nowrap shrink-0 transition-all shadow-lg shadow-emerald-950/30 cursor-pointer" 
             disabled={isPending}
             onClick={() => onDownloadZip(ep)} 
-            icon={<span className="material-symbols-outlined text-sm">download</span>}
+            icon={<span className="material-symbols-outlined text-sm text-emerald-400">archive</span>}
+            title="CT192 (Port 8090) へのドラッグ＆ドロップ用 ZIP パッケージを一括ダウンロード"
           >
-            パッケージ
+            📦 ZIPダウンロード
           </PillButton>
         </div>
         <HistoricalCard ep={ep} />

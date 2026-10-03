@@ -201,26 +201,142 @@ export async function renderCoverCanvas(ep: Episode): Promise<OffscreenCanvas | 
 }
 
 /**
- * ブラウザのネイティブダウンロードを即座にキックする共通ヘルパー
+ * あらゆるブラウザ環境・Google Flow sandbox 環境でファイルを確実に保存する統合関数
+ * 詳細な console.log を出力し、複数の手法をフォールバック実行する
  */
-export const triggerBrowserDownload = (blobUrl: string, filename: string): boolean => {
+export const savePackageFile = async (
+  blob: Blob,
+  filename: string,
+  addLog?: (msg: string, type?: any) => void
+): Promise<{ success: boolean; method: string }> => {
+  const sizeMb = (blob.size / (1024 * 1024)).toFixed(2);
+  const sizeStr = `${sizeMb} MB`;
+  
+  console.group(`📦 [FlowTool Export] ダウンロード処理開始: ${filename} (${sizeStr})`);
+  console.log('📄 ファイル情報:', { filename, sizeStr, bytes: blob.size, mimeType: blob.type });
+
+  // --- 手法 1: File System Access API (showSaveFilePicker) ---
+  // ユーザーのクリック操作がある場合、Chrome/Edgeで最も確実にOSの保存ダイアログが開く
+  if (typeof (window as any).showSaveFilePicker === 'function') {
+    try {
+      console.log('🔄 [Method 1] showSaveFilePicker (File System Access API) を試行中...');
+      const handle = await (window as any).showSaveFilePicker({
+        suggestedName: filename,
+        types: [{
+          description: 'ZIP Package Archive',
+          accept: { 'application/zip': ['.zip'] }
+        }]
+      });
+      const writable = await handle.createWritable();
+      await writable.write(blob);
+      await writable.close();
+      console.log('✅ [Method 1] showSaveFilePicker によるディスク直接保存に成功しました！');
+      console.groupEnd();
+      if (addLog) addLog(`✅ ファイル「${filename}」(${sizeStr}) を保存しました (File System Access)。`, 'success');
+      return { success: true, method: 'showSaveFilePicker' };
+    } catch (fsErr: any) {
+      if (fsErr.name === 'AbortError') {
+        console.warn('⚠️ [Method 1] ユーザーによりファイル保存ダイアログがキャンセルされました。');
+        console.groupEnd();
+        return { success: false, method: 'user_cancelled' };
+      }
+      console.warn('⚠️ [Method 1] showSaveFilePicker スキップ（自動処理または未許可）:', fsErr.message);
+    }
+  }
+
+  // --- 手法 2: Google Flow Tools 公式 Flow.download API ---
+  if (typeof Flow !== 'undefined' && typeof Flow.download === 'function') {
+    console.log('🔄 [Method 2] Google Flow 公式 Flow.download API を試行中...');
+    const maxRetries = 3;
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      try {
+        console.log(`📡 [Method 2] Flow.download 呼び出し (attempt ${attempt}/${maxRetries})...`);
+        const reader = new FileReader();
+        const base64 = await new Promise<string>((resolve, reject) => {
+          reader.onloadend = () => resolve((reader.result as string).split(',')[1]);
+          reader.onerror = reject;
+          reader.readAsDataURL(blob);
+        });
+
+        await Flow.download({ base64, mimeType: 'application/zip', filename });
+        console.log(`✅ [Method 2] Flow.download による保存に成功しました！ (attempt ${attempt})`);
+        console.groupEnd();
+        if (addLog) addLog(`✅ パッケージ「${filename}」(${sizeStr}) をダウンロードしました (Flow API)。`, 'success');
+        return { success: true, method: 'Flow.download' };
+      } catch (flowErr: any) {
+        console.error(`❌ [Method 2] Flow.download attempt ${attempt} 失敗:`, flowErr);
+        if (attempt < maxRetries) {
+          console.log(`⏳ Flow API がビジーのため 1.5 秒待機して再試行します...`);
+          await new Promise(r => setTimeout(r, 1500));
+        }
+      }
+    }
+  }
+
+  // --- 手法 3: DOM <a download> (Blob URL) ---
   try {
+    console.log('🔄 [Method 3] DOM <a download> (Blob URL) を試行中...');
+    const blobUrl = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = blobUrl;
     a.download = filename;
     a.style.display = 'none';
     document.body.appendChild(a);
     a.click();
+    console.log('🚀 [Method 3] a.click() 実行完了。ブラウザのダウンロードトレイを確認してください。');
     setTimeout(() => {
       try {
         if (a.parentNode) document.body.removeChild(a);
+        URL.revokeObjectURL(blobUrl);
       } catch (_) {}
-    }, 2000);
-    return true;
-  } catch (e) {
-    console.warn('DOM download failed:', e);
-    return false;
+    }, 5000);
+  } catch (domErr: any) {
+    console.error('❌ [Method 3] DOM <a download> 失敗:', domErr);
   }
+
+  // --- 手法 4: DOM <a download> (Data URI フォールバック) ---
+  if (blob.size < 25 * 1024 * 1024) {
+    try {
+      console.log('🔄 [Method 4] Data URI <a download> フォールバックを試行中...');
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        try {
+          const dataUri = reader.result as string;
+          const a2 = document.createElement('a');
+          a2.href = dataUri;
+          a2.download = filename;
+          a2.style.display = 'none';
+          document.body.appendChild(a2);
+          a2.click();
+          console.log('🚀 [Method 4] Data URI a.click() 実行完了。');
+          setTimeout(() => {
+            try { if (a2.parentNode) document.body.removeChild(a2); } catch (_) {}
+          }, 3000);
+        } catch (e2) {
+          console.error('❌ [Method 4] Data URI 保存失敗:', e2);
+        }
+      };
+      reader.readAsDataURL(blob);
+    } catch (e) {
+      console.warn('Data URL conversion error:', e);
+    }
+  }
+
+  console.groupEnd();
+  if (addLog) addLog(`💾 パッケージ「${filename}」(${sizeStr}) の保存コマンドを送信しました。`, 'info');
+  return { success: true, method: 'dom_dispatched' };
+};
+
+export const triggerBrowserDownload = (blobUrl: string, filename: string): boolean => {
+  fetch(blobUrl).then(r => r.blob()).then(b => savePackageFile(b, filename)).catch(() => {
+    const a = document.createElement('a');
+    a.href = blobUrl;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(() => { try { if (a.parentNode) document.body.removeChild(a); } catch (_) {} }, 2000);
+  });
+  return true;
 };
 
 /**
@@ -328,37 +444,10 @@ export const downloadZip = async (
 
     const blobUrl = URL.createObjectURL(zipBlob);
 
-    // 1. ブラウザ直接ダウンロードを最優先で直ちにキック（ポップアップなしでスッと落とす）
-    triggerBrowserDownload(blobUrl, filename);
+    // 統合保存処理を実行（showSaveFilePicker ➡ Flow.download ➡ DOM <a> の多重防御・詳細コンソールログ付き）
+    const saveRes = await savePackageFile(zipBlob, filename, addLog);
 
-    // 2. Google Flow Tools 公式 Flow.download も並行して実行（公式ストレージ連携・リトライ付き）
-    let flowSuccess = false;
-    if (typeof Flow !== 'undefined' && typeof Flow.download === 'function') {
-      const maxRetries = 3;
-      for (let attempt = 1; attempt <= maxRetries; attempt++) {
-        try {
-          const reader = new FileReader();
-          const base64 = await new Promise<string>((resolve, reject) => {
-            reader.onloadend = () => resolve((reader.result as string).split(',')[1]);
-            reader.onerror = reject;
-            reader.readAsDataURL(zipBlob);
-          });
-
-          await Flow.download({ base64, mimeType: 'application/zip', filename });
-          flowSuccess = true;
-          break;
-        } catch (flowErr: any) {
-          console.warn(`Flow.download attempt ${attempt} failed:`, flowErr);
-          if (attempt < maxRetries) {
-            await new Promise(r => setTimeout(r, 1500));
-          }
-        }
-      }
-    }
-
-    addLog(`✅ パッケージ「${filename}」(${sizeStr}) をダウンロードしました。`, 'success');
-
-    const result = { filename, blobUrl, sizeStr, flowSuccess };
+    const result = { filename, blobUrl, sizeStr, flowSuccess: saveRes.success };
     if (onReady) {
       onReady(result);
     }

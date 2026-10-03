@@ -9,7 +9,7 @@ import { Cut, GeneratorSettings, VideoModelType, Episode } from './types';
 import { THEMES, TASTES, IMAGE_MODELS, VIDEO_MODELS } from './constants';
 import { createLogMessage } from './services/utils';
 import { initDB, getAllStories, StoryRecord } from './services/db';
-import { downloadZip, triggerBrowserDownload } from './services/exportService';
+import { downloadZip, triggerBrowserDownload, savePackageFile } from './services/exportService';
 import { useStudioProduction } from './services/useStudioProduction';
 import { extractHighlights } from './services/directorService';
 
@@ -42,16 +42,23 @@ export default function App() {
   });
 
   const handleDownloadZip = useCallback(async (ep: Episode) => {
-    // 1. すでに ZIP が生成済みの場合は、即座にブラウザ直接ダウンロードをキック！（ポップアップなし）
+    const filename = ep.packageZipFilename || `Episode_${ep.id}_Package.zip`;
+    console.log(`[FlowTool] 手動ダウンロードボタン押下: Ep.${ep.id} (${filename})`);
+
+    // 1. すでに ZIP が生成済みの場合は、即座に savePackageFile をキック！（詳細コンソールログ出力）
     if (ep.packageZipBlobUrl) {
-      const filename = ep.packageZipFilename || `Episode_${ep.id}_Package.zip`;
       addLog(`💾 作成済みパッケージ「${filename}」を直接保存中...`, 'process');
-      triggerBrowserDownload(ep.packageZipBlobUrl, filename);
-      addLog(`✅ パッケージ「${filename}」のダウンロードを開始しました。`, 'success');
-      return;
+      try {
+        const resp = await fetch(ep.packageZipBlobUrl);
+        const blob = await resp.blob();
+        await savePackageFile(blob, filename, addLog);
+        return;
+      } catch (err: any) {
+        console.warn('[FlowTool] 作成済みBlob URLの取得失敗、再パッケージングを実行:', err);
+      }
     }
 
-    // 2. まだ ZIP が未生成の場合は生成して即座に直接ダウンロード
+    // 2. まだ ZIP が未生成（または失効）の場合は生成して即座に保存
     const res = await downloadZip(ep, addLog, activeSeriesManifest || undefined, logs);
     if (res) {
       updateEpisode(ep.id, {

@@ -3,6 +3,7 @@ import JSZip from 'jszip';
 import { Episode, SeriesManifest } from '../types';
 import { LogEntry } from '../components/StudioLogs';
 import { renderFullEpisodeMovie } from './browserVideoService';
+import { extractHighlights } from './directorService';
 
 /**
  * 動画や扉絵用にタイトル文字列をクリーン化
@@ -238,25 +239,47 @@ export const downloadZip = async (
     
     const scriptJson = {
       id: ep.id,
+      productionMode: ep.productionMode || (ep.isMvMode ? 'mv' : 'episodes'),
       titleJp: ep.titleJp,
       titleEn: ep.titleEn,
       summary: ep.summary || '',
+      theme: ep.theme || '',
+      taste: ep.taste || '',
       catchphrase: { jp: ep.coverCatchphraseJp, en: ep.coverCatchphraseEn },
       historicalIntelligence: {
         eraAnalysis: ep.eraAnalysis || '',
         forbiddenAnachronisms: ep.forbiddenAnachronisms || []
       },
-      cuts: ep.cuts.map(c => ({
-        id: c.id,
-        narrationJp: c.narrationJp || '',
-        narrationEn: c.narrationEn || '',
-        prompt: c.promptEn || '',
-        shotScale: c.shotScale || 'Wide',
-        cameraWork: c.cameraWork || 'static',
-        cameraMotion: c.cameraMotion || '',
-        kenBurnsPreset: c.kenBurnsPreset || 'none',
-        telop: c.telop || null
-      }))
+      cuts: ep.cuts.map(c => {
+        const narration = c.narrationJp || '';
+        const hl = (c.telop?.highlights && c.telop.highlights.length > 0)
+          ? c.telop.highlights
+          : extractHighlights(narration);
+        const hlWords = hl.map(h => h.word);
+
+        return {
+          id: c.id,
+          // 裏で流れるセリフ・ナレーション
+          dialogue: narration,
+          narrationJp: narration,
+          narrationEn: c.narrationEn || '',
+          prompt: c.promptEn || '',
+          shotScale: c.shotScale || 'Wide',
+          cameraWork: c.cameraWork || 'static',
+          cameraMotion: c.cameraMotion || '',
+          kenBurnsPreset: c.kenBurnsPreset || 'none',
+          // テロップの文字・目立たせる文字・様式の完全網羅
+          telop: {
+            fullText: c.telop?.fullText || narration,
+            highlightKeywords: hlWords,
+            highlights: hl,
+            style: c.telop?.style || 'cinema-subtle',
+            transition: c.telop?.transition || 'aos-fade-soft',
+            position: c.telop?.position || 'bottom-center',
+            directorNote: c.telop?.directorNote || ''
+          }
+        };
+      })
     };
     folder.file('script.json', JSON.stringify(scriptJson, null, 2));
 

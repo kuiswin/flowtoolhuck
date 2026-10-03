@@ -242,7 +242,7 @@ export const POSE_CONTRAST_RULES: Array<{
   }
 ];
 
-// ── 6. 音楽MV用テーマ定義（10選） ────────────────────────────────────
+// ── 6. 各制作モード用特化テーマ定義（各10選） ──────────────────────
 export const MV_THEMES = [
   '🌿 草原の風と夕暮れ（あてもなく歩く帰り道・揺れる草木と黄金の光）',
   '☕ 雨の日の純喫茶（曇った窓ガラス・温かい珈琲の湯気・静かな読書）',
@@ -254,6 +254,58 @@ export const MV_THEMES = [
   '🏙️ 霧が立ち込める早朝の街（まだ誰もいない静まり返った交差点・朝露）',
   '🌌 満天の星空と焚き火（静寂の森・揺らめく小さな炎・火の粉と夜空）',
   '🎨 木漏れ日のアトリエ（白いカーテンの揺れ・散らかったパレット・午後の光）'
+];
+
+export const TRIVIA_THEMES = [
+  '💡 9割が知らない江戸時代の夜のトイレ事情（実は世界一エコだった真実）',
+  '⚔️ 戦国武将が一番恐れていた「意外すぎる死因」（討ち死により多い病の闇）',
+  '🍙 コンビニのおにぎりが常温でも腐らない科学のウラと歴史',
+  '💰 バブル狂乱・タクシーを1万円札で止めた男たちの悲惨な末路',
+  '🍣 江戸前寿司のワサビは「防腐剤」ではなく〇〇隠しだった話',
+  '📜 教科書が教えない徳川家康の「究極のケチ伝説と健康オタク」',
+  '🚂 明治の陸蒸気・煙を吸うと早死にすると信じた人々の大パニック',
+  '🏯 参勤交代で大名が破産寸前？宿場町で繰り広げられた借金地獄',
+  '🏃‍♂️ 江戸の飛脚が東京〜京都を3日で走れた「ナンバ走り」の驚異',
+  '📻 戦後の闇市で「謎の缶詰」を食べた人々に起きた怪奇現象'
+];
+
+export const QUOTES_THEMES = [
+  '🪷 ブッダが語る「どうでもいい人間関係」を一瞬で断ち切る処方箋',
+  '🦅 ニーチェが説いた「孤独を愛せる人」が最後に圧倒的に勝つ理由',
+  '⚔️ 織田信長が遺した「裏切り者に下す冷酷にして合理的な決断」',
+  '☕ 太宰治が泥酔の果てに呟いた「愛されることの重荷と絶望の美学」',
+  '🗡️ 宮本武蔵「五輪書」・迷いを断ち切るための冷徹な勝負哲学',
+  '🏛️ 古代ローマ皇帝マルクス・アウレリウス「他人の悪意に動じるな」',
+  '🍵 千利休「侘び寂び」の極意・贅沢を捨てた者が手にする絶対的自由',
+  '👑 坂本龍馬「世の人は我を何とも言わば言え」・規格外の生き方',
+  '🖋️ 芥川龍之介「ぼんやりとした不安」・繊細すぎる魂の叫び',
+  '🏮 勝海舟「行いは己のもの、批判は他人のもの」・器の大きさの極意'
+];
+
+export const FOLKLORE_THEMES = [
+  '🏚️ 明治三十年・一夜にして地図から消滅した「名無しの村」の怪異',
+  '🗡️ 江戸の辻斬り・雨の夜にだけ現れる「顔のない浪人」の正体',
+  '🏥 昭和の廃病院・封印された地下カルテに記された「被験者0号」',
+  '⛩️ 絶対に振り返ってはいけない山奥の鳥居と、あるマタギの遺言',
+  '🎭 大正の浅草・見世物小屋から忽然と消えた「木乃伊の少女」',
+  '🌊 日本海を漂流した無人船・船長室に残された不可解な日記',
+  '📜 古文書に墨塗りで隠された「ある大名家の世継ぎ怪死事件」',
+  '🚂 深夜の終電・決して降りてはいけない「存在しない駅」の都市伝説',
+  '🌾 飢饉の冬・村人全員が笑顔で餓死した不気味な豊作祈願の謎',
+  '🕳️ 東京の地下深く・戦時中に掘られたまま放置された防空壕の奥'
+];
+
+export const CRAFT_THEMES = [
+  '🪵 1000年倒れない五重塔・釘を1本も使わない宮大工の奇跡',
+  '🗡️ 名刀・正宗の刃文・現代科学でも再現不可能な焼き入れの宇宙',
+  '🍣 銀座の寿司職人・シャリを握る「わずか3秒」に宿る極致の技',
+  '🥢 輪島塗の100年輝く漆器・120工程を素手で磨き上げる執念',
+  '👘 西陣織の極細金糸・肉眼の限界を超えて織り成す幻の文様',
+  '⚒️ 江戸切子の硝子職人・下書きなしでダイヤモンドを削り出す勘',
+  '🍵 茶道・千利休が求めた「究極の茶碗」を生み出す土と炎の対話',
+  '🔥 日本刀のたたら製鉄・三日三晩眠らずに炎を見守る村下の眼力',
+  '🪓 樹齢千年の屋久杉を伐り出す山師・木の声を聞く掟と美学',
+  '🍱 曲げわっぱ・杉の板を湯気で曲げる「0.1ミリの指先の記憶」'
 ];
 
 // ── 7. 12カット・ストーリー展開プリセット（シネマ・漫画・音楽MV） ────────
@@ -497,7 +549,8 @@ export function resolveRecommendedTelopStaging(
   cutId: number, 
   isMvMode?: boolean, 
   isHistorical?: boolean,
-  prevStaging?: { transition?: TelopTransition; position?: TelopPosition; style?: TelopStyle }
+  prevStaging?: { transition?: TelopTransition; position?: TelopPosition; style?: TelopStyle },
+  mode?: string
 ): {
   style: TelopStyle;
   transition: TelopTransition;
@@ -505,15 +558,67 @@ export function resolveRecommendedTelopStaging(
   directorNote: string;
 } {
   const normCut = ((cutId - 1) % 12) + 1;
-
-  // 配列から直前と被らない要素をランダム選出するヘルパー
   const pickRandom = <T>(pool: T[], avoid?: T): T => {
     const valid = avoid ? pool.filter(item => item !== avoid) : pool;
     const list = valid.length > 0 ? valid : pool;
     return list[Math.floor(Math.random() * list.length)];
   };
 
-  if (isMvMode) {
+  // 1. 💡 衝撃雑学・ウラ真実（TikTok/Shorts特化の中央インパクト）
+  if (mode === 'trivia') {
+    const style: TelopStyle = 'mv-center-climax';
+    const transPool: TelopTransition[] = ['zoom-in-bounce', 'animista-slide-bck', 'glitch-pop', 'gsap-kinetic-stagger'];
+    const posPool: TelopPosition[] = ['center-climax', 'bottom-center'];
+    const transition = pickRandom(transPool, prevStaging?.transition);
+    const position = pickRandom(posPool, prevStaging?.position);
+    return {
+      style, transition, position,
+      directorNote: `[💡衝撃雑学Shorts] 画面中央フラッシュテロップ（${position} × ${transition}）。冒頭2秒のフックとオチで視聴者を釘付けにする仕様。`
+    };
+  }
+
+  // 2. 📜 偉人の名言・超訳処方箋（縦書き・厳粛・静寂フェード）
+  if (mode === 'quotes') {
+    const style: TelopStyle = 'traditional-sumi';
+    const transPool: TelopTransition[] = ['aos-fade-soft', 'blur-slide-up', 'glow-fade'];
+    const posPool: TelopPosition[] = ['vertical-left', 'top-cinema', 'bottom-center'];
+    const transition = pickRandom(transPool, prevStaging?.transition);
+    const position = pickRandom(posPool, prevStaging?.position);
+    return {
+      style, transition, position,
+      directorNote: `[📜偉人名言] 厳粛な縦書き／天吊りタイポグラフィ（${position} × ${transition}）。静寂なフェードで言葉の重みを心に刻む保存特化型演出。`
+    };
+  }
+
+  // 3. 👻 歴史の怪異・未解決事件（不穏グリッチ・深紅）
+  if (mode === 'folklore') {
+    const stylePool: TelopStyle[] = ['traditional-sumi', 'mv-neon-glow'];
+    const transPool: TelopTransition[] = ['glitch-pop', 'aos-fade-soft', 'glow-fade'];
+    const posPool: TelopPosition[] = ['bottom-center', 'center-stagger', 'vertical-right'];
+    const transition = pickRandom(transPool, prevStaging?.transition);
+    const position = pickRandom(posPool, prevStaging?.position);
+    const style = pickRandom(stylePool, prevStaging?.style);
+    return {
+      style, transition, position,
+      directorNote: `[👻怪異・考察] 不穏なグリッチと深紅ハイライト（${position} × ${transition}）。恐怖と謎を煽りコメント議論を誘発。`
+    };
+  }
+
+  // 4. 🏯 超絶技巧・職人魂（凛とした伝統墨・和モダン）
+  if (mode === 'craft') {
+    const style: TelopStyle = 'traditional-sumi';
+    const transPool: TelopTransition[] = ['blur-slide-left', 'aos-fade-soft', 'blur-slide-up'];
+    const posPool: TelopPosition[] = ['bottom-left', 'vertical-right', 'bottom-center'];
+    const transition = pickRandom(transPool, prevStaging?.transition);
+    const position = pickRandom(posPool, prevStaging?.position);
+    return {
+      style, transition, position,
+      directorNote: `[🏯職人魂] 凛とした和の墨文字（${position} × ${transition}）。極限の手仕事と美を邪魔しない最高峰の気品ある演出。`
+    };
+  }
+
+  // 5. 🎵 音楽MVモード（Ado風キネティック・ビート同期対向スルー）
+  if (isMvMode || mode === 'mv') {
     let stylePool: TelopStyle[] = [];
     let transPool: TelopTransition[] = [];
     let posPool: TelopPosition[] = [];
@@ -521,93 +626,46 @@ export function resolveRecommendedTelopStaging(
     let sectionMood = '';
 
     if (normCut <= 3) {
-      // ── 【Aメロ (Verse A: 導入・静寂)】 ──
-      sectionName = `Verse A${normCut}`;
-      sectionMood = '静寂・導入';
+      sectionName = `Verse A${normCut}`; sectionMood = '静寂・導入';
       stylePool = ['cinema-subtle', 'mv-blur-slide'];
       transPool = ['aos-fade-soft', 'blur-slide-left', 'blur-slide-up', 'glow-fade'];
       posPool = ['bottom-left', 'bottom-right'];
     } else if (normCut <= 6) {
-      // ── 【Bメロ / Bridge (展開・空間変化・テンポアップ)】 ──
-      sectionName = normCut === 6 ? 'Bridge' : `Verse B${normCut - 3}`;
-      sectionMood = '空間変化・加速';
+      sectionName = normCut === 6 ? 'Bridge' : `Verse B${normCut - 3}`; sectionMood = '空間変化・加速';
       stylePool = ['mv-vertical-lyric', 'mv-blur-slide', 'mv-kinetic-pop'];
       transPool = ['blur-slide-right', 'zoom-in-bounce', 'aos-fade-soft', 'blur-slide-left', 'animista-slide-bck'];
       posPool = ['vertical-right', 'vertical-left', 'top-cinema', 'bottom-left', 'bottom-right'];
     } else if (normCut <= 9) {
-      // ── 【サビ (Chorus: クライマックス・動★中央被写体回避)】 ──
-      sectionName = `Chorus ${normCut - 6}★`;
-      sectionMood = '最高潮・爆発';
+      sectionName = `Chorus ${normCut - 6}★`; sectionMood = '最高潮・爆発';
       stylePool = ['mv-neon-glow', 'mv-kinetic-pop', 'mv-blur-slide'];
       transPool = ['animista-slide-bck', 'gsap-kinetic-stagger', 'zoom-in-bounce', 'glitch-pop'];
-      // 中央はメイン被写体を覆うため排除。左始まり・右付け・上空でド派手に炸裂！
       posPool = ['bottom-left', 'bottom-right', 'top-cinema'];
     } else {
-      // ── 【Cメロ / アウトロ (Verse C / Outro: 静寂・余韻)】 ──
-      sectionName = normCut === 10 ? 'Verse C (落ちサビ)' : `Outro ${normCut - 10}`;
-      sectionMood = '静寂・余韻フェード';
+      sectionName = normCut === 10 ? 'Verse C' : `Outro ${normCut - 10}`; sectionMood = '静寂・余韻';
       stylePool = ['mv-neon-glow', 'cinema-subtle', 'mv-vertical-lyric'];
       transPool = ['glow-fade', 'aos-fade-soft', 'blur-slide-left'];
       posPool = ['bottom-left', 'bottom-right', 'vertical-left', 'vertical-right'];
     }
 
-    // 直前カットのトランジション＆配置を除外してランダム選出
     const transition = pickRandom(transPool, prevStaging?.transition);
     const position = pickRandom(posPool, prevStaging?.position);
     const style = pickRandom(stylePool, prevStaging?.style);
-
-    const posLabel = 
-      position === 'bottom-left' ? '下部左寄り(左始まり)' :
-      position === 'bottom-right' ? '下部右寄り(右付け)' :
-      position === 'top-cinema' ? '上部シネマ(天吊り)' :
-      position === 'vertical-right' ? '右サイド縦書き' :
-      position === 'vertical-left' ? '左サイド縦書き' : '下部配置';
-
-    const transLabel = 
-      transition === 'animista-slide-bck' ? 'Animista奥ズーム' :
-      transition === 'gsap-kinetic-stagger' ? 'GSAP急減速スタッガー' :
-      transition === 'aos-fade-soft' ? 'AOS上品ソフトフェード' :
-      transition === 'zoom-in-bounce' ? 'ズームバウンス' :
-      transition === 'glitch-pop' ? 'グリッチカットイン' :
-      transition === 'glow-fade' ? 'ネオングローフェード' : 'ブラースライド';
-
     return {
-      style,
-      transition,
-      position,
-      directorNote: `[${sectionName}・${sectionMood}] ${posLabel} × ${transLabel}。メイン被写体を遮らず無限のバリエーションで楽曲の感情曲線とシンクロ。`
+      style, transition, position,
+      directorNote: `[🎵音楽MV・${sectionName}] キネティックタイポ（${position} × ${transition}）。被写体を遮らず楽曲のグルーヴと完全同期。`
     };
   }
 
-  if (isHistorical) {
-    const style: TelopStyle = 'brush-impact';
-    const transPool: TelopTransition[] = ['blur-slide-up', 'animista-slide-bck', 'blur-slide-right', 'aos-fade-soft'];
-    const posPool: TelopPosition[] = ['bottom-left', 'bottom-right', 'vertical-right', 'top-cinema'];
-
-    const transition = pickRandom(transPool, prevStaging?.transition);
-    const position = pickRandom(posPool, prevStaging?.position);
-
-    return {
-      style,
-      transition,
-      position,
-      directorNote: `重厚な歴史考証に基づき、直前と異なる視覚動線（${position} × ${transition}）で物語の威厳を表現。`
-    };
-  }
-
-  // 一般シネマドラマモード
-  const stylePool: TelopStyle[] = ['cinema-subtle', 'mv-blur-slide'];
-  const transPool: TelopTransition[] = ['aos-fade-soft', 'blur-slide-up', 'blur-slide-left'];
-  const posPool: TelopPosition[] = ['bottom-left', 'bottom-right', 'top-cinema'];
-
+  // 6. 🎬 ドラマ連番モード（映画字幕スタイル・台詞没入重視）
+  const stylePool: TelopStyle[] = ['cinema-subtle'];
+  const transPool: TelopTransition[] = ['aos-fade-soft', 'blur-slide-up'];
+  const posPool: TelopPosition[] = ['bottom-center', 'bottom-left'];
   const transition = pickRandom(transPool, prevStaging?.transition);
   const position = pickRandom(posPool, prevStaging?.position);
   const style = pickRandom(stylePool, prevStaging?.style);
 
   return {
-    style,
-    transition,
-    position,
-    directorNote: `映画字幕風グラスプレート。直前カットと重ならないレイアウト（${position} × ${transition}）で映像への没入感を維持。`
+    style, transition, position,
+    directorNote: `[🎬シネマドラマ字幕] 映画館の字幕のように下部（${position}）に上品にフェードイン（${transition}）。ストーリーと俳優の感情を極限まで引き立てる。`
   };
 }

@@ -592,35 +592,43 @@ Output JSON ONLY:
         return;
       }
 
-      // ── 音楽MVモード（アンニュイ情景連続・指定曲数 × 各12カット） ──
-      if (settings.productionMode === 'mv' || settings.isMvMode) {
-        const totalMvCount = Math.max(1, settings.episodeCount || 1);
-        addLog(`🎵 【音楽MVモード】全 ${totalMvCount} 曲のアンニュイ情景MVアルバム制作を開始します！[世界観: ${settings.theme}]`, 'process');
+      // ── YouTubeバズ特化Shorts / MVモード（指定本数 × 各12カット） ──
+      const shortsConfigMap: Record<string, { label: string; unit: string; icon: string }> = {
+        mv: { label: '音楽MV', unit: '曲', icon: '🎵' },
+        trivia: { label: '衝撃雑学Shorts', unit: '本', icon: '💡' },
+        quotes: { label: '偉人名言Shorts', unit: '本', icon: '📜' },
+        folklore: { label: '怪異・未解決Shorts', unit: '本', icon: '👻' },
+        craft: { label: '職人魂ショート', unit: '本', icon: '🏯' }
+      };
+      const curMode = settings.productionMode || (settings.isMvMode ? 'mv' : 'episodes');
+      if (curMode in shortsConfigMap) {
+        const modeInfo = shortsConfigMap[curMode];
+        const totalEpCount = Math.max(1, settings.episodeCount || 1);
+        addLog(`${modeInfo.icon} 【${modeInfo.label}モード】全 ${totalEpCount} ${modeInfo.unit}の制作を開始します！[世界観: ${settings.theme}]`, 'process');
 
-        // テーマ名からタイトル候補のプレフィックスを抽出
-        const baseRawTitle = settings.theme.split('（')[0].replace(/^[^\w\s\u4e00-\u9faf]+/, '').trim() || '風の記憶';
-        const defaultEnTitle = 'Twilight Whispers';
+        const baseRawTitle = settings.theme.split('（')[0].replace(/^[^\w\s一-龯]+/, '').trim() || '情景の記録';
+        const defaultEnTitle = 'Cinematic Story';
 
-        for (let epIndex = 1; epIndex <= totalMvCount; epIndex++) {
+        for (let epIndex = 1; epIndex <= totalEpCount; epIndex++) {
           if (isAbortedRef.current) {
-            addLog(`🛑 音楽MV制作が中断されました（${epIndex - 1}/${totalMvCount}曲完了）`, 'warning');
+            addLog(`🛑 制作が中断されました（${epIndex - 1}/${totalEpCount}${modeInfo.unit}完了）`, 'warning');
             break;
           }
 
-          const rawTitle = totalMvCount > 1 ? `${baseRawTitle} Track.${epIndex}` : baseRawTitle;
-          const currentEnTitle = totalMvCount > 1 ? `${defaultEnTitle} Vol.${epIndex}` : defaultEnTitle;
+          const rawTitle = totalEpCount > 1 ? `${baseRawTitle} Vol.${epIndex}` : baseRawTitle;
+          const currentEnTitle = totalEpCount > 1 ? `${defaultEnTitle} Vol.${epIndex}` : defaultEnTitle;
 
-          addLog(`🎵 【第${epIndex}曲 / 全${totalMvCount}曲】「${rawTitle}」のアンニュイ情景（12カット）を策定中...`, 'process');
+          addLog(`${modeInfo.icon} 【第${epIndex}${modeInfo.unit} / 全${totalEpCount}${modeInfo.unit}】「${rawTitle}」の脚本・演出（12カット）を策定中...`, 'process');
 
-          const mvPlan = {
+          const curPlan = {
             epNumber: epIndex,
             titleJp: rawTitle,
             titleEn: currentEnTitle,
-            summary: `${baseRawTitle}の世界観で紡がれる第${epIndex}のアンニュイ情景映像（全12カット）`
+            summary: `${baseRawTitle}の世界観で紡がれる第${epIndex}の映像作品（全12カット）`
           };
 
           const scriptPrompt = buildScriptPrompt(
-            epIndex, mvPlan, settings.country, settings.theme, settings.era, false, true, settings.taste
+            epIndex, curPlan, settings.country, settings.theme, settings.era, false, curMode === 'mv', settings.taste, curMode
           );
 
           let scriptRes;
@@ -628,29 +636,23 @@ Output JSON ONLY:
             scriptRes = await callWithRetry<any>(
               () => Flow.generate.text(scriptPrompt),
               (attempt, max, delay, err) => {
-                console.error(`[MV Script Retry ${attempt}/${max}]`, err);
-                addLog(`⚠️ MV脚本リトライ (${attempt}/${max}) ${delay}ms後... 理由: ${formatErrorMessage(err)}`, 'warning');
+                console.error(`[Script Retry ${attempt}/${max}]`, err);
+                addLog(`⚠️ 脚本リトライ (${attempt}/${max}) ${delay}ms後... 理由: ${formatErrorMessage(err)}`, 'warning');
               },
               5
             );
           } catch (e: any) {
             const errorMsg = formatErrorMessage(e);
-            console.error(`[MV Script Failed]`, e, { prompt: scriptPrompt });
-            addLog(`❌ 第${epIndex}曲の脚本策定に失敗しました: ${errorMsg}`, 'error');
+            console.error(`[Script Failed]`, e, { prompt: scriptPrompt });
+            addLog(`❌ 第${epIndex}${modeInfo.unit}の脚本策定に失敗しました: ${errorMsg}`, 'error');
             continue;
           }
 
           const parsed = safeJsonParse<any>(scriptRes.text, {
-            titleJp: rawTitle,
-            titleEn: currentEnTitle,
-            summary: `${rawTitle}のアンニュイな情景`,
-            eraAnalysisJp: '音楽を引き立てるためのシネマティックでアンニュイな光と空気感の連続性。',
-            forbiddenAnachronisms: ['激しい叫びや戦闘', '過剰な劇的演出', '特異な大事件'],
-            authenticAttireEn: 'Effortless relaxed natural attire, indie cinematic style',
-            forbiddenKeywordsEn: 'screaming, aggressive, battle, explosive drama',
-            coverCatchphraseJp: '名もなき時間の、通り過ぎる風と光。',
-            highlightWords: ['風', '光'],
-            cuts: []
+            titleJp: rawTitle, titleEn: currentEnTitle, summary: `${rawTitle}の情景`,
+            eraAnalysisJp: '演出構図とテロップ連動。', forbiddenAnachronisms: ['過剰な劇的演出'],
+            authenticAttireEn: 'Cinematic style attire', forbiddenKeywordsEn: 'explosive drama',
+            coverCatchphraseJp: '心揺さぶる一瞬の物語。', highlightWords: ['光'], cuts: []
           });
 
           const rawCuts = Array.isArray(parsed.cuts) ? parsed.cuts : (Array.isArray(parsed.scenes) ? parsed.scenes : []);
@@ -659,45 +661,35 @@ Output JSON ONLY:
             const narration = cutData.narrationJp || cutData.narration || '';
             const plot = cutData.basicPlot || cutData.promptEn || cutData.prompt || '';
             const cutHighlights = cutData.highlights || parsed.highlightWords || [];
-            const preset = getStoryboardPreset(j + 1, true, false);
+            const preset = getStoryboardPreset(j + 1, curMode === 'mv', false);
+            const staging = resolveRecommendedTelopStaging(j + 1, curMode === 'mv', false, undefined, curMode);
             
             const cut = createDefaultCut(j + 1, narration, plot, isCutSelectedForVideo(j, settings.videoRatio));
             cut.shotScale = preset.scale;
             cut.cinematicAngle = preset.angle;
+            Object.assign(cut.telop, staging);
             cut.telop.highlights = extractHighlights(narration, cutHighlights);
             return cut;
           });
 
-          const mvEpisode: Episode = {
-            id: epIndex,
-            internalId: crypto.randomUUID(),
-            titleJp: `🎵 ${parsed.titleJp || rawTitle}`,
-            titleEn: parsed.titleEn || currentEnTitle,
-            summary: parsed.summary || `${rawTitle}のアンニュイな情景`,
-            eraAnalysis: parsed.eraAnalysisJp || '音楽を引き立てるためのシネマティックでアンニュイな光と空気感の連続性。',
-            forbiddenAnachronisms: parsed.forbiddenAnachronisms || ['激しい叫びや戦闘', '過剰な劇的演出', '特異な大事件'],
-            authenticAttireEn: parsed.authenticAttireEn || 'Effortless relaxed natural attire, indie cinematic style',
-            forbiddenKeywordsEn: parsed.forbiddenKeywordsEn || 'screaming, aggressive, battle, explosive drama',
-            coverCatchphraseJp: parsed.coverCatchphraseJp || '名もなき時間の、通り過ぎる風と光。',
-            highlightWords: parsed.highlightWords || ['風', '光'],
-            cuts: baseCutsData,
-            isGenerating: true,
-            isGeneratingRemainingImages: false,
-            isBatchGeneratingVideos: false,
-            isPreviewDone: false,
-            isDone: false,
-            taste: settings.taste,
-            era: settings.era,
-            theme: settings.theme,
-            isMvMode: true
+          const newEpisode: Episode = {
+            id: epIndex, internalId: crypto.randomUUID(),
+            titleJp: `${modeInfo.icon} ${parsed.titleJp || rawTitle}`, titleEn: parsed.titleEn || currentEnTitle,
+            summary: parsed.summary || `${rawTitle}の情景`, eraAnalysis: parsed.eraAnalysisJp || '作品を引き立てる演出構図。',
+            forbiddenAnachronisms: parsed.forbiddenAnachronisms || ['過剰な劇的演出'],
+            authenticAttireEn: parsed.authenticAttireEn || 'Cinematic style attire', forbiddenKeywordsEn: 'explosive drama',
+            coverCatchphraseJp: parsed.coverCatchphraseJp || '心揺さぶる一瞬の物語。', highlightWords: parsed.highlightWords || ['光'],
+            cuts: baseCutsData, isGenerating: true, isGeneratingRemainingImages: false, isBatchGeneratingVideos: false,
+            isPreviewDone: false, isDone: false, taste: settings.taste, era: settings.era, theme: settings.theme,
+            isMvMode: curMode === 'mv', productionMode: curMode as any
           };
 
-          setEpisodes(prev => [...prev.filter(e => e.id !== epIndex), mvEpisode]);
-          episodesRef.current = [...episodesRef.current.filter(e => e.id !== epIndex), mvEpisode];
-          addLog(`✨ 第${epIndex}曲『${mvEpisode.titleJp}』全12カットの情景演出が確定！描画を開始します...`, 'success');
+          setEpisodes(prev => [...prev.filter(e => e.id !== epIndex), newEpisode]);
+          episodesRef.current = [...episodesRef.current.filter(e => e.id !== epIndex), newEpisode];
+          addLog(`✨ 第${epIndex}${modeInfo.unit}『${newEpisode.titleJp}』全12カットの情景演出が確定！描画を開始します...`, 'success');
 
           const targetCutCount = Math.min(settings.previewCutCount, CUTS_PER_EPISODE);
-          await runTasks(buildCutTasks(mvEpisode, mvEpisode.cuts.slice(0, targetCutCount)));
+          await runTasks(buildCutTasks(newEpisode, newEpisode.cuts.slice(0, targetCutCount)));
 
           const isAllDone = targetCutCount >= CUTS_PER_EPISODE;
           updateEpisode(epIndex, { 
@@ -705,20 +697,19 @@ Output JSON ONLY:
             isPreviewDone: true, 
             isDone: isAllDone 
           });
-          addLog(`✅ 第${epIndex}曲『${mvEpisode.titleJp}』先行${targetCutCount}カットの画像生成が完了しました！`, 'success');
+          addLog(`✅ 第${epIndex}${modeInfo.unit}『${newEpisode.titleJp}』先行${targetCutCount}カットの画像生成が完了しました！`, 'success');
 
-          // 自動動画化（autoVideo が ON の場合）
           if (settings.autoVideo && !isAbortedRef.current) {
-            const selectedCuts = mvEpisode.cuts.slice(0, targetCutCount).filter(c => c.isSelectedForVideo);
+            const selectedCuts = newEpisode.cuts.slice(0, targetCutCount).filter(c => c.isSelectedForVideo);
             if (selectedCuts.length > 0) {
-              addLog(`🎬 第${epIndex}曲の自動動画化を開始します（対象: ${selectedCuts.length}カット）...`, 'process');
+              addLog(`🎬 第${epIndex}${modeInfo.unit}の自動動画化を開始します（対象: ${selectedCuts.length}カット）...`, 'process');
               await handleBulkVideo(epIndex);
             }
           }
         }
 
         if (!isAbortedRef.current) {
-          addLog(`🎉 全 ${totalMvCount} 曲の音楽MV制作がすべて完了しました！`, 'success');
+          addLog(`🎉 全 ${totalEpCount} ${modeInfo.unit}の${modeInfo.label}制作がすべて完了しました！`, 'success');
         }
         return;
       }
@@ -861,7 +852,7 @@ Output JSON ONLY:
           addLog(`📖 【第${epId}話】「${currentPlan.titleJp}」の脚本・時代考証をAIに執筆依頼中...`, 'process');
           updateEpisode(epId, { isGenerating: true });
 
-          const scriptPrompt = buildScriptPrompt(epId, currentPlan, settings.country, settings.theme, settings.era, settings.isMangaMode, settings.isMvMode, settings.taste);
+          const scriptPrompt = buildScriptPrompt(epId, currentPlan, settings.country, settings.theme, settings.era, settings.isMangaMode, settings.isMvMode, settings.taste, 'episodes');
           const scriptRes = await callWithRetry<any>(
             () => Flow.generate.text(scriptPrompt),
             (attempt, max, delay, err) => {
@@ -881,6 +872,8 @@ Output JSON ONLY:
             const narration = cutData.narrationJp || cutData.narration || '';
             const plot = cutData.basicPlot || cutData.promptEn || cutData.prompt || '';
             const cut = createDefaultCut(j + 1, narration, plot, isCutSelectedForVideo(j, settings.videoRatio));
+            const dramaStaging = resolveRecommendedTelopStaging(j + 1, false, false, undefined, 'episodes');
+            Object.assign(cut.telop, dramaStaging);
             
             // AI指定のハイライト、またはエピソード代表キーワード、または漢字熟語自動抽出を適用
             const cutHighlights = cutData.highlights || sharedScript.highlightWords || [];
@@ -890,20 +883,12 @@ Output JSON ONLY:
           });
 
           updateEpisode(epId, {
-            titleJp: sharedScript.titleJp,
-            titleEn: sharedScript.titleEn,
-            summary: sharedScript.summary,
-            eraAnalysis: sharedScript.eraAnalysisJp,
-            forbiddenAnachronisms: sharedScript.forbiddenAnachronisms,
-            authenticAttireEn: sharedScript.authenticAttireEn,
-            forbiddenKeywordsEn: sharedScript.forbiddenKeywordsEn,
-            coverCatchphraseJp: sharedScript.coverCatchphraseJp,
-            coverCatchphraseEn: sharedScript.coverCatchphraseEn,
-            highlightWords: sharedScript.highlightWords || [],
-            cuts: episodeCuts,
-            taste: settings.taste,
-            era: settings.era,
-            theme: settings.theme
+            titleJp: sharedScript.titleJp, titleEn: sharedScript.titleEn, summary: sharedScript.summary,
+            eraAnalysis: sharedScript.eraAnalysisJp, forbiddenAnachronisms: sharedScript.forbiddenAnachronisms,
+            authenticAttireEn: sharedScript.authenticAttireEn, forbiddenKeywordsEn: sharedScript.forbiddenKeywordsEn,
+            coverCatchphraseJp: sharedScript.coverCatchphraseJp, coverCatchphraseEn: sharedScript.coverCatchphraseEn,
+            highlightWords: sharedScript.highlightWords || [], cuts: episodeCuts,
+            taste: settings.taste, era: settings.era, theme: settings.theme, productionMode: 'episodes'
           });
 
           addLog(`🎨 【第${epId}話】先行プレビュー ${settings.previewCutCount} カットの描画タスクを開始...（並列度: ${settings.parallelCount}）`, 'process');

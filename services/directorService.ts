@@ -389,19 +389,29 @@ export function buildScriptPrompt(
   era?: string, 
   isMangaMode?: boolean,
   isMvMode?: boolean,
-  taste?: string
+  taste?: string,
+  productionMode?: string
 ): string {
   const worldSetting = era && era !== theme ? `${theme} (時代: ${era}, 地域: ${country})` : `${theme} (${country})`;
   const rawStyle = taste ? (TASTES[taste] || taste) : '';
   const isHistorical = checkIsHistorical(era, theme);
   
-  const directorRole = isMvMode
-    ? "world-class music video (MV) director and visual poet"
-    : isMangaMode 
-      ? "world-class comic/manga author and storyboard artist" 
-      : isHistorical
-        ? "world-class historical drama director"
-        : "world-class cinematic drama director";
+  const effMode = productionMode || (isMvMode ? 'mv' : 'episodes');
+  const directorRole = effMode === 'trivia'
+    ? "viral YouTube Shorts/TikTok trivia creator and documentary director"
+    : effMode === 'quotes'
+      ? "philosophical essayist, master typographer, and quote archivist"
+      : effMode === 'folklore'
+        ? "investigative mystery storyteller and psychological suspense director"
+        : effMode === 'craft'
+          ? "master artisan documentarian and aesthetic visual poet"
+          : isMvMode
+            ? "world-class music video (MV) director and visual poet"
+            : isMangaMode 
+              ? "world-class comic/manga author and storyboard artist" 
+              : isHistorical
+                ? "world-class historical drama director"
+                : "world-class cinematic drama director";
     
   const mangaInstructions = isMangaMode 
     ? `MANGA/COMIC DIRECTING:
@@ -442,14 +452,36 @@ MANDATORY VISUAL RULES:
 - NEVER include elements of this art style (e.g., neon, pop, pastel, anime, glowing lights) into forbidden lists!`
     : "";
 
-  const contextTitle = isMvMode ? "Music Video Sequence" : isMangaMode ? "Comic Episode" : isHistorical ? "Historical Drama Episode" : "Drama Episode";
+  const modeInstructions = effMode === 'trivia'
+    ? `VIRAL TRIVIA DIRECTING:
+1. Pacing & Curiosity: Hook in Cut 1-2 with unbelievable curiosity/question. Explain the hidden scientific/historical truth in Cut 3-9. Deliver a mind-blowing punchline/conclusion in Cut 10-12.
+2. Narration: narrationJp MUST be punchy Japanese trivia spoken commentary (18-25 chars per cut, engaging YouTube Shorts rhythm).
+3. Gold Highlights: Highlight critical numbers, shocking facts, and core keywords.`
+    : effMode === 'quotes'
+      ? `PHILOSOPHICAL GREAT QUOTES DIRECTING:
+1. Pacing: Cut 1-3 sets the emotional dilemma/anxiety of life. Cut 4-9 reveals the profound quote and wisdom. Cut 10-12 provides the healing conclusion/prescription to save.
+2. Narration: narrationJp MUST be elegant, dignified, memorable quotes (格調高い名言・超訳処方箋).
+3. Gold Highlights: Highlight the profound keyword that resonates in the heart.`
+      : effMode === 'folklore'
+        ? `FOLKLORE & UNSOLVED MYSTERY DIRECTING:
+1. Pacing: Cut 1-2 introduces the chilling historical incident/creepy lore. Cut 3-9 examines unsettling evidence and bizarre theories. Cut 10-12 poses an eerie open question provoking comments.
+2. Narration: narrationJp MUST be suspenseful, atmospheric commentary evoking curiosity and goosebumps.
+3. Gold Highlights: Highlight chilling evidence, dates, and ominous names.`
+        : effMode === 'craft'
+          ? `SUPREME CRAFTSMAN DIRECTING:
+1. Pacing: Cut 1-2 presents the raw pristine material. Cut 3-9 captures the mesmerizing precision handwork, micro-focus, and extreme dedication. Cut 10-12 reveals the sublime finished masterpiece.
+2. Narration: narrationJp MUST be serene, reverent, and poetic, honoring the craftsman's devotion.
+3. Gold Highlights: Highlight artisan terms, material names, and supreme techniques.`
+          : isMvMode ? mvInstructions : mangaInstructions;
+
+  const contextTitle = effMode === 'trivia' ? "Trivia Shorts Sequence" : effMode === 'quotes' ? "Quotes Shorts Sequence" : effMode === 'folklore' ? "Folklore Mystery Sequence" : effMode === 'craft' ? "Craft Documentary Sequence" : isMvMode ? "Music Video Sequence" : isMangaMode ? "Comic Episode" : isHistorical ? "Historical Drama Episode" : "Drama Episode";
 
   return `You are a ${directorRole} and visual researcher.
 Create a 12-cut ${contextTitle} for Episode ${epId} ("${currentPlan.titleJp}").
 World Theme & Setting: "${worldSetting}".
 ${visualStyleMandate}
 
-${isMvMode ? mvInstructions : mangaInstructions}
+${modeInstructions}
 
 ${isMvMode ? 'ATMOSPHERIC & VISUAL HARMONY:' : (isHistorical ? 'STRICT HISTORICAL ACCURACY:' : 'AUTHENTIC SETTING & CULTURAL ACCURACY:')}
 Dynamically analyze the period, setting, and atmosphere implied by "${worldSetting}". Determine authentic aesthetic attire and identify elements that would break the mood and must NEVER appear (NEVER forbid elements of the chosen Visual Art Style).
@@ -582,7 +614,8 @@ MANDATORY RULE: This Cut ${cutId} MUST BE RADICALLY DIFFERENT from the previous 
     cutId, 
     settings.isMvMode, 
     isHistorical, 
-    previousShotInfo?.telop
+    previousShotInfo?.telop,
+    settings.productionMode
   );
 
   const directorPrompt = `You are a ${directorRole} designing a visual shot and motion-graphics telop staging for ${genreDesc}.

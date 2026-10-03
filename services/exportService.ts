@@ -294,9 +294,25 @@ export const downloadZip = async (
     const safeTitle = (ep.titleJp || '無題').replace(/[\/\\:*?"<>|]/g, '_').replace(/\s+/g, '_').slice(0, 25);
     const filename = `${timestamp}_${safeTitle}.zip`;
 
-    // 1. 最優先: ブラウザ直接ダウンロード（a download）でサイズ上限ゼロ・高速保存
-    let directSuccess = false;
-    try {
+    // 1. Google Flow Tools 環境: iframe 内の sandbox 制約を回避するため、必ず公式 Flow.download を優先実行
+    if (typeof Flow !== 'undefined' && typeof Flow.download === 'function') {
+      await new Promise<void>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onloadend = async () => {
+          try {
+            const base64 = (reader.result as string).split(',')[1];
+            await Flow.download({ base64, mimeType: 'application/zip', filename });
+            addLog(`✅ パッケージ「${filename}」をダウンロードしました。`, 'success');
+            resolve();
+          } catch (e) {
+            reject(e);
+          }
+        };
+        reader.onerror = reject;
+        reader.readAsDataURL(zipBlob);
+      });
+    } else {
+      // 2. ローカル開発環境（Vite等、Flow が未定義の場合）: DOM a.click で保存
       const blobUrl = URL.createObjectURL(zipBlob);
       const a = document.createElement('a');
       a.href = blobUrl;
@@ -305,29 +321,7 @@ export const downloadZip = async (
       a.click();
       document.body.removeChild(a);
       setTimeout(() => URL.revokeObjectURL(blobUrl), 15000);
-      directSuccess = true;
       addLog(`✅ パッケージ「${filename}」をダウンロードしました。`, 'success');
-    } catch (directErr) {
-      console.warn('Direct browser download failed, trying Flow.download fallback', directErr);
-    }
-
-    // 2. フォールバック: Flow.download（直接ダウンロードが制限された場合）
-    if (!directSuccess) {
-      await new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onloadend = async () => {
-          try {
-            const base64 = (reader.result as string).split(',')[1];
-            await Flow.download({ base64, mimeType: 'application/zip', filename });
-            addLog(`✅ パッケージ「${filename}」をダウンロードしました。`, 'success');
-            resolve(true);
-          } catch (e) {
-            reject(e);
-          }
-        };
-        reader.onerror = reject;
-        reader.readAsDataURL(zipBlob);
-      });
     }
   } catch (err: any) { addLog(`❌ ZIP生成エラー: ${err.message}`, 'error'); }
 };

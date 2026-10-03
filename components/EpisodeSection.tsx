@@ -7,7 +7,31 @@ import { CutCard } from './CutCard';
  * 時代考証・世界観インテリジェンスカード（作品の時代設定と禁止要素を表示）
  */
 export const HistoricalCard: React.FC<{ ep: Episode }> = ({ ep }) => {
-  const isMv = !!ep.isMvMode || ep.titleJp.startsWith('🎵');
+  const isMv = !!ep.isMvMode || ep.titleJp.startsWith('🎵') || ep.productionMode === 'mv';
+  const mode = ep.productionMode || (isMv ? 'mv' : 'episodes');
+
+  const cardTitle = mode === 'mv' ? 'Music Video Concept Card'
+    : mode === 'trivia' ? 'Trivia & Science Intelligence Card'
+    : mode === 'quotes' ? 'Mastermind Wisdom Card'
+    : mode === 'folklore' ? 'Occult & Folklore Intelligence Card'
+    : mode === 'craft' ? 'Craftsmanship Spirit Card'
+    : mode === 'style-matrix' ? 'Style Matrix Card'
+    : 'Historical Intelligence Card';
+
+  const cardIcon = mode === 'mv' ? 'headphones'
+    : mode === 'trivia' ? 'lightbulb'
+    : mode === 'quotes' ? 'format_quote'
+    : mode === 'folklore' ? 'psychology'
+    : mode === 'craft' ? 'precision_manufacturing'
+    : mode === 'style-matrix' ? 'palette'
+    : 'history_edu';
+
+  const themeLabel = isMv ? 'シチュエーション'
+    : mode === 'trivia' ? '雑学テーマ'
+    : mode === 'quotes' ? '名言・人物'
+    : mode === 'folklore' ? '怪異・伝説'
+    : mode === 'craft' ? '伝統技術'
+    : 'テーマ';
 
   return (
     <div className={`border rounded-2xl p-5 flex flex-col gap-4 animate-in fade-in slide-in-from-top-2 duration-500 ${
@@ -16,10 +40,10 @@ export const HistoricalCard: React.FC<{ ep: Episode }> = ({ ep }) => {
       <div className="flex items-center justify-between border-b border-white/5 pb-3">
         <div className="flex items-center gap-2">
           <span className={`material-symbols-outlined text-xl ${isMv ? 'text-purple-400' : 'text-amber-400'}`}>
-            {isMv ? 'headphones' : 'history_edu'}
+            {cardIcon}
           </span>
           <h3 className="text-sm font-black tracking-widest uppercase text-white/90">
-            {isMv ? 'Music Video Concept Card' : 'Historical Intelligence Card'}
+            {cardTitle}
           </h3>
         </div>
         
@@ -30,19 +54,40 @@ export const HistoricalCard: React.FC<{ ep: Episode }> = ({ ep }) => {
               🎵 音楽MVモード
             </span>
           )}
+          {mode === 'trivia' && (
+            <span className="px-2.5 py-0.5 bg-amber-500/20 text-amber-300 text-[10px] font-bold rounded-full border border-amber-500/40">
+              💡 雑学Shorts
+            </span>
+          )}
+          {mode === 'quotes' && (
+            <span className="px-2.5 py-0.5 bg-blue-500/20 text-blue-300 text-[10px] font-bold rounded-full border border-blue-500/40">
+              📜 偉人の名言
+            </span>
+          )}
+          {mode === 'folklore' && (
+            <span className="px-2.5 py-0.5 bg-emerald-500/20 text-emerald-300 text-[10px] font-bold rounded-full border border-emerald-500/40">
+              👁️ 怪異・都市伝説
+            </span>
+          )}
+          {mode === 'craft' && (
+            <span className="px-2.5 py-0.5 bg-orange-500/20 text-orange-300 text-[10px] font-bold rounded-full border border-orange-500/40">
+              🔨 職人魂
+            </span>
+          )}
           {ep.taste && (
             <span className="px-2.5 py-0.5 bg-blue-500/20 text-blue-300 text-[10px] font-bold rounded-full border border-blue-500/30">
               画風: {ep.taste.split(' (')[0].trim()}
             </span>
           )}
-          {ep.era && !isMv && (
+          {/* 年代バッジ: テーマと重複せず、かつ歴史ドラマモード等の実質的な時代情報がある場合のみ表示 */}
+          {ep.era && ep.era !== ep.theme && !isMv && mode === 'episodes' && (
             <span className="px-2.5 py-0.5 bg-purple-500/20 text-purple-300 text-[10px] font-bold rounded-full border border-purple-500/30">
               年代: {ep.era.split('（')[0].trim()}
             </span>
           )}
           {ep.theme && (
             <span className="px-2.5 py-0.5 bg-amber-500/20 text-amber-400 text-[10px] font-bold rounded-full border border-amber-500/30">
-              {isMv ? 'シチュエーション' : 'テーマ'}: {ep.theme.split('（')[0].trim()}
+              {themeLabel}: {ep.theme.split('（')[0].trim()}
             </span>
           )}
         </div>
@@ -51,7 +96,12 @@ export const HistoricalCard: React.FC<{ ep: Episode }> = ({ ep }) => {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div className="flex flex-col gap-2">
           <span className="text-[10px] font-bold text-white/30 uppercase tracking-tighter">
-            {isMv ? 'MVビジュアルコンセプト・情景美（アンニュイ演出）' : '作品世界観・時代分析'}
+            {isMv ? 'MVビジュアルコンセプト・情景美（アンニュイ演出）'
+              : mode === 'trivia' ? '科学的メカニズム・歴史的ウラ側の検証'
+              : mode === 'quotes' ? '名言の思想的背景・時代文脈'
+              : mode === 'folklore' ? '伝承の真実・オカルト的考証'
+              : mode === 'craft' ? '職人の技術革新・歴史的背景'
+              : '作品世界観・時代分析'}
           </span>
           <p className="text-xs text-white/80 leading-relaxed italic">{ep.eraAnalysis || "分析データ収集中..."}</p>
         </div>

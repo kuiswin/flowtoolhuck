@@ -17,8 +17,8 @@ interface CutCardProps {
 export const CutCard: React.FC<CutCardProps> = ({ 
   cut, episodeId, isMvMode, onAnimateRequest, onPreviewCut, onUpdateSelection, onUpdateModel, onRetry 
 }) => {
-  const imageSrc = cut.imageBase64 ? `data:image/png;base64,${cut.imageBase64}` : null;
-  const videoSrc = cut.videoBase64 ? `data:video/mp4;base64,${cut.videoBase64}` : null;
+  const imageSrc = cut.imageBase64 ? (cut.imageBase64.startsWith('data:') ? cut.imageBase64 : `data:image/png;base64,${cut.imageBase64}`) : null;
+  const videoSrc = cut.videoBase64 ? (cut.videoBase64.startsWith('data:') ? cut.videoBase64 : `data:video/mp4;base64,${cut.videoBase64}`) : null;
 
   const handleRetry = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -143,8 +143,8 @@ export const CutCard: React.FC<CutCardProps> = ({
           </div>
         )}
 
-        {cut.isGeneratingVideo && (
-          <div className="absolute inset-0 bg-black/70 backdrop-blur-sm flex flex-col items-center justify-center gap-2">
+        {cut.isGeneratingVideo && !videoSrc && (
+          <div className="absolute inset-0 bg-black/70 backdrop-blur-sm flex flex-col items-center justify-center gap-2 z-20">
              <div className="w-8 h-8 border-2 border-white/20 border-t-white rounded-full animate-spin" />
              <span className="text-[8px] text-white font-black animate-pulse uppercase">Baking Video</span>
           </div>

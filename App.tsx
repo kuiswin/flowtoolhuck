@@ -5,12 +5,11 @@ import { ArchiveDrawer } from './components/ArchiveDrawer';
 import { StudioSidebar } from './components/StudioSidebar';
 import { EpisodeSection } from './components/EpisodeSection';
 import { LogEntry } from './components/StudioLogs';
-import { PackageDownloadModal, PackageDownloadData } from './components/PackageDownloadModal';
 import { Cut, GeneratorSettings, VideoModelType, Episode } from './types';
 import { THEMES, TASTES, IMAGE_MODELS, VIDEO_MODELS } from './constants';
 import { createLogMessage } from './services/utils';
 import { initDB, getAllStories, StoryRecord } from './services/db';
-import { downloadZip } from './services/exportService';
+import { downloadZip, triggerBrowserDownload } from './services/exportService';
 import { useStudioProduction } from './services/useStudioProduction';
 import { extractHighlights } from './services/directorService';
 
@@ -24,7 +23,6 @@ export default function App() {
   const [archiveOpen, setArchiveOpen] = useState(false);
   const [isTrashModalOpen, setIsTrashModalOpen] = useState(false);
   const [previewingCutData, setPreviewingCutData] = useState<{ epId: number; cut: Cut } | null>(null);
-  const [packageModalData, setPackageModalData] = useState<PackageDownloadData | null>(null);
 
   // ログ保持数を9999に拡大（1万行制限）
   const addLog = useCallback((message: string, type: LogEntry['type'] = 'info') => {
@@ -36,48 +34,25 @@ export default function App() {
     setStories(all);
   }, []);
 
-  const handlePackageReady = useCallback((data: PackageDownloadData) => {
-    // Flow.download で自動保存された場合はモーダルを出さずスムーズに完了
-    // Flow API が応答せず直接保存が必要な場合のみモーダルをポップアップ
-    if (!data.flowSuccess) {
-      setPackageModalData(data);
-    }
-  }, []);
-
   const { episodes, isProducing, startProduction, abortProduction, resumeSeries, activeSeriesManifest, handleGenerateRemaining, handleBulkVideo, handleBulkBrowserVideo, handleExportFullMovie, handleBulkRerollTelop, generateImage, generateVideo, generateBrowserVideo, updateCut, updateEpisode, clearEpisodes } = useStudioProduction({ 
     settings, 
     logs, 
     addLog, 
-    refreshStories,
-    onPackageReady: handlePackageReady
+    refreshStories
   });
 
   const handleDownloadZip = useCallback(async (ep: Episode) => {
+    // 1. すでに ZIP が生成済みの場合は、即座にブラウザ直接ダウンロードをキック！（ポップアップなし）
     if (ep.packageZipBlobUrl) {
-      setPackageModalData({
-        epId: ep.id,
-        titleJp: ep.titleJp,
-        filename: ep.packageZipFilename || `Episode_${ep.id}_Package.zip`,
-        blobUrl: ep.packageZipBlobUrl,
-        sizeStr: ep.packageZipSizeStr || '',
-        videoCount: ep.cuts.filter(c => !!c.videoBase64).length,
-        imageCount: ep.cuts.filter(c => !!c.imageBase64).length
-      });
+      const filename = ep.packageZipFilename || `Episode_${ep.id}_Package.zip`;
+      addLog(`💾 作成済みパッケージ「${filename}」を直接保存中...`, 'process');
+      triggerBrowserDownload(ep.packageZipBlobUrl, filename);
+      addLog(`✅ パッケージ「${filename}」のダウンロードを開始しました。`, 'success');
       return;
     }
 
-    const res = await downloadZip(ep, addLog, activeSeriesManifest || undefined, logs, info => {
-      setPackageModalData({
-        epId: ep.id,
-        titleJp: ep.titleJp,
-        filename: info.filename,
-        blobUrl: info.blobUrl,
-        sizeStr: info.sizeStr,
-        videoCount: ep.cuts.filter(c => !!c.videoBase64).length,
-        imageCount: ep.cuts.filter(c => !!c.imageBase64).length
-      });
-    });
-
+    // 2. まだ ZIP が未生成の場合は生成して即座に直接ダウンロード
+    const res = await downloadZip(ep, addLog, activeSeriesManifest || undefined, logs);
     if (res) {
       updateEpisode(ep.id, {
         packageZipBlobUrl: res.blobUrl,
@@ -206,7 +181,6 @@ export default function App() {
       })()}
       <ArchiveDrawer isOpen={archiveOpen} onClose={() => setArchiveOpen(false)} stories={stories} onRemake={(s) => { setSettings(prev => ({ ...prev, country: s.country, era: s.era, theme: s.theme })); setArchiveOpen(false); }} />
       <ConfirmationModal isOpen={isTrashModalOpen} title="全消去" message="制作中のデータを消去します。" onConfirm={() => { clearEpisodes(); setIsTrashModalOpen(false); }} onCancel={() => setIsTrashModalOpen(false)} />
-      <PackageDownloadModal isOpen={!!packageModalData} data={packageModalData} onClose={() => setPackageModalData(null)} />
     </div>
   );
 }

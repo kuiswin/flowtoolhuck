@@ -73,6 +73,13 @@ export function useStudioProduction({ settings, logs, addLog, refreshStories, on
   }, [episodes]);
 
   const updateCut = useCallback((epId: number, cutId: number, updates: Partial<Cut>) => {
+    // 1. 即座に episodesRef.current を同期更新（非同期ループ内の競合・古い参照を完全排除）
+    episodesRef.current = episodesRef.current.map(ep =>
+      ep.id === epId
+        ? { ...ep, cuts: ep.cuts.map(c => c.id === cutId ? { ...c, ...updates } : c) }
+        : ep
+    );
+    // 2. React state を更新して UI に即座に反映
     setEpisodes(prev => prev.map(ep =>
       ep.id === epId
         ? { ...ep, cuts: ep.cuts.map(c => c.id === cutId ? { ...c, ...updates } : c) }
@@ -81,7 +88,14 @@ export function useStudioProduction({ settings, logs, addLog, refreshStories, on
   }, []);
 
   const updateEpisode = useCallback((epId: number, updates: Partial<Episode>) => {
-    setEpisodes(prev => prev.map(ep => ep.id === epId ? { ...ep, ...updates } : ep));
+    // 1. 即座に episodesRef.current を同期更新
+    episodesRef.current = episodesRef.current.map(ep =>
+      ep.id === epId ? { ...ep, ...updates } : ep
+    );
+    // 2. React state を更新
+    setEpisodes(prev => prev.map(ep =>
+      ep.id === epId ? { ...ep, ...updates } : ep
+    ));
   }, []);
 
   const abortProduction = useCallback(() => {
@@ -348,25 +362,27 @@ export function useStudioProduction({ settings, logs, addLog, refreshStories, on
     let mediaId = cut?.imageMediaId;
     if (!mediaId && cut?.imageBase64) {
       try {
-        const up = await Flow.upload({ base64: cut.imageBase64, mimeType: 'image/png', name: `Cut_${epId}_${cutId}` });
+        const cleanImg = cut.imageBase64.replace(/^data:[^;]+;base64,/, '');
+        const up = await Flow.upload({ base64: cleanImg, mimeType: 'image/png', name: `Cut_${epId}_${cutId}` });
         mediaId = up.mediaId;
         updateCut(epId, cutId, { imageMediaId: mediaId });
       } catch (_) {}
     }
     if (!mediaId) {
       addLog(`⚠️ Ep.${epId} C${cutId.toString().padStart(2, '0')}: 画像がないため動画生成をスキップ`, 'warning');
+      updateCut(epId, cutId, { isGeneratingVideo: false });
       return;
     }
     // 動画モデル定義から安全に解決（デフォルト値・尺・コストを自動取得）
     const modelDef = resolveVideoModel(modelType);
-    updateCut(epId, cutId, { isGeneratingVideo: true, videoModelUsed: modelDef.name });
+    updateCut(epId, cutId, { isGeneratingVideo: true, videoModelUsed: modelDef.name, error: undefined });
     addLog(`🎥 Ep.${epId} C${cutId.toString().padStart(2, '0')}: 動画生成開始 (${modelDef.name})`, 'info');
 
     try {
       // カメラモーションを定義レジストリから解決して自然に注入
-      const cameraMotionText = cut.cameraMotion || (cut.cameraWork ? resolveCameraWork(cut.cameraWork).motionPrompt : '');
+      const cameraMotionText = cut?.cameraMotion || (cut?.cameraWork ? resolveCameraWork(cut.cameraWork).motionPrompt : '');
       const cameraInstruction = cameraMotionText ? ` [Camera Motion: ${cameraMotionText}]` : '';
-      const finalVideoPrompt = `${cut.promptEn}${cameraInstruction}`;
+      const finalVideoPrompt = `${cut?.promptEn || ''}${cameraInstruction}`;
 
       const res = await callWithRetry<any>(
         () => Flow.generate.video({ 
@@ -379,7 +395,14 @@ export function useStudioProduction({ settings, logs, addLog, refreshStories, on
         (attempt, max, delay) => addLog(`Retrying Video (attempt ${attempt}/${max}) after ${delay} ms...`, 'warning'),
         5, 180000, '動画生成'
       );
-      updateCut(epId, cutId, { videoBase64: res.base64, videoMediaId: res.mediaId, isGeneratingVideo: false, videoDuration: modelDef.defaultDuration });
+      const cleanVideoBase64 = res.base64 ? res.base64.replace(/^data:[^;]+;base64,/, '') : '';
+      updateCut(epId, cutId, { 
+        videoBase64: cleanVideoBase64, 
+        videoMediaId: res.mediaId, 
+        isGeneratingVideo: false, 
+        error: undefined,
+        videoDuration: modelDef.defaultDuration 
+      });
       addLog(`🎬 Ep.${epId} C${cutId.toString().padStart(2, '0')}: 動画生成完了 (${modelDef.defaultDuration}s)`, 'success');
     } catch (err) {
       updateCut(epId, cutId, { isGeneratingVideo: false, error: '動画失敗' });
@@ -390,13 +413,16 @@ export function useStudioProduction({ settings, logs, addLog, refreshStories, on
   const generateBrowserVideo = async (epId: number, cutId: number) => {
     const cut = episodesRef.current.find(e => e.id === epId)?.cuts.find(c => c.id === cutId);
     if (!cut?.imageBase64) return;
-    updateCut(epId, cutId, { isGeneratingVideo: true, videoModelUsed: 'Browser (0pt)' });
+    updateCut(epId, cutId, { isGeneratingVideo: true, videoModelUsed: 'Browser (0pt)', error: undefined });
     try {
       const isMvMode = episodesRef.current.find(e => e.id === epId)?.isMvMode || false;
       const base64 = await renderKenBurnsVideo(cut, 4, isMvMode);
-      updateCut(epId, cutId, { videoBase64: base64, isGeneratingVideo: false, videoDuration: 4 });
+      const cleanVideoBase64 = base64 ? base64.replace(/^data:[^;]+;base64,/, '') : '';
+      updateCut(epId, cutId, { videoBase64: cleanVideoBase64, isGeneratingVideo: false, error: undefined, videoDuration: 4 });
       addLog(`🎬 Ep.${epId} C${cutId.toString().padStart(2, '0')}: ブラウザ動画化完了`, 'success');
-    } catch (err) { updateCut(epId, cutId, { isGeneratingVideo: false, error: '失敗' }); }
+    } catch (err) { 
+      updateCut(epId, cutId, { isGeneratingVideo: false, error: '失敗' }); 
+    }
   };
 
   const handleBulkVideo = async (epId: number) => {
@@ -405,12 +431,24 @@ export function useStudioProduction({ settings, logs, addLog, refreshStories, on
     setIsProducing(true);
     updateEpisode(epId, { isBatchGeneratingVideos: true });
     for (const cut of ep.cuts) {
-      if (cut.isSelectedForVideo && !cut.videoMediaId) {
-        const targetModel = resolveVideoModel(cut.targetVideoModel || settings.videoModel).id;
-        await generateVideo(epId, cut.id, targetModel as VideoModelType);
+      if (isAbortedRef.current) break;
+      const currentCut = episodesRef.current.find(e => e.id === epId)?.cuts.find(c => c.id === cut.id);
+      if (currentCut?.isSelectedForVideo && !currentCut.videoBase64 && !currentCut.videoMediaId) {
+        const targetModel = resolveVideoModel(currentCut.targetVideoModel || settings.videoModel).id;
+        await generateVideo(epId, currentCut.id, targetModel as VideoModelType);
       }
     }
-    updateEpisode(epId, { isBatchGeneratingVideos: false });
+    // 確実に全カットの isGeneratingVideo を解除し、バッチフラグをOFFにする
+    episodesRef.current = episodesRef.current.map(e => e.id === epId ? {
+      ...e,
+      isBatchGeneratingVideos: false,
+      cuts: e.cuts.map(c => ({ ...c, isGeneratingVideo: false }))
+    } : e);
+    setEpisodes(prev => prev.map(e => e.id === epId ? {
+      ...e,
+      isBatchGeneratingVideos: false,
+      cuts: e.cuts.map(c => ({ ...c, isGeneratingVideo: false }))
+    } : e));
     setIsProducing(false);
   };
 
@@ -709,21 +747,33 @@ Output JSON ONLY:
           addLog(`✅ 第${epIndex}${modeInfo.unit}『${newEpisode.titleJp}』先行${targetCutCount}カットの画像生成が完了しました！`, 'success');
 
           if (settings.autoVideo && !isAbortedRef.current) {
-            const selectedCuts = newEpisode.cuts.slice(0, targetCutCount).filter(c => c.isSelectedForVideo);
+            const currentEpForVideo = episodesRef.current.find(e => e.id === epIndex);
+            const selectedCuts = currentEpForVideo ? currentEpForVideo.cuts.slice(0, targetCutCount).filter(c => c.isSelectedForVideo) : [];
             if (selectedCuts.length > 0) {
               addLog(`🎬 第${epIndex}${modeInfo.unit}の自動動画化を開始します（対象: ${selectedCuts.length}カット）...`, 'process');
               await handleBulkVideo(epIndex);
             }
           }
 
-          // 先行プレビュー＋動画化完了フラグを確実にONにして全ボタンを解放
-          updateEpisode(epIndex, { 
-            isGenerating: false, 
-            isPreviewDone: true, 
-            isDone: true 
-          });
+          // 先行プレビュー＋動画化完了フラグを確実にONにして全ボタンを解放、かつ全カットのisGeneratingVideoを確実にクリア
+          episodesRef.current = episodesRef.current.map(e => e.id === epIndex ? {
+            ...e,
+            isGenerating: false,
+            isBatchGeneratingVideos: false,
+            isPreviewDone: true,
+            isDone: true,
+            cuts: e.cuts.map(c => ({ ...c, isGeneratingVideo: false }))
+          } : e);
+          setEpisodes(prev => prev.map(e => e.id === epIndex ? {
+            ...e,
+            isGenerating: false,
+            isBatchGeneratingVideos: false,
+            isPreviewDone: true,
+            isDone: true,
+            cuts: e.cuts.map(c => ({ ...c, isGeneratingVideo: false }))
+          } : e));
 
-          // 自動ダウンロードがONの場合、パッケージング＆保存を実行
+          // 自動ダウンロードがONの場合、パッケージング＆直接保存を実行（ポップアップモーダルなし）
           const freshEp = episodesRef.current.find(e => e.id === epIndex) || newEpisode;
           if (settings.autoDownload && !isAbortedRef.current) {
             addLog(`📦 第${epIndex}${modeInfo.unit}の完了時自動ダウンロードを開始します...`, 'process');
@@ -734,18 +784,6 @@ Output JSON ONLY:
                 packageZipFilename: res.filename,
                 packageZipSizeStr: res.sizeStr
               });
-              if (onPackageReady) {
-                onPackageReady({
-                  epId: epIndex,
-                  titleJp: freshEp.titleJp,
-                  filename: res.filename,
-                  blobUrl: res.blobUrl,
-                  sizeStr: res.sizeStr,
-                  videoCount: freshEp.cuts.filter(c => !!c.videoBase64).length,
-                  imageCount: freshEp.cuts.filter(c => !!c.imageBase64).length,
-                  flowSuccess: res.flowSuccess
-                });
-              }
             }
           }
           await saveStory({ titleJp: freshEp.titleJp, titleEn: freshEp.titleEn, country: settings.country, era: settings.era, theme: settings.theme, protagonistSummary: freshEp.summary || '', createdAt: new Date().toISOString() });
@@ -939,13 +977,14 @@ Output JSON ONLY:
           await runTasks(buildCutTasks(currentEp, episodeCuts.slice(0, settings.previewCutCount)));
           addLog(`🎉 【第${epId}話】「${currentPlan.titleJp}」の先行プレビュー制作が完了しました！`, 'success');
 
-          const cutsToAnimate = episodeCuts.filter(c => c.isSelectedForVideo);
+          const currentEpForVideo = episodesRef.current.find(e => e.id === epId);
+          const cutsToAnimate = currentEpForVideo ? currentEpForVideo.cuts.filter(c => c.isSelectedForVideo) : [];
           if (settings.autoVideo && cutsToAnimate.length > 0 && !isAbortedRef.current) {
             updateEpisode(epId, { isBatchGeneratingVideos: true });
             for (const cutTask of cutsToAnimate) {
               if (isAbortedRef.current) break;
               const currentCut = episodesRef.current.find(e => e.id === epId)?.cuts.find(c => c.id === cutTask.id);
-              if (currentCut?.imageMediaId) {
+              if (currentCut && (currentCut.imageMediaId || currentCut.imageBase64)) {
                 const targetModel = resolveVideoModel(currentCut.targetVideoModel || settings.videoModel).id;
                 await generateVideo(epId, cutTask.id, targetModel as VideoModelType);
               }
@@ -953,7 +992,23 @@ Output JSON ONLY:
             updateEpisode(epId, { isBatchGeneratingVideos: false });
           }
 
-          updateEpisode(epId, { isGenerating: false, isPreviewDone: true, isDone: true });
+          // 確実に全カットの isGeneratingVideo を解除し、先行プレビュー完了フラグをセット
+          episodesRef.current = episodesRef.current.map(e => e.id === epId ? {
+            ...e,
+            isGenerating: false,
+            isBatchGeneratingVideos: false,
+            isPreviewDone: true,
+            isDone: true,
+            cuts: e.cuts.map(c => ({ ...c, isGeneratingVideo: false }))
+          } : e);
+          setEpisodes(prev => prev.map(e => e.id === epId ? {
+            ...e,
+            isGenerating: false,
+            isBatchGeneratingVideos: false,
+            isPreviewDone: true,
+            isDone: true,
+            cuts: e.cuts.map(c => ({ ...c, isGeneratingVideo: false }))
+          } : e));
 
           manifest.completedEpisodeIds = Array.from(new Set([...manifest.completedEpisodeIds, epId]));
           manifest.currentEpisodeId = epId + 1;
@@ -968,18 +1023,6 @@ Output JSON ONLY:
                 packageZipFilename: res.filename,
                 packageZipSizeStr: res.sizeStr
               });
-              if (onPackageReady) {
-                onPackageReady({
-                  epId,
-                  titleJp: freshEp.titleJp,
-                  filename: res.filename,
-                  blobUrl: res.blobUrl,
-                  sizeStr: res.sizeStr,
-                  videoCount: freshEp.cuts.filter(c => !!c.videoBase64).length,
-                  imageCount: freshEp.cuts.filter(c => !!c.imageBase64).length,
-                  flowSuccess: res.flowSuccess
-                });
-              }
             }
           }
           await saveStory({ titleJp: freshEp.titleJp, titleEn: freshEp.titleEn, country: settings.country, era: settings.era, theme: settings.theme, protagonistSummary: freshEp.summary || '', createdAt: new Date().toISOString() });

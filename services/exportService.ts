@@ -201,6 +201,29 @@ export async function renderCoverCanvas(ep: Episode): Promise<OffscreenCanvas | 
 }
 
 /**
+ * ブラウザのネイティブダウンロードを即座にキックする共通ヘルパー
+ */
+export const triggerBrowserDownload = (blobUrl: string, filename: string): boolean => {
+  try {
+    const a = document.createElement('a');
+    a.href = blobUrl;
+    a.download = filename;
+    a.style.display = 'none';
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(() => {
+      try {
+        if (a.parentNode) document.body.removeChild(a);
+      } catch (_) {}
+    }, 2000);
+    return true;
+  } catch (e) {
+    console.warn('DOM download failed:', e);
+    return false;
+  }
+};
+
+/**
  * パッケージのダウンロード
  */
 export const downloadZip = async (
@@ -209,7 +232,7 @@ export const downloadZip = async (
   manifest?: SeriesManifest,
   logs?: LogEntry[],
   onReady?: (info: { filename: string; blobUrl: string; sizeStr: string }) => void
-): Promise<{ filename: string; blobUrl: string; sizeStr: string } | null> => {
+): Promise<{ filename: string; blobUrl: string; sizeStr: string; flowSuccess: boolean } | null> => {
   addLog(`📦 Ep.${ep.id} パッケージング中...`, 'process');
   try {
     const zip = new JSZip();
@@ -217,8 +240,14 @@ export const downloadZip = async (
     if (!folder) throw new Error('ZIP creation failed');
 
     ep.cuts.forEach(c => {
-      if (c.imageBase64) folder.file(`cut_${c.id}.png`, c.imageBase64, { base64: true });
-      if (c.videoBase64) folder.file(`cut_${c.id}.mp4`, c.videoBase64, { base64: true });
+      if (c.imageBase64) {
+        const cleanImg = c.imageBase64.replace(/^data:[^;]+;base64,/, '');
+        folder.file(`cut_${c.id}.png`, cleanImg, { base64: true });
+      }
+      if (c.videoBase64) {
+        const cleanVid = c.videoBase64.replace(/^data:[^;]+;base64,/, '');
+        folder.file(`cut_${c.id}.mp4`, cleanVid, { base64: true });
+      }
     });
     
     addLog(`📝 SRT字幕ファイルを生成中...`, 'info');
@@ -299,7 +328,10 @@ export const downloadZip = async (
 
     const blobUrl = URL.createObjectURL(zipBlob);
 
-    // 1. Google Flow Tools 公式 Flow.download を最優先実行（大容量ZIPも対応・一時エラー自動リトライ）
+    // 1. ブラウザ直接ダウンロードを最優先で直ちにキック（ポップアップなしでスッと落とす）
+    triggerBrowserDownload(blobUrl, filename);
+
+    // 2. Google Flow Tools 公式 Flow.download も並行して実行（公式ストレージ連携・リトライ付き）
     let flowSuccess = false;
     if (typeof Flow !== 'undefined' && typeof Flow.download === 'function') {
       const maxRetries = 3;
@@ -313,37 +345,20 @@ export const downloadZip = async (
           });
 
           await Flow.download({ base64, mimeType: 'application/zip', filename });
-          addLog(`✅ パッケージ「${filename}」(${sizeStr}) をダウンロードしました。`, 'success');
           flowSuccess = true;
           break;
         } catch (flowErr: any) {
           console.warn(`Flow.download attempt ${attempt} failed:`, flowErr);
           if (attempt < maxRetries) {
-            addLog(`⏳ Flow API が一時ビジーです。1.5秒後に自動再試行します (${attempt}/${maxRetries})...`, 'process');
             await new Promise(r => setTimeout(r, 1500));
-          } else {
-            addLog(`⚠️ Flow API が応答しないため、ブラウザ直接保存リンクを準備しました: ${flowErr.message}`, 'warning');
           }
         }
       }
     }
 
-    // 2. Flow 環境外（ローカルViteなど）または Flow.download が3回失敗した場合のブラウザ直接ダウンロード試行
-    if (!flowSuccess) {
-      try {
-        const a = document.createElement('a');
-        a.href = blobUrl;
-        a.download = filename;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-      } catch (e) {
-        console.warn('DOM download attempt ignored by browser sandbox:', e);
-      }
-    }
+    addLog(`✅ パッケージ「${filename}」(${sizeStr}) をダウンロードしました。`, 'success');
 
     const result = { filename, blobUrl, sizeStr, flowSuccess };
-    // 画面上の保存バナー・モーダル通知（Flow.downloadが失敗した時の救済、または再保存用）
     if (onReady) {
       onReady(result);
     }

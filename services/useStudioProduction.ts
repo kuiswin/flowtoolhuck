@@ -10,7 +10,8 @@ import {
   resolveImageModel,
   resolveVideoModel,
   resolveCameraWork,
-  resolveRecommendedTelopStaging
+  resolveRecommendedTelopStaging,
+  resolveRecommendedCameraWorkAndKenBurns
 } from '../constants';
 import { safeJsonParse, callWithRetry, formatErrorMessage, createDefaultCut, isCutSelectedForVideo } from './utils';
 import { saveStory, getAllReferenceAssets, saveReferenceAsset } from './db';
@@ -714,6 +715,10 @@ Output JSON ONLY:
             const cut = createDefaultCut(j + 1, narration, plot, isCutSelectedForVideo(j, settings.videoRatio));
             cut.shotScale = preset.scale;
             cut.cinematicAngle = preset.angle;
+            const recCw = resolveRecommendedCameraWorkAndKenBurns(j + 1, curMode, curMode === 'mv', settings.isMangaMode);
+            cut.cameraWork = recCw.id;
+            cut.cameraMotion = recCw.motionPrompt;
+            cut.kenBurnsPreset = recCw.recommendedKenBurns;
             Object.assign(cut.telop, staging);
             cut.telop.highlights = extractHighlights(narration, cutHighlights);
             return cut;
@@ -953,6 +958,10 @@ Output JSON ONLY:
             const narration = cutData.narrationJp || cutData.narration || '';
             const plot = cutData.basicPlot || cutData.promptEn || cutData.prompt || '';
             const cut = createDefaultCut(j + 1, narration, plot, isCutSelectedForVideo(j, settings.videoRatio));
+            const recCw = resolveRecommendedCameraWorkAndKenBurns(j + 1, 'episodes', false, settings.isMangaMode);
+            cut.cameraWork = recCw.id;
+            cut.cameraMotion = recCw.motionPrompt;
+            cut.kenBurnsPreset = recCw.recommendedKenBurns;
             const dramaStaging = resolveRecommendedTelopStaging(j + 1, false, false, undefined, 'episodes');
             Object.assign(cut.telop, dramaStaging);
             

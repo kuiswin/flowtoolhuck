@@ -94,12 +94,20 @@ export const CutCard: React.FC<CutCardProps> = ({
           <span className="text-white/10 text-[8px] tracking-widest uppercase">Standby</span>
         )}
 
-        {/* 演出バッジ (Shot Scale) */}
-        {cut.shotScale && (
-          <div className="absolute bottom-1.5 left-1.5 px-1.5 py-0.5 rounded-sm bg-amber-500 text-[7px] font-black text-black uppercase tracking-tighter shadow-lg">
-            {cut.shotScale}
-          </div>
-        )}
+        {/* 演出バッジ (Shot Scale & Ken Burns) */}
+        <div className="absolute bottom-1.5 left-1.5 flex items-center gap-1 z-10 max-w-[90%] overflow-hidden">
+          {cut.shotScale && (
+            <div className="px-1.5 py-0.5 rounded-sm bg-amber-500 text-[7px] font-black text-black uppercase tracking-tighter shadow-lg shrink-0">
+              {cut.shotScale}
+            </div>
+          )}
+          {cut.kenBurnsPreset && cut.kenBurnsPreset !== 'none' && !videoSrc && (
+            <div className="px-1.5 py-0.5 rounded-sm bg-black/75 backdrop-blur-md border border-white/20 text-[7px] font-bold text-white/90 uppercase tracking-tighter shadow-lg flex items-center gap-0.5 truncate shrink-0">
+              <span className="material-symbols-outlined text-[8px] text-amber-400">videocam</span>
+              <span>{cut.kenBurnsPreset.replace('-', ' ')}</span>
+            </div>
+          )}
+        </div>
 
 
 

@@ -519,7 +519,11 @@ import {
   MV_ANTI_CAMERA_LOOK_NEGATIVE,
   PreviousShotContext 
 } from './promptEngine';
-import { resolveCameraWork, resolveRecommendedTelopStaging } from '../config/studioDefinitions';
+import { 
+  resolveCameraWork, 
+  resolveRecommendedCameraWorkAndKenBurns, 
+  resolveRecommendedTelopStaging 
+} from '../config/studioDefinitions';
 
 export type { PreviousShotContext as PreviousShotInfo };
 
@@ -562,11 +566,15 @@ export async function directShot(
     ? `Protagonist: ${activeReference.characterDna}. NOTE: Adopt only the character's appearance and distinctive features (face, hair, eyes); DO NOT copy reference pose.` 
     : 'No specific reference asset.';
 
-  // 定義テーブルから本カットの演出プリセットを取得
+  // 定義テーブルから本カットの演出プリセットおよびカメラワーク＆ケンバーンを取得
   const preset = getStoryboardPreset(cutId, settings.isMvMode, settings.isMangaMode);
-  const kbPreset: KenBurnsPreset = settings.isMangaMode 
-    ? 'none' 
-    : resolveCameraWork(preset.tag).recommendedKenBurns;
+  const recCw = resolveRecommendedCameraWorkAndKenBurns(
+    cutId,
+    settings.productionMode,
+    settings.isMvMode,
+    settings.isMangaMode
+  );
+  const kbPreset: KenBurnsPreset = recCw.recommendedKenBurns;
 
   const directorRole = settings.isMvMode ? "music video (MV) visual director" : settings.isMangaMode ? "comic book/manga storyboard artist" : "film director";
   
@@ -632,7 +640,7 @@ ${mvExtraDirecting}
 Output ONLY valid JSON:
 {
   "enhancedPrompt": "Extremely detailed scene description in English including lighting, props, ${wardrobeDesc}, atmosphere, shot angle, and distinct character pose/action",
-  "cameraWork": "${preset.tag}",
+  "cameraWork": "${recCw.label}",
   "cinematicAngle": "${preset.angle}",
   "shotScale": "${preset.scale}",
   "telopStyle": "${defaultTelop.style}",
@@ -651,15 +659,15 @@ Output ONLY valid JSON:
     const resText = typeof res === 'string' ? res : (res?.text || res);
     const parsed = safeJsonParse<any>(resText, {});
     if (parsed && parsed.enhancedPrompt) {
-      const cwTag = parsed.cameraWork || preset.tag;
+      const cwDef = parsed.cameraWork ? resolveCameraWork(parsed.cameraWork) : recCw;
       return {
         promptEn: parsed.enhancedPrompt,
         negativePrompt: antiPreviousNegative,
-        cameraWork: cwTag,
-        cameraMotion: resolveCameraWork(cwTag).motionPrompt,
+        cameraWork: cwDef.id,
+        cameraMotion: cwDef.motionPrompt,
         cinematicAngle: parsed.cinematicAngle || preset.angle,
         shotScale: parsed.shotScale || preset.scale,
-        kenBurnsPreset: kbPreset,
+        kenBurnsPreset: cwDef.recommendedKenBurns || kbPreset,
         telop: {
           fullText: '',
           style: parsed.telopStyle || defaultTelop.style,
@@ -676,8 +684,8 @@ Output ONLY valid JSON:
   return {
     promptEn: `${preset.angle}. ${prompt}`,
     negativePrompt: antiPreviousNegative,
-    cameraWork: preset.tag,
-    cameraMotion: resolveCameraWork(preset.tag).motionPrompt,
+    cameraWork: recCw.id,
+    cameraMotion: recCw.motionPrompt,
     cinematicAngle: preset.angle,
     shotScale: preset.scale,
     kenBurnsPreset: kbPreset,

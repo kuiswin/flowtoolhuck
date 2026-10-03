@@ -164,7 +164,8 @@ import {
   resolveTelopStyle,
   resolveTelopTransition,
   resolveTelopPosition,
-  resolveRecommendedTelopStaging
+  resolveRecommendedTelopStaging,
+  resolveRecommendedCameraWorkAndKenBurns
 } from './config/studioDefinitions';
 
 export {
@@ -185,7 +186,8 @@ export {
   resolveTelopStyle,
   resolveTelopTransition,
   resolveTelopPosition,
-  resolveRecommendedTelopStaging
+  resolveRecommendedTelopStaging,
+  resolveRecommendedCameraWorkAndKenBurns
 };
 
 export const IMAGE_MODELS = IMAGE_MODELS_REGISTRY;

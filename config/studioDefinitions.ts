@@ -157,6 +157,77 @@ export function resolveCameraWork(labelOrMotion?: string): CameraWorkDefinition 
   return CAMERA_WORK_REGISTRY.find(c => c.label === labelOrMotion || c.motionPrompt === labelOrMotion || c.id === labelOrMotion) || CAMERA_WORK_REGISTRY[0];
 }
 
+/**
+ * 制作モード（全7ジャンル）の特性に応じた最適なカメラワーク＆ケンバーン演出を算出
+ */
+export function resolveRecommendedCameraWorkAndKenBurns(
+  cutId: number,
+  mode?: string,
+  isMvMode?: boolean,
+  isMangaMode?: boolean
+): CameraWorkDefinition {
+  // 1. 漫画モード（isMangaMode）または画風比較（style-matrix）：完全固定（ブレ防止）
+  if (isMangaMode || mode === 'style-matrix') {
+    return resolveCameraWork('static');
+  }
+
+  // 2. 📜 偉人の名言・処方箋（quotes）：文字可読性と厳粛な静寂を優先し「固定（フィックス）」
+  if (mode === 'quotes') {
+    return resolveCameraWork('static');
+  }
+
+  // 3. 💡 衝撃雑学Shorts（trivia）：冒頭2秒のフックとインパクト重視（ズームイン主体）
+  if (mode === 'trivia') {
+    const triviaPool = ['zoom-in', 'zoom-in', 'pan-left', 'tilt-up', 'zoom-in'];
+    const cwId = triviaPool[(cutId - 1) % triviaPool.length];
+    return resolveCameraWork(cwId);
+  }
+
+  // 4. 👻 怪異・未解決事件（folklore）：不穏なスロー移動・見上げるチルト
+  if (mode === 'folklore') {
+    const folklorePool = ['zoom-in', 'tilt-up', 'pan-left', 'zoom-in', 'tilt-down', 'pan-right'];
+    const cwId = folklorePool[(cutId - 1) % folklorePool.length];
+    return resolveCameraWork(cwId);
+  }
+
+  // 5. 🏯 超絶技巧・職人魂（craft）：手元へのクローズアップ・作品鑑賞パン・仰ぐチルト
+  if (mode === 'craft') {
+    const craftPool = ['zoom-in', 'pan-right', 'tilt-up', 'zoom-in', 'pan-left', 'zoom-out'];
+    const cwId = craftPool[(cutId - 1) % craftPool.length];
+    return resolveCameraWork(cwId);
+  }
+
+  // 6. 🎵 音楽MVモード（mv）：楽曲パート展開連動（Aメロ＝静寂・導入、Bメロ＝空間変化・加速、サビ＝最高潮・ダイナミック寄り、アウトロ＝余韻）
+  if (isMvMode || mode === 'mv') {
+    const normCut = ((cutId - 1) % 12) + 1;
+    let cwId = 'zoom-in';
+    if (normCut <= 3) {
+      // Verse A（静寂・導入）: 緩やかなパン・チルト・ズーム
+      const vA = ['pan-left', 'tilt-up', 'zoom-in'];
+      cwId = vA[(normCut - 1) % vA.length];
+    } else if (normCut <= 6) {
+      // Verse B（空間変化・加速）: 右パン・チルトダウン・ズームイン
+      const vB = ['pan-right', 'tilt-down', 'zoom-in'];
+      cwId = vB[(normCut - 4) % vB.length];
+    } else if (normCut <= 9) {
+      // Chorus ★（最高潮・サビ）: ダイナミックなズームイン・ズームアウト
+      const vCh = ['zoom-in', 'zoom-out', 'zoom-in'];
+      cwId = vCh[(normCut - 7) % vCh.length];
+    } else {
+      // Outro（余韻・終幕）: 引きのズームアウト・パン・静寂
+      const vOut = ['zoom-out', 'pan-left', 'zoom-out'];
+      cwId = vOut[(normCut - 10) % vOut.length];
+    }
+    return resolveCameraWork(cwId);
+  }
+
+  // 7. 🎬 ドラマ連番モード（episodes / デフォルト）: 映画的感情曲線ローテーション
+  const dramaPool = ['zoom-in', 'pan-left', 'zoom-out', 'tilt-up', 'zoom-in', 'pan-right'];
+  const cwId = dramaPool[(cutId - 1) % dramaPool.length];
+  return resolveCameraWork(cwId);
+}
+
+
 // ── 4. 構図スケール＆直前カット対比ルール定義（Rule-based Contrast） ─────
 export interface ShotScaleDefinition {
   scale: string;

@@ -114,6 +114,11 @@ export interface Episode {
   theme?: string;
   isMvMode?: boolean;
   productionMode?: ProductionMode;
+
+  // 生成済みZIPパッケージキャッシュ
+  packageZipBlobUrl?: string;
+  packageZipFilename?: string;
+  packageZipSizeStr?: string;
 }
 
 export interface GeneratorSettings {

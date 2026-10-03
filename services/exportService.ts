@@ -207,8 +207,9 @@ export const downloadZip = async (
   ep: Episode, 
   addLog: (msg: string, type?: any) => void, 
   manifest?: SeriesManifest,
-  logs?: LogEntry[]
-) => {
+  logs?: LogEntry[],
+  onReady?: (info: { filename: string; blobUrl: string; sizeStr: string }) => void
+): Promise<{ filename: string; blobUrl: string; sizeStr: string } | null> => {
   addLog(`📦 Ep.${ep.id} パッケージング中...`, 'process');
   try {
     const zip = new JSZip();
@@ -293,37 +294,49 @@ export const downloadZip = async (
     const timestamp = `${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}_${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}`;
     const safeTitle = (ep.titleJp || '無題').replace(/[\/\\:*?"<>|]/g, '_').replace(/\s+/g, '_').slice(0, 25);
     const filename = `${timestamp}_${safeTitle}.zip`;
+    const sizeMb = (zipBlob.size / (1024 * 1024)).toFixed(1);
+    const sizeStr = `${sizeMb} MB`;
 
-    // 1. Google Flow Tools 環境: iframe 内の sandbox 制約を回避するため、必ず公式 Flow.download を優先実行
-    if (typeof Flow !== 'undefined' && typeof Flow.download === 'function') {
-      await new Promise<void>((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onloadend = async () => {
-          try {
-            const base64 = (reader.result as string).split(',')[1];
-            await Flow.download({ base64, mimeType: 'application/zip', filename });
-            addLog(`✅ パッケージ「${filename}」をダウンロードしました。`, 'success');
-            resolve();
-          } catch (e) {
-            reject(e);
-          }
-        };
-        reader.onerror = reject;
-        reader.readAsDataURL(zipBlob);
-      });
-    } else {
-      // 2. ローカル開発環境（Vite等、Flow が未定義の場合）: DOM a.click で保存
-      const blobUrl = URL.createObjectURL(zipBlob);
+    const blobUrl = URL.createObjectURL(zipBlob);
+
+    // 1. 同期直接ダウンロード（DOM a.click）を試行
+    try {
       const a = document.createElement('a');
       a.href = blobUrl;
       a.download = filename;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
-      setTimeout(() => URL.revokeObjectURL(blobUrl), 15000);
-      addLog(`✅ パッケージ「${filename}」をダウンロードしました。`, 'success');
+    } catch (e) {
+      console.warn('DOM download attempt ignored by browser sandbox:', e);
     }
-  } catch (err: any) { addLog(`❌ ZIP生成エラー: ${err.message}`, 'error'); }
+
+    // 2. 容量がGoogle Flow API制限（約3.5MB）未満の場合のみ Flow.download を安全に試行
+    if (zipBlob.size < 3.5 * 1024 * 1024 && typeof Flow !== 'undefined' && typeof Flow.download === 'function') {
+      try {
+        const reader = new FileReader();
+        const base64 = await new Promise<string>((resolve, reject) => {
+          reader.onloadend = () => resolve((reader.result as string).split(',')[1]);
+          reader.onerror = reject;
+          reader.readAsDataURL(zipBlob);
+        });
+        await Flow.download({ base64, mimeType: 'application/zip', filename });
+      } catch (flowErr) {
+        console.warn('Flow.download payload overflow, fallback to direct download modal', flowErr);
+      }
+    }
+
+    addLog(`✅ パッケージ準備完了 (${sizeStr}): 「${filename}」`, 'success');
+
+    const result = { filename, blobUrl, sizeStr };
+    if (onReady) {
+      onReady(result);
+    }
+    return result;
+  } catch (err: any) { 
+    addLog(`❌ ZIP生成エラー: ${err.message}`, 'error'); 
+    return null;
+  }
 };
 
 /**

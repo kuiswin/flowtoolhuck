@@ -35,9 +35,18 @@ interface UseStudioProductionProps {
   logs: LogEntry[];
   addLog: (message: string, type?: LogEntry['type']) => void;
   refreshStories: () => Promise<void>;
+  onPackageReady?: (data: {
+    epId: number;
+    titleJp: string;
+    filename: string;
+    blobUrl: string;
+    sizeStr: string;
+    videoCount: number;
+    imageCount: number;
+  }) => void;
 }
 
-export function useStudioProduction({ settings, logs, addLog, refreshStories }: UseStudioProductionProps) {
+export function useStudioProduction({ settings, logs, addLog, refreshStories, onPackageReady }: UseStudioProductionProps) {
   const [episodes, setEpisodes] = useState<Episode[]>([]);
   const [isProducing, setIsProducing] = useState(false);
   const [activeSeriesManifest, setActiveSeriesManifest] = useState<SeriesManifest | null>(null);
@@ -918,7 +927,26 @@ Output JSON ONLY:
 
           const freshEp = episodesRef.current.find(e => e.id === epId)!;
           if (settings.autoDownload && !isAbortedRef.current) {
-            await downloadZip(freshEp, addLog, manifest, logsRef.current);
+            const res = await downloadZip(freshEp, addLog, manifest, logsRef.current, info => {
+              if (onPackageReady) {
+                onPackageReady({
+                  epId,
+                  titleJp: freshEp.titleJp,
+                  filename: info.filename,
+                  blobUrl: info.blobUrl,
+                  sizeStr: info.sizeStr,
+                  videoCount: freshEp.cuts.filter(c => !!c.videoBase64).length,
+                  imageCount: freshEp.cuts.filter(c => !!c.imageBase64).length
+                });
+              }
+            });
+            if (res) {
+              updateEpisode(epId, {
+                packageZipBlobUrl: res.blobUrl,
+                packageZipFilename: res.filename,
+                packageZipSizeStr: res.sizeStr
+              });
+            }
           }
           await saveStory({ titleJp: freshEp.titleJp, titleEn: freshEp.titleEn, country: settings.country, era: settings.era, theme: settings.theme, protagonistSummary: freshEp.summary || '', createdAt: new Date().toISOString() });
         } catch (epErr: any) {
@@ -967,5 +995,5 @@ Output JSON ONLY:
     addLog('🧹 制作データを全消去しました。', 'info');
   }, [addLog]);
 
-  return { episodes, isProducing, startProduction, abortProduction, resumeSeries, activeSeriesManifest, handleGenerateRemaining, handleBulkVideo, handleBulkBrowserVideo, handleExportFullMovie, handleBulkRerollTelop, generateImage, generateVideo, generateBrowserVideo, updateCut, clearEpisodes };
+  return { episodes, isProducing, startProduction, abortProduction, resumeSeries, activeSeriesManifest, handleGenerateRemaining, handleBulkVideo, handleBulkBrowserVideo, handleExportFullMovie, handleBulkRerollTelop, generateImage, generateVideo, generateBrowserVideo, updateCut, updateEpisode, clearEpisodes };
 }

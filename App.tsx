@@ -5,7 +5,8 @@ import { ArchiveDrawer } from './components/ArchiveDrawer';
 import { StudioSidebar } from './components/StudioSidebar';
 import { EpisodeSection } from './components/EpisodeSection';
 import { LogEntry } from './components/StudioLogs';
-import { Cut, GeneratorSettings, VideoModelType } from './types';
+import { PackageDownloadModal, PackageDownloadData } from './components/PackageDownloadModal';
+import { Cut, GeneratorSettings, VideoModelType, Episode } from './types';
 import { THEMES, TASTES, IMAGE_MODELS, VIDEO_MODELS } from './constants';
 import { createLogMessage } from './services/utils';
 import { initDB, getAllStories, StoryRecord } from './services/db';
@@ -23,6 +24,7 @@ export default function App() {
   const [archiveOpen, setArchiveOpen] = useState(false);
   const [isTrashModalOpen, setIsTrashModalOpen] = useState(false);
   const [previewingCutData, setPreviewingCutData] = useState<{ epId: number; cut: Cut } | null>(null);
+  const [packageModalData, setPackageModalData] = useState<PackageDownloadData | null>(null);
 
   // ログ保持数を9999に拡大（1万行制限）
   const addLog = useCallback((message: string, type: LogEntry['type'] = 'info') => {
@@ -34,7 +36,52 @@ export default function App() {
     setStories(all);
   }, []);
 
-  const { episodes, isProducing, startProduction, abortProduction, resumeSeries, activeSeriesManifest, handleGenerateRemaining, handleBulkVideo, handleBulkBrowserVideo, handleExportFullMovie, handleBulkRerollTelop, generateImage, generateVideo, generateBrowserVideo, updateCut, clearEpisodes } = useStudioProduction({ settings, logs, addLog, refreshStories });
+  const handlePackageReady = useCallback((data: PackageDownloadData) => {
+    setPackageModalData(data);
+  }, []);
+
+  const { episodes, isProducing, startProduction, abortProduction, resumeSeries, activeSeriesManifest, handleGenerateRemaining, handleBulkVideo, handleBulkBrowserVideo, handleExportFullMovie, handleBulkRerollTelop, generateImage, generateVideo, generateBrowserVideo, updateCut, updateEpisode, clearEpisodes } = useStudioProduction({ 
+    settings, 
+    logs, 
+    addLog, 
+    refreshStories,
+    onPackageReady: handlePackageReady
+  });
+
+  const handleDownloadZip = useCallback(async (ep: Episode) => {
+    if (ep.packageZipBlobUrl) {
+      setPackageModalData({
+        epId: ep.id,
+        titleJp: ep.titleJp,
+        filename: ep.packageZipFilename || `Episode_${ep.id}_Package.zip`,
+        blobUrl: ep.packageZipBlobUrl,
+        sizeStr: ep.packageZipSizeStr || '',
+        videoCount: ep.cuts.filter(c => !!c.videoBase64).length,
+        imageCount: ep.cuts.filter(c => !!c.imageBase64).length
+      });
+      return;
+    }
+
+    const res = await downloadZip(ep, addLog, activeSeriesManifest || undefined, logs, info => {
+      setPackageModalData({
+        epId: ep.id,
+        titleJp: ep.titleJp,
+        filename: info.filename,
+        blobUrl: info.blobUrl,
+        sizeStr: info.sizeStr,
+        videoCount: ep.cuts.filter(c => !!c.videoBase64).length,
+        imageCount: ep.cuts.filter(c => !!c.imageBase64).length
+      });
+    });
+
+    if (res) {
+      updateEpisode(ep.id, {
+        packageZipBlobUrl: res.blobUrl,
+        packageZipFilename: res.filename,
+        packageZipSizeStr: res.sizeStr
+      });
+    }
+  }, [addLog, activeSeriesManifest, logs, updateEpisode]);
 
   const handleResumeSeries = useCallback(async (manifest: any) => {
     if (manifest.settings) {
@@ -79,7 +126,7 @@ export default function App() {
         <div className="max-w-[1300px] mx-auto flex flex-col gap-16">
           {episodes.map(ep => (
             <EpisodeSection 
-              key={ep.id} ep={ep} onGenerateRemaining={handleGenerateRemaining} onBulkVideo={handleBulkVideo} onBulkBrowserVideo={handleBulkBrowserVideo} onExportFullMovie={handleExportFullMovie} onDownloadZip={(e) => downloadZip(e, addLog, activeSeriesManifest || undefined, logs)} onAnimateRequest={generateVideo} onPreviewCut={(eId, cut) => setPreviewingCutData({ epId: eId, cut })} onUpdateCut={updateCutWrapped} onBulkRerollTelop={handleBulkRerollTelop} onRetry={(type, eId, cId) => {
+              key={ep.id} ep={ep} onGenerateRemaining={handleGenerateRemaining} onBulkVideo={handleBulkVideo} onBulkBrowserVideo={handleBulkBrowserVideo} onExportFullMovie={handleExportFullMovie} onDownloadZip={handleDownloadZip} onAnimateRequest={generateVideo} onPreviewCut={(eId, cut) => setPreviewingCutData({ epId: eId, cut })} onUpdateCut={updateCutWrapped} onBulkRerollTelop={handleBulkRerollTelop} onRetry={(type, eId, cId) => {
                 const epFound = episodes.find(e => e.id === eId);
                 const cutFound = epFound?.cuts.find(c => c.id === cId);
                 if (type === 'image' && cutFound) {
@@ -155,6 +202,7 @@ export default function App() {
       })()}
       <ArchiveDrawer isOpen={archiveOpen} onClose={() => setArchiveOpen(false)} stories={stories} onRemake={(s) => { setSettings(prev => ({ ...prev, country: s.country, era: s.era, theme: s.theme })); setArchiveOpen(false); }} />
       <ConfirmationModal isOpen={isTrashModalOpen} title="全消去" message="制作中のデータを消去します。" onConfirm={() => { clearEpisodes(); setIsTrashModalOpen(false); }} onCancel={() => setIsTrashModalOpen(false)} />
+      <PackageDownloadModal isOpen={!!packageModalData} data={packageModalData} onClose={() => setPackageModalData(null)} />
     </div>
   );
 }

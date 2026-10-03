@@ -80,7 +80,7 @@ export const StudioSidebar: React.FC<StudioSidebarProps> = ({
                 productionMode: mode,
                 isMvMode: mode === 'mv',
                 episodeCount: mode === 'style-matrix'
-                  ? ([3, 5, 8, 11].includes(s.episodeCount) ? s.episodeCount : 3)
+                  ? ([3, 5, 8, 10].includes(s.episodeCount) ? s.episodeCount : 3)
                   : ([1, 5, 10, 20, 50].includes(s.episodeCount) ? s.episodeCount : 1),
                 theme: mode === 'mv' 
                   ? (MV_THEMES.includes(s.theme) ? s.theme : MV_THEMES[0])
@@ -187,8 +187,8 @@ export const StudioSidebar: React.FC<StudioSidebarProps> = ({
             <NumberChoice 
               label={settings.productionMode === 'mv' ? '生成曲数' : (settings.productionMode === 'style-matrix' ? '比較画風数' : '生成話数')} 
               value={settings.episodeCount} 
-              options={settings.productionMode === 'style-matrix' ? [3, 5, 8, 11] : [1, 5, 10, 20, 50]} 
-              formatLabel={v => settings.productionMode === 'style-matrix' && v === 11 ? '11種 (全)' : `${v}${settings.productionMode === 'mv' ? '曲' : (settings.productionMode === 'style-matrix' ? '種' : '話')}`}
+              options={settings.productionMode === 'style-matrix' ? [3, 5, 8, 10] : [1, 5, 10, 20, 50]} 
+              formatLabel={v => settings.productionMode === 'style-matrix' && v === 10 ? '10種 (全)' : `${v}${settings.productionMode === 'mv' ? '曲' : (settings.productionMode === 'style-matrix' ? '種' : '話')}`}
               onChange={v => setSettings(s => ({ ...s, episodeCount: v }))} 
             />
           </div>

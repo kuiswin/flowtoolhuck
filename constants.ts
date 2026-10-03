@@ -113,39 +113,35 @@ export const TASTES: Record<string, string> = {
   "🧪 4頭身サイバー・パステルポップ (Chibi Pop Lab Anime)":
     "Japanese vocaloid music video aesthetic illustration, modern stylized pop anime art, bold clean ink line art, flat cel shading with soft pastel tones, high-angle dynamic close-up view, cute 4-heads-tall anime proportions, large expressive stylized eyes, playful mouth with sharp snaggletooth, subtle two-tone pastel hair highlights, futuristic gadget laboratory desk in foreground, sharp clean 2D vector finish",
 
-  // 3. 4頭身・ゲーマー胡坐（チル・散らかり部屋）
-  "🎮 4頭身ゲーマー・チルポップ (Chibi Gamer Chill Anime)":
-    "Japanese vocaloid music video aesthetic illustration, modern stylized pop anime art, bold clean ink line art, flat cel shading with soft pastel hues, high-angle dynamic shot, cute 4-heads-tall anime proportions, large stylized eyes, snaggletooth smile, two-tone pastel hair, sitting cross-legged in cozy cluttered retro gaming room, RGB monitors and snack wrappers, sharp clean 2D vector finish",
-
-  // 4. 全身ストリート・ダイナミック（ネオンポップ）
+  // 3. 全身ストリート・ダイナミック（ネオンポップ）
   "⚡ ボカロMV・ネオンポップ (Vocaloid Neon Pop Anime)":
     "Japanese vocaloid music video aesthetic illustration, modern pop anime style, bold clean line art, flat cel shading with vibrant pastel tones, chromatic aberration, prism light dispersion, punchy street techwear vibe, dynamic perspective, sharp clean 2D vector finish",
 
-  // 5. 夜景・サイバーパンク
+  // 4. 夜景・サイバーパンク
   "🌃 サイバーナイト・ネオン街 (Cyberpunk Night Street Anime)":
     "Japanese vocaloid music video aesthetic illustration, modern pop anime style, bold clean line art, flat cel shading, night city rain reflection, vivid glowing neon pink and cyan lights, chromatic aberration, prism lens flare, high-contrast dynamic composition, sharp 2D anime cut",
 
-  // 6. 90sシティポップ（Lo-Fi雨夜部屋）
+  // 5. 90sシティポップ（Lo-Fi雨夜部屋）
   "📼 90sシティポップ・Lo-Fi調 (90s City Pop & Lo-Fi Anime)":
     "90s classic Japanese retro anime aesthetic, vintage city pop music video still, aesthetic bedroom neon lighting, soft glowing purple and cyan backlight, nostalgic warm film grain, moody rainy window atmosphere, VHS tape scanline effect, detailed nostalgic anime cut",
 
-  // 7. 新海風シネマティック（夕暮れ・巨大積乱雲）
+  // 6. 新海風シネマティック（夕暮れ・巨大積乱雲）
   "✨ 美麗シネマティック・光と青空 (Luminous Sky & Cinematic Anime)":
     "Breathtaking luminous cinematic anime aesthetic, ultra vibrant emotional sky, massive dramatic cumulus clouds, dazzling golden hour lens flare, rich purple and amber twilight gradient, atmospheric rim lighting, delicate high-detail digital painting finish",
 
-  // 8. ダークファンタジー（深紅の炎・キアロスクーロ）
+  // 7. ダークファンタジー（深紅の炎・キアロスクーロ）
   "⚔️ ダークファンタジー・重厚陰影 (Dark Chiaroscuro & High-Contrast Anime)":
     "Dark cinematic fantasy anime aesthetic, extreme chiaroscuro lighting, dramatic deep shadows, intense glowing fiery ember highlights, ominous ruined gothic atmosphere, dynamic sharp armor reflections, hyper-detailed epic illustration",
 
-  // 9. 伝統浮世絵（江戸前寿司・屋台）
+  // 8. 伝統浮世絵（江戸前寿司・屋台）
   "🏮 京都・江戸 伝統浮世絵木版画 (Traditional Japanese Ukiyo-e)":
     "Authentic Japanese Ukiyo-e woodblock print aesthetic, traditional Edo period masterpiece, textured washi paper, deep indigo blue and warm vermilion tones, elegant dynamic flowing black ink contours, expressive classical genre artwork",
 
-  // 10. 白黒劇画（浪人・見開き1枚絵）
+  // 9. 白黒劇画（浪人・見開き1枚絵）
   "🖋️ 白黒劇画・超絶インクマンガ (Intense Monochrome Manga)":
     "Dramatic monochrome manga aesthetic, aggressive dry ink brush strokes, intense screentone crosshatching, extreme chiaroscuro contrast, dynamic single splash cut, no panels, gritty realism, high-impact black and white artwork",
 
-  // 11. アール・ヌーヴォー油彩（優美な曲線美・宮廷絵画）
+  // 10. アール・ヌーヴォー油彩（優美な曲線美・宮廷絵画）
   "👑 アール・ヌーヴォー油彩・宮廷エレガンス (Art Nouveau Classical Oil Painting)":
     "Masterpiece fine art classical oil painting, elegant Art Nouveau aesthetic, romantic classical realism, seamless full-bleed composition without frame or borders, flowing organic decorative curves and subtle botanical motifs gently blended into the background, delicate translucent sheer lace and silk drapery, luminous porcelain skin, soft diffused museum lighting, rich muted amber and cyan oil palette, timeless classical masterpiece, absolutely NO decorative frame, NO border, NO window arch, edge-to-edge artwork"
 };

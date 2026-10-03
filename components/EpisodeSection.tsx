@@ -143,7 +143,8 @@ interface EpisodeSectionProps {
 export const EpisodeSection: React.FC<EpisodeSectionProps> = ({
   ep, onGenerateRemaining, onBulkVideo, onBulkBrowserVideo, onExportFullMovie, onDownloadZip, onAnimateRequest, onPreviewCut, onUpdateCut, onBulkRerollTelop, onRetry
 }) => {
-  const isPending = !ep.isGenerating && !ep.isDone;
+  // 先行プレビュー完了(isPreviewDone)または全体完了(isDone)していれば操作可能
+  const isPending = !ep.isGenerating && !ep.isDone && !ep.isPreviewDone;
 
   return (
     <section className={`flex flex-col gap-8 animate-slide-in transition-opacity duration-700 ${isPending ? 'opacity-30' : 'opacity-100'}`}>

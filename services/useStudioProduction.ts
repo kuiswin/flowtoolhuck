@@ -715,6 +715,40 @@ Output JSON ONLY:
               await handleBulkVideo(epIndex);
             }
           }
+
+          // 先行プレビュー＋動画化完了フラグを確実にONにして全ボタンを解放
+          updateEpisode(epIndex, { 
+            isGenerating: false, 
+            isPreviewDone: true, 
+            isDone: true 
+          });
+
+          // 自動ダウンロードがONの場合、パッケージング＆保存を実行
+          const freshEp = episodesRef.current.find(e => e.id === epIndex) || newEpisode;
+          if (settings.autoDownload && !isAbortedRef.current) {
+            addLog(`📦 第${epIndex}${modeInfo.unit}の完了時自動ダウンロードを開始します...`, 'process');
+            const res = await downloadZip(freshEp, addLog, undefined, logsRef.current);
+            if (res) {
+              updateEpisode(epIndex, {
+                packageZipBlobUrl: res.blobUrl,
+                packageZipFilename: res.filename,
+                packageZipSizeStr: res.sizeStr
+              });
+              if (onPackageReady) {
+                onPackageReady({
+                  epId: epIndex,
+                  titleJp: freshEp.titleJp,
+                  filename: res.filename,
+                  blobUrl: res.blobUrl,
+                  sizeStr: res.sizeStr,
+                  videoCount: freshEp.cuts.filter(c => !!c.videoBase64).length,
+                  imageCount: freshEp.cuts.filter(c => !!c.imageBase64).length,
+                  flowSuccess: res.flowSuccess
+                });
+              }
+            }
+          }
+          await saveStory({ titleJp: freshEp.titleJp, titleEn: freshEp.titleEn, country: settings.country, era: settings.era, theme: settings.theme, protagonistSummary: freshEp.summary || '', createdAt: new Date().toISOString() });
         }
 
         if (!isAbortedRef.current) {

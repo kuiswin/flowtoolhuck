@@ -8,6 +8,7 @@ export interface PackageDownloadData {
   sizeStr: string;
   videoCount: number;
   imageCount: number;
+  flowSuccess?: boolean;
 }
 
 interface PackageDownloadModalProps {

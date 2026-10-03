@@ -927,25 +927,25 @@ Output JSON ONLY:
 
           const freshEp = episodesRef.current.find(e => e.id === epId)!;
           if (settings.autoDownload && !isAbortedRef.current) {
-            const res = await downloadZip(freshEp, addLog, manifest, logsRef.current, info => {
-              if (onPackageReady) {
-                onPackageReady({
-                  epId,
-                  titleJp: freshEp.titleJp,
-                  filename: info.filename,
-                  blobUrl: info.blobUrl,
-                  sizeStr: info.sizeStr,
-                  videoCount: freshEp.cuts.filter(c => !!c.videoBase64).length,
-                  imageCount: freshEp.cuts.filter(c => !!c.imageBase64).length
-                });
-              }
-            });
+            const res = await downloadZip(freshEp, addLog, manifest, logsRef.current);
             if (res) {
               updateEpisode(epId, {
                 packageZipBlobUrl: res.blobUrl,
                 packageZipFilename: res.filename,
                 packageZipSizeStr: res.sizeStr
               });
+              if (onPackageReady) {
+                onPackageReady({
+                  epId,
+                  titleJp: freshEp.titleJp,
+                  filename: res.filename,
+                  blobUrl: res.blobUrl,
+                  sizeStr: res.sizeStr,
+                  videoCount: freshEp.cuts.filter(c => !!c.videoBase64).length,
+                  imageCount: freshEp.cuts.filter(c => !!c.imageBase64).length,
+                  flowSuccess: res.flowSuccess
+                });
+              }
             }
           }
           await saveStory({ titleJp: freshEp.titleJp, titleEn: freshEp.titleEn, country: settings.country, era: settings.era, theme: settings.theme, protagonistSummary: freshEp.summary || '', createdAt: new Date().toISOString() });

@@ -299,36 +299,51 @@ export const downloadZip = async (
 
     const blobUrl = URL.createObjectURL(zipBlob);
 
-    // 1. 同期直接ダウンロード（DOM a.click）を試行
-    try {
-      const a = document.createElement('a');
-      a.href = blobUrl;
-      a.download = filename;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-    } catch (e) {
-      console.warn('DOM download attempt ignored by browser sandbox:', e);
-    }
+    // 1. Google Flow Tools 公式 Flow.download を最優先実行（大容量ZIPも対応・一時エラー自動リトライ）
+    let flowSuccess = false;
+    if (typeof Flow !== 'undefined' && typeof Flow.download === 'function') {
+      const maxRetries = 3;
+      for (let attempt = 1; attempt <= maxRetries; attempt++) {
+        try {
+          const reader = new FileReader();
+          const base64 = await new Promise<string>((resolve, reject) => {
+            reader.onloadend = () => resolve((reader.result as string).split(',')[1]);
+            reader.onerror = reject;
+            reader.readAsDataURL(zipBlob);
+          });
 
-    // 2. 容量がGoogle Flow API制限（約3.5MB）未満の場合のみ Flow.download を安全に試行
-    if (zipBlob.size < 3.5 * 1024 * 1024 && typeof Flow !== 'undefined' && typeof Flow.download === 'function') {
-      try {
-        const reader = new FileReader();
-        const base64 = await new Promise<string>((resolve, reject) => {
-          reader.onloadend = () => resolve((reader.result as string).split(',')[1]);
-          reader.onerror = reject;
-          reader.readAsDataURL(zipBlob);
-        });
-        await Flow.download({ base64, mimeType: 'application/zip', filename });
-      } catch (flowErr) {
-        console.warn('Flow.download payload overflow, fallback to direct download modal', flowErr);
+          await Flow.download({ base64, mimeType: 'application/zip', filename });
+          addLog(`✅ パッケージ「${filename}」(${sizeStr}) をダウンロードしました。`, 'success');
+          flowSuccess = true;
+          break;
+        } catch (flowErr: any) {
+          console.warn(`Flow.download attempt ${attempt} failed:`, flowErr);
+          if (attempt < maxRetries) {
+            addLog(`⏳ Flow API が一時ビジーです。1.5秒後に自動再試行します (${attempt}/${maxRetries})...`, 'process');
+            await new Promise(r => setTimeout(r, 1500));
+          } else {
+            addLog(`⚠️ Flow API が応答しないため、ブラウザ直接保存リンクを準備しました: ${flowErr.message}`, 'warning');
+          }
+        }
       }
     }
 
-    addLog(`✅ パッケージ準備完了 (${sizeStr}): 「${filename}」`, 'success');
+    // 2. Flow 環境外（ローカルViteなど）または Flow.download が3回失敗した場合のブラウザ直接ダウンロード試行
+    if (!flowSuccess) {
+      try {
+        const a = document.createElement('a');
+        a.href = blobUrl;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+      } catch (e) {
+        console.warn('DOM download attempt ignored by browser sandbox:', e);
+      }
+    }
 
-    const result = { filename, blobUrl, sizeStr };
+    const result = { filename, blobUrl, sizeStr, flowSuccess };
+    // 画面上の保存バナー・モーダル通知（Flow.downloadが失敗した時の救済、または再保存用）
     if (onReady) {
       onReady(result);
     }

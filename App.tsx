@@ -37,7 +37,11 @@ export default function App() {
   }, []);
 
   const handlePackageReady = useCallback((data: PackageDownloadData) => {
-    setPackageModalData(data);
+    // Flow.download で自動保存された場合はモーダルを出さずスムーズに完了
+    // Flow API が応答せず直接保存が必要な場合のみモーダルをポップアップ
+    if (!data.flowSuccess) {
+      setPackageModalData(data);
+    }
   }, []);
 
   const { episodes, isProducing, startProduction, abortProduction, resumeSeries, activeSeriesManifest, handleGenerateRemaining, handleBulkVideo, handleBulkBrowserVideo, handleExportFullMovie, handleBulkRerollTelop, generateImage, generateVideo, generateBrowserVideo, updateCut, updateEpisode, clearEpisodes } = useStudioProduction({ 

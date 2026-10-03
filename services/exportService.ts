@@ -229,20 +229,9 @@ export const downloadZip = async (
       ? coverCanvas.convertToBlob({ type: 'image/png' }) 
       : new Promise<Blob>(r => (coverCanvas as HTMLCanvasElement).toBlob(b => r(b!), 'image/png')));
     folder.file('cover.png', coverBlob);
-
-    const hasMedia = ep.cuts.some(c => !!c.imageBase64 || !!c.videoBase64);
-    if (ep.fullMovieBase64) {
-      folder.file('full_movie.mp4', ep.fullMovieBase64, { base64: true });
-    } else if (hasMedia) {
-      try {
-        addLog(`🎞️ 結合動画（扉絵入り）をレンダリング中...`, 'info');
-        const movieBlob = await renderFullEpisodeMovie(ep, () => {});
-        folder.file('full_movie.mp4', movieBlob);
-      } catch (err: any) {
-        console.warn('Full movie rendering skipped in ZIP:', err);
-        addLog(`⚠️ 結合動画の同梱をスキップし素材優先でパッケージ化します`, 'warning');
-      }
-    }
+    
+    // ※向こう（CT192）側で音声実尺に合わせて高画質結合・焼き直しを行うため、
+    // 未結合の各カット素材（cut_*.png / cut_*.mp4）と script.json のみを同梱し、不要な結合動画は完全カットして爆速化
     
     const scriptJson = {
       id: ep.id,

@@ -569,9 +569,10 @@ Output JSON ONLY:
           const tasteKey = targetTastes[idx];
           const shortTaste = tasteKey.split(' (')[0].trim();
 
-          addLog(`🎨 [${idx + 1}/${targetTastes.length}] 画風「${shortTaste}」の描画タスクを開始...（先行${settings.previewCutCount}カット）`, 'process');
+          const compareCutCount = 2; // 画風比較は強制2カット（動画化なし）
+          addLog(`🎨 [${idx + 1}/${targetTastes.length}] 画風「${shortTaste}」の比較描画タスクを開始...（固定2カット）`, 'process');
           const currentEp = matrixEpisodes[idx];
-          await runTasks(buildCutTasks(currentEp, currentEp.cuts.slice(0, settings.previewCutCount), tasteKey));
+          await runTasks(buildCutTasks(currentEp, currentEp.cuts.slice(0, compareCutCount), tasteKey));
           updateEpisode(epId, { isGenerating: false, isPreviewDone: true, isDone: true });
           addLog(`✅ 画風「${shortTaste}」の生成が完了しました！`, 'success');
         }

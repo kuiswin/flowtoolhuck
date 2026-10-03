@@ -190,17 +190,31 @@ export const StudioSidebar: React.FC<StudioSidebarProps> = ({
             />
           </div>
 
-          <NumberChoice 
-            label={settings.productionMode === 'mv' ? '先行カット数' : '生成カット数'} 
-            value={settings.previewCutCount} 
-            options={[1, 3, 5, 12]} 
-            formatLabel={v => v === 12 ? '12枚 (全)' : `${v}枚`} 
-            onChange={v => setSettings(s => ({ ...s, previewCutCount: v }))} 
-          />
-          <SegmentedToggle label="動画化する割合" value={settings.videoRatio} onChange={v => setSettings(s => ({ ...s, videoRatio: v as any }))} items={VIDEO_RATIO_OPTIONS} />
+          {settings.productionMode === 'style-matrix' ? (
+            <div className="flex items-center justify-between px-3 py-2 rounded-xl bg-pink-500/10 border border-pink-500/20 text-pink-300 text-[11px] font-bold">
+              <span className="flex items-center gap-1.5">
+                <span className="material-symbols-outlined text-[15px]">photo_library</span>
+                比較カット数 (動画なし)
+              </span>
+              <span className="px-2 py-0.5 rounded-md bg-pink-500/20 text-pink-200 text-[10px] font-black border border-pink-500/30">2枚固定</span>
+            </div>
+          ) : (
+            <>
+              <NumberChoice 
+                label={settings.productionMode === 'mv' ? '先行カット数' : '生成カット数'} 
+                value={settings.previewCutCount} 
+                options={[1, 3, 5, 12]} 
+                formatLabel={v => v === 12 ? '12枚 (全)' : `${v}枚`} 
+                onChange={v => setSettings(s => ({ ...s, previewCutCount: v }))} 
+              />
+              <SegmentedToggle label="動画化する割合" value={settings.videoRatio} onChange={v => setSettings(s => ({ ...s, videoRatio: v as any }))} items={VIDEO_RATIO_OPTIONS} />
+            </>
+          )}
 
           <div className="flex flex-col bg-white/5 rounded-xl p-1.5 border border-white/5 gap-1">
-            <ToggleSwitch label="🎬 動画まで自動完走" checked={settings.autoVideo} onChange={v => setSettings(s => ({ ...s, autoVideo: v }))} />
+            {settings.productionMode !== 'style-matrix' && (
+              <ToggleSwitch label="🎬 動画まで自動完走" checked={settings.autoVideo} onChange={v => setSettings(s => ({ ...s, autoVideo: v }))} />
+            )}
             <ToggleSwitch label="📦 完了時自動ダウンロード" checked={settings.autoDownload} onChange={v => setSettings(s => ({ ...s, autoDownload: v }))} />
           </div>
         </div>

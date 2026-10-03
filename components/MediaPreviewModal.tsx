@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { Cut, VideoModelType, KenBurnsPreset } from '../types';
 import { 
   CAMERA_WORK_OPTIONS, 
+  CAMERA_WORK_REGISTRY,
   IMAGE_MODELS, 
   VIDEO_MODELS_REGISTRY,
   KEN_BURNS_PRESETS, 
@@ -156,13 +157,8 @@ export const MediaPreviewModal: React.FC<MediaPreviewModalProps> = ({
 
     const getKenBurnsClass = () => {
         if (videoSrc || !imageSrc) return '';
-        let preset = normalizeKenBurnsPreset(cut.kenBurnsPreset);
-        if (preset === 'none') {
-            // 未指定やnoneの場合でも、カットIDに応じたケンバーン演出で確実にプレビューを躍動させる！
-            const kbCycle: KenBurnsPreset[] = ['zoom-in', 'pan-left', 'zoom-out', 'pan-right', 'tilt-up', 'tilt-down'];
-            const idx = (cut.id || 1) % kbCycle.length;
-            preset = kbCycle[idx];
-        }
+        const preset = normalizeKenBurnsPreset(cut.kenBurnsPreset);
+        if (preset === 'none') return '';
         return `studio-kb-${preset}`;
     };
 
@@ -711,10 +707,25 @@ export const MediaPreviewModal: React.FC<MediaPreviewModalProps> = ({
                                 </div>
                             </div>
 
-                            <div className="grid grid-cols-2 gap-2">
-                                <FieldDropdown label="カメラワーク" value={CAMERA_WORK_OPTIONS.find(o => o.value === cut.cameraMotion)?.label || CAMERA_WORK_OPTIONS[0].label} options={CAMERA_WORK_OPTIONS.map(o => o.label)} onChange={l => onUpdateCut({ cameraMotion: CAMERA_WORK_OPTIONS.find(o => l === o.label)?.value })} />
-                                <FieldDropdown label="ケンバーン演出" value={KEN_BURNS_PRESETS.find(p => p.value === normalizeKenBurnsPreset(cut.kenBurnsPreset))?.label || KEN_BURNS_PRESETS[0].label} options={KEN_BURNS_PRESETS.map(p => p.label)} onChange={l => onUpdateCut({ kenBurnsPreset: KEN_BURNS_PRESETS.find(p => p.label === l)?.value as KenBurnsPreset })} />
-                            </div>
+                            {(() => {
+                                const currentCw = CAMERA_WORK_REGISTRY.find(c => c.id === cut.cameraWork || c.motionPrompt === cut.cameraMotion || (cut.kenBurnsPreset && cut.kenBurnsPreset !== 'none' && c.recommendedKenBurns === cut.kenBurnsPreset)) || CAMERA_WORK_REGISTRY[0];
+                                const currentKb = KEN_BURNS_PRESETS.find(p => p.value === normalizeKenBurnsPreset(cut.kenBurnsPreset)) || KEN_BURNS_PRESETS[0];
+                                return (
+                                    <div className="grid grid-cols-2 gap-2">
+                                        <FieldDropdown label="カメラワーク" value={currentCw.label} options={CAMERA_WORK_REGISTRY.map(c => c.label)} onChange={l => {
+                                            const cw = CAMERA_WORK_REGISTRY.find(c => c.label === l);
+                                            if (cw) onUpdateCut({ cameraWork: cw.id, cameraMotion: cw.motionPrompt, kenBurnsPreset: cw.recommendedKenBurns });
+                                        }} />
+                                        <FieldDropdown label="ケンバーン演出" value={currentKb.label} options={KEN_BURNS_PRESETS.map(p => p.label)} onChange={l => {
+                                            const kb = KEN_BURNS_PRESETS.find(p => p.label === l);
+                                            if (kb) {
+                                                const cw = CAMERA_WORK_REGISTRY.find(c => c.recommendedKenBurns === kb.value);
+                                                onUpdateCut({ kenBurnsPreset: kb.value as KenBurnsPreset, ...(cw ? { cameraWork: cw.id, cameraMotion: cw.motionPrompt } : {}) });
+                                            }
+                                        }} />
+                                    </div>
+                                );
+                            })()}
 
                             <TextInput label="画像プロンプト (EN)" value={cut.promptEn || ''} onChange={v => onUpdateCut({ promptEn: v })} />
 

@@ -618,10 +618,12 @@ Output ONLY valid JSON:
     const resText = typeof res === 'string' ? res : (res?.text || res);
     const parsed = safeJsonParse<any>(resText, {});
     if (parsed && parsed.enhancedPrompt) {
+      const cwTag = parsed.cameraWork || preset.tag;
       return {
         promptEn: parsed.enhancedPrompt,
         negativePrompt: antiPreviousNegative,
-        cameraWork: parsed.cameraWork || preset.tag,
+        cameraWork: cwTag,
+        cameraMotion: resolveCameraWork(cwTag).motionPrompt,
         cinematicAngle: parsed.cinematicAngle || preset.angle,
         shotScale: parsed.shotScale || preset.scale,
         kenBurnsPreset: kbPreset,
@@ -642,6 +644,7 @@ Output ONLY valid JSON:
     promptEn: `${preset.angle}. ${prompt}`,
     negativePrompt: antiPreviousNegative,
     cameraWork: preset.tag,
+    cameraMotion: resolveCameraWork(preset.tag).motionPrompt,
     cinematicAngle: preset.angle,
     shotScale: preset.scale,
     kenBurnsPreset: kbPreset,

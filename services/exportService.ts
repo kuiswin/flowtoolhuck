@@ -201,22 +201,53 @@ export async function renderCoverCanvas(ep: Episode): Promise<OffscreenCanvas | 
 }
 
 /**
+ * ファイル名を生成（ASCII安全名とサニタイズ表示名の両方を作成）
+ */
+export function generateSafeFilenames(ep: Episode): { asciiFilename: string; displayFilename: string } {
+  const now = new Date();
+  const pad = (n: number) => String(n).padStart(2, '0');
+  const timestamp = `${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}_${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}`;
+  
+  // 1. 完全 ASCII 安全ファイル名 (Google Flow 親フレームやHTTPヘッダーが100%受け付ける英数字名)
+  const asciiFilename = `FlowTool_Ep${ep.id}_${timestamp}.zip`;
+
+  // 2. 日本語サニタイズファイル名 (絵文字・サロゲートペア・全角記号を完全除去)
+  const cleanTitle = (ep.titleJp || 'Episode')
+    .replace(/[\uD800-\uDBFF][\uDC00-\uDFFF]/g, '') // サロゲートペア絵文字
+    .replace(/[\u2600-\u27BF\uE000-\uF8FF]/g, '') // その他のUnicode記号
+    .replace(/[「」『』【】（）()［］\[\]・…！？!?,:;~〜\/\:*?"<>|]/g, '_') // 全角・半角記号
+    .replace(/\s+/g, '_')
+    .replace(/_+/g, '_')
+    .trim()
+    .slice(0, 30);
+
+  const displayFilename = `${timestamp}_${cleanTitle || `Ep${ep.id}`}.zip`;
+
+  return { asciiFilename, displayFilename };
+}
+
+/**
  * あらゆるブラウザ環境・Google Flow sandbox 環境でファイルを確実に保存する統合関数
  * 詳細な console.log を出力し、複数の手法をフォールバック実行する
  */
 export const savePackageFile = async (
   blob: Blob,
   filename: string,
-  addLog?: (msg: string, type?: any) => void
+  addLog?: (msg: string, type?: any) => void,
+  fallbackAsciiFilename?: string
 ): Promise<{ success: boolean; method: string }> => {
   const sizeMb = (blob.size / (1024 * 1024)).toFixed(2);
   const sizeStr = `${sizeMb} MB`;
   
+  const now = new Date();
+  const pad = (n: number) => String(n).padStart(2, '0');
+  const timestamp = `${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}_${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}`;
+  const safeAsciiFilename = fallbackAsciiFilename || `FlowTool_Package_${timestamp}.zip`;
+
   console.group(`📦 [FlowTool Export] ダウンロード処理開始: ${filename} (${sizeStr})`);
-  console.log('📄 ファイル情報:', { filename, sizeStr, bytes: blob.size, mimeType: blob.type });
+  console.log('📄 ファイル情報:', { filename, safeAsciiFilename, sizeStr, bytes: blob.size, mimeType: blob.type });
 
   // --- 手法 1: File System Access API (showSaveFilePicker) ---
-  // ユーザーのクリック操作がある場合、Chrome/Edgeで最も確実にOSの保存ダイアログが開く
   if (typeof (window as any).showSaveFilePicker === 'function') {
     try {
       console.log('🔄 [Method 1] showSaveFilePicker (File System Access API) を試行中...');
@@ -240,80 +271,103 @@ export const savePackageFile = async (
         console.groupEnd();
         return { success: false, method: 'user_cancelled' };
       }
-      console.warn('⚠️ [Method 1] showSaveFilePicker スキップ（自動処理または未許可）:', fsErr.message);
+      console.warn('⚠️ [Method 1] showSaveFilePicker スキップ（自動処理またはクロスオリジン制限）:', fsErr.message);
     }
   }
 
   // --- 手法 2: Google Flow Tools 公式 Flow.download API ---
   if (typeof Flow !== 'undefined' && typeof Flow.download === 'function') {
     console.log('🔄 [Method 2] Google Flow 公式 Flow.download API を試行中...');
-    const maxRetries = 3;
-    for (let attempt = 1; attempt <= maxRetries; attempt++) {
-      try {
-        console.log(`📡 [Method 2] Flow.download 呼び出し (attempt ${attempt}/${maxRetries})...`);
-        const reader = new FileReader();
-        const base64 = await new Promise<string>((resolve, reject) => {
-          reader.onloadend = () => resolve((reader.result as string).split(',')[1]);
-          reader.onerror = reject;
-          reader.readAsDataURL(blob);
-        });
+    try {
+      const reader = new FileReader();
+      const base64 = await new Promise<string>((resolve, reject) => {
+        reader.onloadend = () => resolve((reader.result as string).split(',')[1]);
+        reader.onerror = reject;
+        reader.readAsDataURL(blob);
+      });
 
-        await Flow.download({ base64, mimeType: 'application/zip', filename });
-        console.log(`✅ [Method 2] Flow.download による保存に成功しました！ (attempt ${attempt})`);
-        console.groupEnd();
-        if (addLog) addLog(`✅ パッケージ「${filename}」(${sizeStr}) をダウンロードしました (Flow API)。`, 'success');
-        return { success: true, method: 'Flow.download' };
-      } catch (flowErr: any) {
-        console.error(`❌ [Method 2] Flow.download attempt ${attempt} 失敗:`, flowErr);
-        if (attempt < maxRetries) {
-          console.log(`⏳ Flow API がビジーのため 1.5 秒待機して再試行します...`);
-          await new Promise(r => setTimeout(r, 1500));
+      // 試行するファイル名の優先順: 1. ASCII安全ファイル名（親フレームRPCで絶対にコケない） 2. サニタイズ名
+      const candidateFilenames = [safeAsciiFilename];
+      if (filename !== safeAsciiFilename) {
+        // 絵文字を完全除外した安全名
+        const sanitized = filename.replace(/[\uD800-\uDBFF][\uDC00-\uDFFF]/g, '').replace(/[「」『』]/g, '_').trim();
+        if (sanitized && sanitized !== safeAsciiFilename) {
+          candidateFilenames.push(sanitized);
         }
       }
+
+      for (let attempt = 0; attempt < candidateFilenames.length; attempt++) {
+        const targetFilename = candidateFilenames[attempt];
+        try {
+          console.log(`📡 [Method 2] Flow.download 呼び出し (ファイル名: "${targetFilename}")...`);
+          await Flow.download({ base64, mimeType: 'application/zip', filename: targetFilename });
+          console.log(`✅ [Method 2] Flow.download による保存に成功しました！ ("${targetFilename}")`);
+          console.groupEnd();
+          if (addLog) addLog(`✅ パッケージ「${targetFilename}」(${sizeStr}) をダウンロードしました (Flow API)。`, 'success');
+          return { success: true, method: 'Flow.download' };
+        } catch (flowErr: any) {
+          console.error(`❌ [Method 2] Flow.download ("${targetFilename}") 失敗:`, flowErr.message || flowErr);
+        }
+      }
+    } catch (readErr: any) {
+      console.error('❌ [Method 2] Base64エンコード失敗:', readErr);
     }
   }
 
-  // --- 手法 3: DOM <a download> (Blob URL) ---
+  // --- 手法 3: window.open (Blob URL / 別タブ経由で iframe sandbox 制限を突破) ---
+  const blobUrl = URL.createObjectURL(blob);
   try {
-    console.log('🔄 [Method 3] DOM <a download> (Blob URL) を試行中...');
-    const blobUrl = URL.createObjectURL(blob);
+    console.log('🔄 [Method 3] window.open によるサンドボックス外ダウンロードを試行中...');
+    const newWindow = window.open(blobUrl, '_blank');
+    if (newWindow) {
+      console.log('🚀 [Method 3] window.open 実行成功。別タブ/ウィンドウ経由で保存が開始されます。');
+    }
+  } catch (winErr: any) {
+    console.warn('⚠️ [Method 3] window.open スキップ (ポップアップ制限等):', winErr.message);
+  }
+
+  // --- 手法 4: DOM <a download> (Blob URL) ---
+  try {
+    console.log('🔄 [Method 4] DOM <a download> (Blob URL) を試行中...');
     const a = document.createElement('a');
     a.href = blobUrl;
     a.download = filename;
+    a.target = '_blank';
+    a.rel = 'noopener noreferrer';
     a.style.display = 'none';
     document.body.appendChild(a);
     a.click();
-    console.log('🚀 [Method 3] a.click() 実行完了。ブラウザのダウンロードトレイを確認してください。');
+    console.log('🚀 [Method 4] a.click() 実行完了。ブラウザのダウンロードトレイを確認してください。');
     setTimeout(() => {
       try {
         if (a.parentNode) document.body.removeChild(a);
         URL.revokeObjectURL(blobUrl);
       } catch (_) {}
-    }, 5000);
+    }, 10000);
   } catch (domErr: any) {
-    console.error('❌ [Method 3] DOM <a download> 失敗:', domErr);
+    console.error('❌ [Method 4] DOM <a download> 失敗:', domErr);
   }
 
-  // --- 手法 4: DOM <a download> (Data URI フォールバック) ---
+  // --- 手法 5: DOM <a download> (Data URI フォールバック) ---
   if (blob.size < 25 * 1024 * 1024) {
     try {
-      console.log('🔄 [Method 4] Data URI <a download> フォールバックを試行中...');
+      console.log('🔄 [Method 5] Data URI <a download> フォールバックを試行中...');
       const reader = new FileReader();
       reader.onloadend = () => {
         try {
           const dataUri = reader.result as string;
           const a2 = document.createElement('a');
           a2.href = dataUri;
-          a2.download = filename;
+          a2.download = safeAsciiFilename;
           a2.style.display = 'none';
           document.body.appendChild(a2);
           a2.click();
-          console.log('🚀 [Method 4] Data URI a.click() 実行完了。');
+          console.log('🚀 [Method 5] Data URI a.click() 実行完了。');
           setTimeout(() => {
             try { if (a2.parentNode) document.body.removeChild(a2); } catch (_) {}
           }, 3000);
         } catch (e2) {
-          console.error('❌ [Method 4] Data URI 保存失敗:', e2);
+          console.error('❌ [Method 5] Data URI 保存失敗:', e2);
         }
       };
       reader.readAsDataURL(blob);
@@ -434,18 +488,15 @@ export const downloadZip = async (
     addLog(`📦 ZIPアーカイブを圧縮中...`, 'process');
     const zipBlob = await zip.generateAsync({ type: 'blob' });
 
-    const now = new Date();
-    const pad = (n: number) => String(n).padStart(2, '0');
-    const timestamp = `${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}_${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}`;
-    const safeTitle = (ep.titleJp || '無題').replace(/[\/\\:*?"<>|]/g, '_').replace(/\s+/g, '_').slice(0, 25);
-    const filename = `${timestamp}_${safeTitle}.zip`;
+    const { asciiFilename, displayFilename } = generateSafeFilenames(ep);
+    const filename = displayFilename;
     const sizeMb = (zipBlob.size / (1024 * 1024)).toFixed(1);
     const sizeStr = `${sizeMb} MB`;
 
     const blobUrl = URL.createObjectURL(zipBlob);
 
-    // 統合保存処理を実行（showSaveFilePicker ➡ Flow.download ➡ DOM <a> の多重防御・詳細コンソールログ付き）
-    const saveRes = await savePackageFile(zipBlob, filename, addLog);
+    // 統合保存処理を実行（ASCII安全名 asciiFilename を最優先で Flow.download に渡す）
+    const saveRes = await savePackageFile(zipBlob, filename, addLog, asciiFilename);
 
     const result = { filename, blobUrl, sizeStr, flowSuccess: saveRes.success };
     if (onReady) {

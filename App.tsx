@@ -48,10 +48,15 @@ export default function App() {
     // 1. すでに ZIP が生成済みの場合は、即座に savePackageFile をキック！（詳細コンソールログ出力）
     if (ep.packageZipBlobUrl) {
       addLog(`💾 作成済みパッケージ「${filename}」を直接保存中...`, 'process');
+      // ユーザーの直接クリック操作コンテキストが生きている間に window.open を試行
+      try {
+        window.open(ep.packageZipBlobUrl, '_blank');
+      } catch (_) {}
+
       try {
         const resp = await fetch(ep.packageZipBlobUrl);
         const blob = await resp.blob();
-        await savePackageFile(blob, filename, addLog);
+        await savePackageFile(blob, filename, addLog, `FlowTool_Ep${ep.id}_Package.zip`);
         return;
       } catch (err: any) {
         console.warn('[FlowTool] 作成済みBlob URLの取得失敗、再パッケージングを実行:', err);

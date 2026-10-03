@@ -243,13 +243,17 @@ export const EpisodeSection: React.FC<EpisodeSectionProps> = ({
                 <span className="text-[11px] text-white/50 font-mono truncate max-w-md">{ep.packageZipFilename}</span>
               </div>
             </div>
-            <button
+            <a
+              href={ep.packageZipBlobUrl}
+              download={ep.packageZipFilename || `FlowTool_Ep${ep.id}_Package.zip`}
+              target="_blank"
+              rel="noopener noreferrer"
               onClick={() => onDownloadZip(ep)}
               className="px-4 py-2 bg-emerald-500 hover:bg-emerald-400 text-black text-xs font-black rounded-xl shadow-lg shadow-emerald-950/50 flex items-center gap-1.5 transition-transform hover:scale-105 active:scale-95 cursor-pointer whitespace-nowrap"
             >
               <span className="material-symbols-outlined text-sm">download</span>
               今すぐ保存
-            </button>
+            </a>
           </div>
         )}
 

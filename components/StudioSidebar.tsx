@@ -16,6 +16,8 @@ import {
 import { StudioLogs, LogEntry } from './StudioLogs';
 import { ReferenceVault } from './ReferenceVault';
 import { getAllReferenceAssets } from '../services/db';
+import { ThemeEditorModal } from './ThemeEditorModal';
+import { loadCustomThemes, CustomThemeMap } from '../services/themeStorage';
 
 interface StudioSidebarProps {
   settings: GeneratorSettings;
@@ -53,6 +55,8 @@ export const StudioSidebar: React.FC<StudioSidebarProps> = ({
   settings, setSettings, isProducing, onStart, onAbort, onClear, onOpenArchive, onResumeSeries, activeSeriesManifest, logs, onAddLog
 }) => {
   const [referenceAssets, setReferenceAssets] = useState<ReferenceAsset[]>([]);
+  const [customThemes, setCustomThemes] = useState<CustomThemeMap>(() => loadCustomThemes());
+  const [isThemeEditorOpen, setIsThemeEditorOpen] = useState(false);
   const resumeFileRef = useRef<HTMLInputElement | null>(null);
 
   const refreshAssets = async () => {
@@ -89,12 +93,8 @@ export const StudioSidebar: React.FC<StudioSidebarProps> = ({
   const handleModeChange = (modeVal: string) => {
     const matched = PRODUCTION_MODES.find(m => m.label === modeVal || m.value === modeVal);
     const mode = (matched ? matched.value : modeVal) as ProductionMode;
-    let defaultTheme = THEMES[0];
-    if (mode === 'mv') defaultTheme = MV_THEMES[0];
-    else if (mode === 'trivia') defaultTheme = TRIVIA_THEMES[0];
-    else if (mode === 'quotes') defaultTheme = QUOTES_THEMES[0];
-    else if (mode === 'folklore') defaultTheme = FOLKLORE_THEMES[0];
-    else if (mode === 'craft') defaultTheme = CRAFT_THEMES[0];
+    const modeList = customThemes[mode] || [];
+    let defaultTheme = modeList[0] || THEMES[0];
 
     setSettings(s => ({
       ...s,
@@ -109,12 +109,13 @@ export const StudioSidebar: React.FC<StudioSidebarProps> = ({
   };
 
   const getThemeConfig = () => {
+    const modeList = customThemes[settings.productionMode];
     switch (settings.productionMode) {
-      case 'mv': return { options: MV_THEMES, groups: undefined, label: 'MV世界観・シチュエーション (10選)' };
-      case 'trivia': return { options: TRIVIA_THEMES, groups: undefined, label: '💡 雑学Shortsテーマ (10選)' };
-      case 'quotes': return { options: QUOTES_THEMES, groups: undefined, label: '📜 偉人の名言テーマ (10選)' };
-      case 'folklore': return { options: FOLKLORE_THEMES, groups: undefined, label: '👻 怪異・未解決テーマ (10選)' };
-      case 'craft': return { options: CRAFT_THEMES, groups: undefined, label: '🏯 職人魂・超絶技巧テーマ (10選)' };
+      case 'mv': return { options: modeList || MV_THEMES, groups: undefined, label: `MV世界観・シチュエーション (${(modeList || MV_THEMES).length}選)` };
+      case 'trivia': return { options: modeList || TRIVIA_THEMES, groups: undefined, label: `💡 雑学Shortsテーマ (${(modeList || TRIVIA_THEMES).length}選)` };
+      case 'quotes': return { options: modeList || QUOTES_THEMES, groups: undefined, label: `📜 偉人の名言テーマ (${(modeList || QUOTES_THEMES).length}選)` };
+      case 'folklore': return { options: modeList || FOLKLORE_THEMES, groups: undefined, label: `👻 怪異・未解決テーマ (${(modeList || FOLKLORE_THEMES).length}選)` };
+      case 'craft': return { options: modeList || CRAFT_THEMES, groups: undefined, label: `🏯 職人魂・超絶技巧テーマ (${(modeList || CRAFT_THEMES).length}選)` };
       default: return { options: undefined, groups: THEME_CATEGORIES.map(c => ({ label: c.category, items: c.items })), label: '世界観・テーマ' };
     }
   };
@@ -247,7 +248,19 @@ export const StudioSidebar: React.FC<StudioSidebarProps> = ({
           disabled={isProducing}
         />
 
-        <SectionLabel>{themeConfig.label}</SectionLabel>
+        <div className="flex items-center justify-between mt-1">
+          <SectionLabel>{themeConfig.label}</SectionLabel>
+          <button
+            type="button"
+            onClick={() => setIsThemeEditorOpen(true)}
+            disabled={isProducing}
+            className="px-2 py-0.5 text-[10px] rounded-md bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 border border-amber-500/30 flex items-center gap-1 transition-colors cursor-pointer"
+            title="テーマ一覧をWebUI上で編集・追加・保存"
+          >
+            <span className="material-symbols-outlined text-[12px]">edit</span>
+            編集・追加
+          </button>
+        </div>
         <FieldDropdown 
           label={themeConfig.label} 
           value={settings.theme} 
@@ -332,6 +345,22 @@ export const StudioSidebar: React.FC<StudioSidebarProps> = ({
       </div>
 
       <StudioLogs logs={logs} onAddLog={onAddLog} isProducing={isProducing} />
+
+      <ThemeEditorModal
+        isOpen={isThemeEditorOpen}
+        onClose={() => setIsThemeEditorOpen(false)}
+        currentMode={settings.productionMode}
+        modeLabel={currentModeDef.label}
+        onThemesUpdated={(updatedList) => {
+          setCustomThemes(prev => ({
+            ...prev,
+            [settings.productionMode]: updatedList
+          }));
+          if (updatedList.length > 0 && !updatedList.includes(settings.theme)) {
+            setSettings(s => ({ ...s, theme: updatedList[0], era: updatedList[0] }));
+          }
+        }}
+      />
     </div>
   );
 };

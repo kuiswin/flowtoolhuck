@@ -79,6 +79,9 @@ export const StudioSidebar: React.FC<StudioSidebarProps> = ({
                 ...s,
                 productionMode: mode,
                 isMvMode: mode === 'mv',
+                episodeCount: mode === 'style-matrix'
+                  ? ([3, 5, 8, 11].includes(s.episodeCount) ? s.episodeCount : 3)
+                  : ([1, 5, 10, 20, 50].includes(s.episodeCount) ? s.episodeCount : 1),
                 theme: mode === 'mv' 
                   ? (MV_THEMES.includes(s.theme) ? s.theme : MV_THEMES[0])
                   : (THEMES.includes(s.theme) ? s.theme : THEMES[0]),

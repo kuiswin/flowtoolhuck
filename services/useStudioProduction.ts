@@ -8,6 +8,9 @@ import {
   CUTS_PER_EPISODE, 
   TASTES,
   resolveImageModel,
+  resolveVideoModel,
+  resolveCameraWork,
+  resolveRecommendedTelopStaging
 } from '../constants';
 import { safeJsonParse, callWithRetry, formatErrorMessage, createDefaultCut, isCutSelectedForVideo } from './utils';
 import { saveStory, getAllReferenceAssets, saveReferenceAsset } from './db';
@@ -333,7 +336,15 @@ export function useStudioProduction({ settings, logs, addLog, refreshStories }: 
 
   const generateVideo = async (epId: number, cutId: number, modelType: VideoModelType) => {
     const cut = episodesRef.current.find(e => e.id === epId)?.cuts.find(c => c.id === cutId);
-    if (!cut?.imageMediaId) {
+    let mediaId = cut?.imageMediaId;
+    if (!mediaId && cut?.imageBase64) {
+      try {
+        const up = await Flow.upload({ base64: cut.imageBase64, mimeType: 'image/png', name: `Cut_${epId}_${cutId}` });
+        mediaId = up.mediaId;
+        updateCut(epId, cutId, { imageMediaId: mediaId });
+      } catch (_) {}
+    }
+    if (!mediaId) {
       addLog(`⚠️ Ep.${epId} C${cutId.toString().padStart(2, '0')}: 画像がないため動画生成をスキップ`, 'warning');
       return;
     }
@@ -351,7 +362,7 @@ export function useStudioProduction({ settings, logs, addLog, refreshStories }: 
       const res = await callWithRetry<any>(
         () => Flow.generate.video({ 
           prompt: finalVideoPrompt, 
-          firstFrameImageMediaId: cut.imageMediaId, 
+          firstFrameImageMediaId: mediaId, 
           modelDisplayName: modelDef.name, 
           durationSeconds: modelDef.defaultDuration, 
           aspectRatio: DEFAULT_ASPECT_RATIO as any 
@@ -944,36 +955,20 @@ Output JSON ONLY:
   const handleBulkRerollTelop = useCallback((epId: number) => {
     const targetEp = episodesRef.current.find(e => e.id === epId);
     if (!targetEp) return;
-
     let prevStaging: any = undefined;
     const isMv = !!targetEp.isMvMode || targetEp.titleJp.startsWith('🎵');
     const isHist = checkIsHistorical(targetEp.era, targetEp.theme);
-
     const updatedCuts = targetEp.cuts.map((c) => {
       const staging = resolveRecommendedTelopStaging(c.id, isMv, isHist, prevStaging);
-      prevStaging = {
-        transition: staging.transition,
-        position: staging.position,
-        style: staging.style
-      };
-
+      prevStaging = { transition: staging.transition, position: staging.position, style: staging.style };
       const rawText = c.telop?.fullText || c.narrationJp || '';
       const existingHighlights = c.telop?.highlights || [];
       const highlights = existingHighlights.length > 0 ? existingHighlights : extractHighlights(rawText);
-
       return {
         ...c,
-        telop: {
-          fullText: rawText,
-          highlights,
-          style: staging.style,
-          transition: staging.transition,
-          position: staging.position,
-          directorNote: staging.directorNote
-        }
+        telop: { fullText: rawText, highlights, style: staging.style, transition: staging.transition, position: staging.position, directorNote: staging.directorNote }
       };
     });
-
     setEpisodes(prev => prev.map(e => e.id === epId ? { ...e, cuts: updatedCuts } : e));
     episodesRef.current = episodesRef.current.map(e => e.id === epId ? { ...e, cuts: updatedCuts } : e);
     addLog(`🎲 第 ${epId} 話: 全12カットのテロップ演出（動き・配置）を一括再抽選しました！（画像は保持）`, 'success');

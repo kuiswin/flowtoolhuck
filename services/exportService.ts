@@ -252,7 +252,10 @@ export const downloadZip = async (
         narrationEn: c.narrationEn || '',
         prompt: c.promptEn || '',
         shotScale: c.shotScale || 'Wide',
-        cameraMotion: c.kenBurnsPreset || 'none'
+        cameraWork: c.cameraWork || 'static',
+        cameraMotion: c.cameraMotion || '',
+        kenBurnsPreset: c.kenBurnsPreset || 'none',
+        telop: c.telop || null
       }))
     };
     folder.file('script.json', JSON.stringify(scriptJson, null, 2));

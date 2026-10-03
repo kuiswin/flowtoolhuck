@@ -51,7 +51,7 @@ export const CutCard: React.FC<CutCardProps> = ({
     if (videoSrc || !imageSrc) return '';
     const preset = normalizeKenBurnsPreset(cut.kenBurnsPreset);
     if (preset === 'none') return '';
-    return `animate-ken-burns-${preset}`;
+    return `studio-kb-${preset}`;
   };
 
   return (

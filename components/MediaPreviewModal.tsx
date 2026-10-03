@@ -953,7 +953,7 @@ export const MediaPreviewModal: React.FC<MediaPreviewModalProps> = ({
                                             variant="filled" 
                                             className={`${colorClass} text-white font-black h-[40px] text-[10px] ${isSelected ? 'ring-2 ring-amber-400' : ''}`} 
                                             onClick={() => onAnimate(m.id)} 
-                                            disabled={cut.isGeneratingVideo || !cut.imageMediaId}
+                                            disabled={cut.isGeneratingVideo || (!cut.imageMediaId && !cut.imageBase64)}
                                         >
                                             🎬 {m.name} ({m.defaultDuration}s)
                                         </PillButton>
